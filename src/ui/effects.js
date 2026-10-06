@@ -8,13 +8,13 @@ export function createEffects(rng = { next: Math.random, signed: () => Math.rand
   const api = {
     get count() { return parts.length; },
     /** 타격 스파크: PERFECT 는 금색 + 많이, GOOD 은 흰색 */
-    hit(x, y, grade = 'GOOD') {
+    hit(x, y, grade = 'GOOD', { scale = 1 } = {}) { // scale: 깊이에 따른 크기(가까울수록 크게)
       const perfect = grade === 'PERFECT';
       const n = perfect ? 10 : 5;
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2 + rng.signed() * 0.3;
         const sp = 25 + rng.next() * 25;
-        add({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.35, color: perfect ? '#ffd24a' : '#ffffff', g: 0 });
+        add({ x, y, vx: Math.cos(a) * sp * scale, vy: Math.sin(a) * sp * scale, life: 0.35, color: perfect ? '#ffd24a' : '#ffffff', g: 0, size: 1 + scale + (perfect ? 1 : 0) });
       }
     },
     /** 득점: 내가 득점하면 색종이, 실점이면 회색 연기 */

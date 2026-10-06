@@ -1,6 +1,6 @@
 import {
   DRAG_MIN, DRAG_FULL, TAP_POWER, DRAG_VERTICAL_RATIO, COURSE_X,
-} from './constants.js?v=1791276975';
+} from './constants.js?v=1791277282';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 

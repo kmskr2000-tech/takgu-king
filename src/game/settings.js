@@ -1,5 +1,5 @@
 // 설정: 시즌 저장과 분리된 별도 키 (새로 시작/데이터 삭제로 지워지지 않음)
-import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791276975';
+import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791277282';
 
 export const SETTINGS_KEY = 'tabgu-king-settings-v1';
 

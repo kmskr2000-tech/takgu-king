@@ -17,7 +17,7 @@ table.standings { width:100%; border-collapse:collapse; background:var(--panel);
 .stat-row small { display:block; color:var(--dim); }
 .scoreboard { text-align:center; font-size:2rem; font-weight:700; letter-spacing:4px; }
 .opp-info { text-align:center; } .opp-info small { display:block; color:var(--dim); }
-canvas.court { width:min(100%, calc(62vh * 160 / 300)); height:auto; aspect-ratio: 160/300; image-rendering: pixelated; touch-action:none; background:#1b2a3a; align-self:center; }
+canvas.court { width:100%; height:auto; aspect-ratio: 160/320; image-rendering: pixelated; touch-action:none; background:#05070d; display:block; }
 .judge { text-align:center; min-height:1.5em; font-weight:700; color:var(--accent); }
 .result .score { font-size: 3rem; text-align:center; margin:0; }
 .win { color: var(--accent); font-weight:700; }
@@ -60,3 +60,15 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .tip { min-height: 2.6em; text-align: center; color: #fff; font-weight: 700; padding: 6px 10px; border-radius: 6px; visibility: hidden; background: rgba(20,40,70,.9); border: 2px solid var(--accent); }
 .tip.on { visibility: visible; }
 .btn.setting.enum small { color: #c8d3e0; }
+
+/* 경기 화면: 원근 뷰를 화면 폭 가득, HUD 는 캔버스 위 오버레이 */
+.screen.match { gap: 8px; }
+.match-stage { position: relative; width: min(100%, calc((100dvh - 96px) * 0.5)); margin: 0 auto; }
+.hud { position: absolute; top: 6px; left: 0; right: 0; text-align: center; pointer-events: none; color: #fff;
+  text-shadow: 1px 0 #000, -1px 0 #000, 0 1px #000, 0 -1px #000, 2px 2px 0 #000; }
+.hud .scoreboard { font-size: 2.2rem; line-height: 1.1; }
+.hud .opp-info { font-weight: 700; } .hud .opp-info small { display: block; color: #c8d3e0; font-weight: 400; }
+.hud .judge { position: absolute; left: 0; right: 0; top: 84px; font-size: 1.3rem; }
+.btn.quit { position: absolute; top: 6px; right: 6px; min-height: 44px; padding: 0 14px; background: rgba(0,0,0,.55); border-color: rgba(255,255,255,.5); }
+.intro-caption { bottom: 48px; }
+.intro-hint { bottom: 12px; }

@@ -1,10 +1,10 @@
-import { h } from './dom.js?v=1791276975';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791276975';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791276975';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791276975';
+import { h } from './dom.js?v=1791277282';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791277282';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791277282';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791277282';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats,
-} from '../game/season.js?v=1791276975';
+} from '../game/season.js?v=1791277282';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -208,10 +208,16 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit }) {
   const judge = h('div', { class: 'judge' }, '');
   const tip = h('div', { class: 'tip', 'aria-live': 'polite' }, '');
   return {
+    // 캔버스를 화면 폭 가득 쓰고, 점수·상대 정보·판정·포기는 캔버스 위 오버레이, 힌트는 캔버스 아래
     el: h('section', { class: 'screen match' },
-      h('div', { class: 'opp-info' }, `${oppName}`, h('small', {}, oppStyle)),
-      h('div', { class: 'scoreboard' }, oppScore, ' : ', meScore),
-      canvas, judge, tip, btn('포기', onQuit)),
+      h('div', { class: 'match-stage' },
+        canvas,
+        h('div', { class: 'hud' },
+          h('div', { class: 'opp-info' }, `${oppName}`, h('small', {}, oppStyle)),
+          h('div', { class: 'scoreboard' }, oppScore, ' : ', meScore),
+          judge),
+        h('button', { class: 'btn quit', type: 'button', onclick: onQuit }, '포기')),
+      tip),
     setTip(text) { tip.textContent = text; tip.className = text ? 'tip on' : 'tip'; },
     setScore(me, opp, server) {
       meScore.textContent = `${me}${server === 'me' ? '●' : ''}`;
