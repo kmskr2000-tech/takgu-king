@@ -13,6 +13,10 @@ const STEP_SERVE = {
   goals: [{ key: 'serve', need: 1, label: '서브', accept: (e) => e.type === 'serve' && e.side === 'me' }], hint: {},
   done: '서브는 탭 한 번이면 돼요.',
 };
+const SIMPLE_SERVE = {
+  ...STEP_SERVE, text: '아래 "일반" 버튼을 누르면 서브해요. 버튼을 누르는 순간이 스윙이에요!', hint: { button: 'normal' },
+  done: '샷 버튼을 누르는 순간 바로 쳐요.',
+};
 const STEP_PERFECT = {
   id: 'perfect', title: 'PERFECT 노리기', text: '붉은 띠 한가운데에 맞추면 PERFECT! 더 강하고 정확한 샷이 나가요.',
   goals: [{ key: 'perfect', need: 1, label: 'PERFECT', accept: (e) => e.type === 'return' && e.grade === 'PERFECT' && e.kind === 'in' }], hint: {},
@@ -33,21 +37,21 @@ const STEP_FREE = {
 };
 
 const SIMPLE_STEPS = [
-  STEP_SERVE,
+  SIMPLE_SERVE,
   {
-    id: 'timing', title: '타이밍 맞추기', text: '공이 튕기면 노란 띠가 나타나요. 공이 띠 안에서 반짝일 때 화면을 탭하세요!',
-    goals: [{ key: 'return', need: 2, label: '받아치기', accept: inCourt }], hint: {},
-    done: '공이 띠 안에 있을 때 탭하면 받아쳐요. 일러도 늦어도 안 돼요.',
+    id: 'timing', title: '타이밍 맞추기', text: '공이 튕기면 노란 띠가 나타나요. 공이 띠 안에서 반짝일 때 "일반" 버튼을 누르세요!',
+    goals: [{ key: 'return', need: 2, label: '받아치기', accept: inCourt }], hint: { button: 'normal' },
+    done: '공이 띠 안에 있을 때 버튼을 누르면 받아쳐요. 일러도 늦어도 안 돼요.',
   },
   STEP_PERFECT,
-  stepCourse('화면 왼쪽을 탭하면 왼쪽으로, 오른쪽을 탭하면 오른쪽으로 가요. 먼저 왼쪽, 다음엔 오른쪽을 탭!'),
+  stepCourse('코트의 왼쪽을 탭하면 노란 코스 구역이 왼쪽으로 옮겨져요. 그 상태로 공이 오면 버튼을 눌러요. 먼저 왼쪽, 다음엔 오른쪽!'),
   {
-    id: 'topspin', title: '탑스핀', text: '아래 "탑스핀" 버튼을 누르고, 공이 오면 탭! 빠르고 낮게 날아가요.',
+    id: 'topspin', title: '탑스핀', text: '공이 띠에 들어오면 "탑스핀" 버튼을 누르세요! 빠르고 낮게 날아가요.',
     goals: [{ key: 'topspin', need: 1, label: '탑스핀', accept: (e) => inCourt(e) && e.spin > 0 }], hint: { button: 'topspin' },
     done: '탑스핀은 빠르고 낮게 날아가 상대를 압박해요 (붉은 궤적).',
   },
   {
-    id: 'cut', title: '커트', text: '"커트" 버튼을 누르고, 공이 오면 탭! 느리고 높게 떠요.',
+    id: 'cut', title: '커트', text: '공이 띠에 들어오면 "커트" 버튼을 누르세요! 느리고 높게 떠요.',
     goals: [{ key: 'cut', need: 1, label: '커트', accept: (e) => inCourt(e) && e.spin < 0 }], hint: { button: 'cut' },
     done: '커트는 느리고 높게 떠서 상대의 강한 공격을 막아요 (푸른 궤적).',
   },
@@ -86,7 +90,7 @@ export const tutorialSteps = (mode) => (mode === 'advanced' ? ADVANCED_STEPS : S
 
 /** 실패 원인 피드백 (진행에는 영향 없음) */
 export function feedbackFor(e, step) {
-  if (e.type === 'missed') return e.reason === 'early' ? '조금 일렀어요! 노란 띠가 반짝일 때 탭!' : '늦었어요! 띠가 지나가기 전에 탭하세요.';
+  if (e.type === 'missed') return e.reason === 'early' ? '조금 일렀어요! 노란 띠가 반짝일 때 쳐요!' : '늦었어요! 띠가 지나가기 전에 쳐요.';
   if (e.type === 'return') {
     if (e.kind === 'net') return step?.id === 'power' ? '약하게 걸렸어요 — 그래도 길게 쓸어 강타는 성공!' : '공이 네트에 걸렸어요. 조금 더 길게 쓸어 파워를 올려보세요.';
     if (e.kind === 'out') return '너무 세서 아웃! 파워를 줄이거나 위로 쓸어 탑스핀을 걸어보세요.';

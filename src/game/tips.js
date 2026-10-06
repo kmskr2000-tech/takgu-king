@@ -9,12 +9,12 @@ export const TIPS = Object.freeze([
   { id: 'spin', when: 'incoming', text: '탭하면서 위로 쓸면 탑스핀(빠르고 낮게), 아래로 쓸면 커트(느리고 높게)' },
   { id: 'power', when: 'incoming', text: '길게 쓸수록 강한 샷! 너무 세면 아웃, 약하면 네트' },
 ]);
-// 간단 조작용 힌트 (쓸기 없음): 서브 → 띠에서 탭 → 코스(탭 위치) → 샷 선택 버튼
+// 간단 조작용 힌트: 샷 버튼을 누르는 순간이 스윙 · 코트 탭은 코스 지정
 export const TIPS_SIMPLE = Object.freeze([
-  { id: 'serve', when: 'awaitServe', text: '화면을 탭하면 서브해요' },
-  { id: 'zone', when: 'incoming', text: '공이 노란 띠에 들어오면 탭! 가운데(붉은 띠)가 PERFECT' },
-  { id: 'course', when: 'incoming', text: '탭하는 위치로 공을 보내요: 왼쪽 탭 → 왼쪽, 오른쪽 탭 → 오른쪽' },
-  { id: 'shot', when: 'incoming', text: '아래 버튼으로 샷을 골라요: 탑스핀=빠르고 낮게, 커트=느리고 높게' },
+  { id: 'serve', when: 'awaitServe', text: '아래 샷 버튼을 누르면 서브해요' },
+  { id: 'zone', when: 'incoming', text: '공이 노란 띠에 들어오면 버튼을 눌러요! 가운데(붉은 띠)가 PERFECT' },
+  { id: 'course', when: 'incoming', text: '코트를 탭하면 코스(노란 구역)가 바뀌어요. 상대가 없는 쪽으로!' },
+  { id: 'shot', when: 'incoming', text: '상대 공 색을 보고 골라요: 빨강=탑스핀(빠름), 파랑=커트(느림). 버튼을 누르는 순간 스윙!' },
   { id: 'matchup', when: 'incoming', text: '상성! 탑스핀은 커트에, 커트는 일반에, 일반은 탑스핀에 강해요. 상대 공을 보고 골라요' },
 ]);
 export const tipsFor = (mode) => (mode === 'advanced' ? TIPS : TIPS_SIMPLE);

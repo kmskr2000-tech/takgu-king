@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791289549';
-import { createEffects } from './effects.js?v=1791289549';
-import { createRng } from '../core/rng.js?v=1791289549';
+} from './sprites.js?v=1791290560';
+import { createEffects } from './effects.js?v=1791290560';
+import { createRng } from '../core/rng.js?v=1791290560';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -69,7 +69,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
   const trail = [];
   const fx = createEffects(rng);
   const st = {
-    controlMode: 'advanced', meTarget: 50, meK: 3, lean: 0, lastAct: null, hint: null, swing: { me: null, opp: null }, meX: 50, oppX: 50, lastNow: null, lastGrade: 'GOOD', look: 'opp', shake: 0,
+    controlMode: 'advanced', meTarget: 50, meK: 3, lean: 0, lastAct: null, hint: null, swing: { me: null, opp: null }, meX: 50, oppX: 50, lastNow: null, lastGrade: 'GOOD', look: 'opp', shake: 0, lane: 'center',
   };
 
   const R = (g, x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
@@ -245,6 +245,9 @@ export function createRenderer(canvas, { rng, options } = {}) {
     drawSprite(ctx, BALL, BALL_PALETTE, hx - Math.floor((5 * bs) / 2), hy - 5 * bs, { scale: bs });
   }
 
+  // 공 색 = 스핀 종류 (상대 공을 보는 그 자리에서 읽는다): 탑스핀 빨강 / 커트 파랑 / 일반 흰색
+  const BALL_PAL = { top: { k: '#7a1a10', w: '#ff5a4a', l: '#ffc2ba' }, cut: { k: '#10407a', w: '#4aa3ff', l: '#c4e0ff' } };
+  const ballPalette = (spin) => (spin > 0.5 ? BALL_PAL.top : spin < -0.5 ? BALL_PAL.cut : BALL_PALETTE);
   function drawBall(ball, spin = 0) {
     const p = ball?.visible ? project(ball.x, ball.y, ball.z ?? 0) : null;
     if (!p) { trail.length = 0; return; } // 화면 밖(컬링)이면 그리지 않음
@@ -258,7 +261,19 @@ export function createRenderer(canvas, { rng, options } = {}) {
       trail.forEach((q, i) => { if (i < trail.length - 1) { const w = i > 3 ? q.s + 1 : q.s; ctx.fillRect(q.x, q.y, w, w); } });
     }
     R(ctx, bx - 2 * sc, Math.round(g0.y), 5 * sc, Math.max(1, sc), C.shadow); // 지면 그림자
-    drawSprite(ctx, BALL, BALL_PALETTE, bx - Math.floor((5 * sc) / 2), by - Math.floor((5 * sc) / 2), { scale: sc });
+    drawSprite(ctx, BALL, ballPalette(spin), bx - Math.floor((5 * sc) / 2), by - Math.floor((5 * sc) / 2), { scale: sc });
+  }
+
+  // 간단 조작: 코스 마커 — 상대 쪽 코트에서 내 샷이 갈 3분의 1 구역을 은은하게 표시
+  function drawLane(now) {
+    if (st.controlMode !== 'simple' || !st.lane) return;
+    const r0 = Math.round(groundY(10)); const r1 = Math.round(groundY(96));
+    const a = (0.13 + 0.07 * Math.sin(now * 5)).toFixed(2);
+    for (let row = r0; row <= r1; row++) {
+      const hw = halfWidthAtRow(row); const third = (hw * 2) / 3;
+      const x0 = st.lane === 'left' ? CAM.CX - hw : st.lane === 'right' ? CAM.CX + hw - third : CAM.CX - third / 2;
+      ctx.fillStyle = `rgba(255,210,74,${a})`; ctx.fillRect(Math.round(x0), row, Math.round(third), 1);
+    }
   }
 
   // 튜토리얼 안내: 코스 레인 반짝임 + 스와이프 방향 화살표(파워 단계는 긴 화살표)
@@ -309,6 +324,8 @@ export function createRenderer(canvas, { rng, options } = {}) {
     /** 튜토리얼 안내: { lane: 'left'|'right', arrow: 'up'|'down', power: bool } (없으면 null) */
     setHint(h) { st.hint = h && (h.lane || h.arrow) ? h : null; },
     setControlMode(m) { st.controlMode = m; },
+    /** 코스 마커: 'left' | 'center' | 'right' */
+    setLane(lane) { st.lane = lane; },
     setOpponentLook(look) { st.look = look === 'rival' ? 'rival' : 'opp'; },
     /** 컨트롤러 이벤트 수신: 스윙 애니메이션 + 이펙트 */
     notify(e, now) {
@@ -352,6 +369,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
       if (opt().guide) drawLaneArrows(ctl.timing); // 선수 앞(위)에
       drawServeCue(ctl, now);
       drawCoachHint(now);
+      drawLane(now);
       drawBall(ctl.ballAt(now), ctl.flight?.spin ?? 0); // 공은 선수 뒤에 가려지지 않게 선수 다음에 그린다
       fx.draw(ctx);
       ctx.restore?.();

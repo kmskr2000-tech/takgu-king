@@ -1,29 +1,30 @@
-import { h } from './dom.js?v=1791289549';
+import { h } from './dom.js?v=1791290560';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen,
-} from './screens.js?v=1791289549';
+} from './screens.js?v=1791290560';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791289549';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791289549';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791289549';
-import { SHOT_TYPES, DEFAULT_SHOT_TYPE, shotKeyOfSpin } from '../game/controls.js?v=1791289549';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791289549';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791289549';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791289549';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791289549';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791289549';
-import { createAudio } from './audio.js?v=1791289549';
-import { createHaptics, react } from './feedback.js?v=1791289549';
-import { createRenderer } from './render.js?v=1791289549';
-import { createMatchController } from '../game/matchController.js?v=1791289549';
+} from './intro.js?v=1791290560';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791290560';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791290560';
+import { SHOT_TYPES, shotKeyOfSpin } from '../game/controls.js?v=1791290560';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791290560';
+import { oppProfile } from '../game/oppProfile.js?v=1791290560';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791290560';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791290560';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791290560';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791290560';
+import { createAudio } from './audio.js?v=1791290560';
+import { createHaptics, react } from './feedback.js?v=1791290560';
+import { createRenderer } from './render.js?v=1791290560';
+import { createMatchController } from '../game/matchController.js?v=1791290560';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult, seasonGoals,
-} from '../game/season.js?v=1791289549';
-import { createStore } from '../game/store.js?v=1791289549';
-import { createRng } from '../core/index.js?v=1791289549';
+} from '../game/season.js?v=1791290560';
+import { createStore } from '../game/store.js?v=1791290560';
+import { createRng } from '../core/index.js?v=1791290560';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -219,14 +220,14 @@ export function createApp(root, deps = {}) {
       api.gameClock = clock;
       const mode = settings.get().controls; // 조작 방식은 경기 시작 시점 값으로 고정
       let lastMiss = null;
-      let shotType = DEFAULT_SHOT_TYPE; // 간단 조작: 마지막으로 고른 샷 종류가 유지된다
       const canvas = h('canvas', { class: 'court' });
       const view = matchScreen({
         oppName: opp.name,
-        oppStyle: tut ? '연습 상대' : opp.style === 'cut' ? '커트 위주' : '올라운더',
+        oppTags: oppProfile(opp, { tutorial: !!tut }).tags,
         canvas,
         quitLabel: tut ? '나가기' : '포기',
-        onShot: (k) => { shotType = k; view.setShot(k); audio.unlock(); audio.play('click'); },
+        // 간단 조작: 샷 버튼을 누르는 순간 = 스윙 (샷 종류는 상대 공을 보고 매번 새로 정한다)
+        onSwing: (k) => { audio.unlock(); tipper.acted(); if (ctl.swing(clock(), k)) view.flashShot(k); },
         onQuit: () => {
           if (tut) { loop = null; api.showTitle(); return; } // 튜토리얼은 언제든 페널티 없이 나감
           const ctl2 = api.controller;
@@ -246,7 +247,7 @@ export function createApp(root, deps = {}) {
         },
       });
       mount(view.el);
-      view.setShotBar(mode === 'simple'); view.setShot(shotType);
+      view.setShotBar(mode === 'simple'); view.setLane(mode === 'simple' ? 'center' : null);
       const renderer = createRenderer(canvas, { options: () => settings.get() });
       renderer.setControlMode(mode);
       audio.unlock(); // 경기 시작 클릭(사용자 제스처) 안에서 오디오 허용
@@ -257,11 +258,12 @@ export function createApp(root, deps = {}) {
         oppParams: tut ? TRAINER_PARAMS : aiParamsFor(state, opp),
         rng: createRng(seed),
         difficulty: tut ? 'tutorial' : settings.get().difficulty, // 경기 시작 시점의 난이도 (경기 중 고정)
-        controlMode: mode, getShotType: () => shotType, useMatchup: !tut, // 튜토리얼은 상성 없이 기본기부터
+        controlMode: mode, useMatchup: !tut, // 튜토리얼은 상성 없이 기본기부터
         courtWidth: canvas.clientWidth || 300,
         onEvent: (e) => {
           renderer.notify(e, clock());
           react(e, { audio, haptics });
+          if (e.type === 'lane') { view.setLane(e.lane); renderer.setLane(e.lane); }
           if (e.type === 'grade') {
             const mu = e.matchup === 'win' ? ' · 상성 유리!' : e.matchup === 'lose' ? ' · 상성 불리…' : '';
             view.setJudge((e.grade === 'MISS' ? '미스!' : e.grade === 'PERFECT' ? '퍼펙트!' : '굿') + (e.grade === 'MISS' ? '' : mu));
@@ -341,7 +343,7 @@ export function createApp(root, deps = {}) {
         renderer.draw(ctl, now);
         view.setScore(ctl.match.score.me, ctl.match.score.opp, ctl.match.server);
         const serving = ctl.phase === 'awaitServe' || ctl.phase === 'oppServeWait';
-        if (serving && !wasServing) { view.flashServe(ctl.match.server); view.setPoint(null); } // 다음 서브가 시작되면 득점/실점 배너를 치운다
+        if (serving && !wasServing) { view.flashServe(ctl.match.server, mode); view.setPoint(null); } // 다음 서브가 시작되면 득점/실점 배너를 치운다
         if (serving && !wasServing) view.setJudge(''); // 서브 차례가 시작되는 순간 크게 알림
         wasServing = serving;
         if (ctl.match.server !== shownServer) { shownServer = ctl.match.server; view.setServe(shownServer); }

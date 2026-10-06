@@ -1,12 +1,12 @@
-import { h } from './dom.js?v=1791289549';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791289549';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791289549';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791289549';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791289549';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791289549';
+import { h } from './dom.js?v=1791290560';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791290560';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791290560';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791290560';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791290560';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791290560';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791289549';
+} from '../game/season.js?v=1791290560';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -227,7 +227,7 @@ export function resultScreen({ result, onNext, reward = null }) {
     btn('계속', onNext, 'primary'));
 }
 
-export function matchScreen({ oppName, oppStyle, canvas, onQuit, quitLabel = '포기', onShot = null }) {
+export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, onQuit, quitLabel = '포기', onSwing = null }) {
   const oppScore = h('span', { class: 'opp-score' }, '0');
   const meScore = h('span', { class: 'me-score' }, '0');
   // 점수판: '나'와 '상대'를 라벨·색으로 구분. 점수를 딴 쪽은 +1 이 튀어 오른다. 서브권은 ● 점
@@ -236,6 +236,7 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit, quitLabel = '�
   const oppPanel = h('div', { class: 'panel opp', 'aria-label': '상대 점수' }, h('div', { class: 'who' }, oppServe, '상대'), oppScore, oppPlus);
   const mePanel = h('div', { class: 'panel me', 'aria-label': '내 점수' }, h('div', { class: 'who' }, meServe, '나'), meScore, mePlus);
   const incoming = h('div', { class: 'incoming', 'aria-live': 'polite' }, '');
+  const laneChip = h('div', { class: 'lane-chip' }, '');
   const pbTitle = h('b', {}, ''); const pbDetail = h('span', {}, ''); const pbTip = h('small', {}, '');
   const pointBanner = h('div', { class: 'point-banner', 'aria-live': 'assertive' }, pbTitle, pbDetail, pbTip);
   const judge = h('div', { class: 'judge' }, '');
@@ -251,31 +252,40 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit, quitLabel = '�
   const bar = h('div', { class: 'shotbar', role: 'group', 'aria-label': '샷 종류 선택' },
     SHOT_ORDER.map((k) => {
       const t = SHOT_TYPES[k];
-      shotBtns[k] = h('button', { class: 'shot-btn', type: 'button', 'data-shot': k, style: `--c:${t.color}`, onclick: () => onShot?.(k) },
+      // 버튼을 누르는 순간(pointerdown)이 곧 스윙: onclick 은 손을 뗄 때(80~150ms 뒤)라 PERFECT 가 거의 불가능해진다.
+      // 키보드(Enter/Space)로 누른 click(detail 0)만 별도로 받는다. 터치 뒤의 click 은 무시.
+      shotBtns[k] = h('button', {
+        class: 'shot-btn', type: 'button', 'data-shot': k, style: `--c:${t.color}`,
+        onpointerdown: (ev) => { ev?.preventDefault?.(); onSwing?.(k); },
+        onclick: (ev) => { if (ev?.detail === 0) onSwing?.(k); },
+      },
         h('b', {}, t.label), h('em', {}, t.tag), h('small', {}, t.desc));
       return shotBtns[k];
     }));
   const badge = h('div', { class: 'serve-badge' }, '');
   const banner = h('div', { class: 'serve-banner', 'aria-live': 'polite' }, '');
-  let flashes = 0; let pops = 0; let banners = 0;
+  let flashes = 0; let pops = 0; let banners = 0; let presses = 0;
   return {
     // 캔버스를 화면 폭 가득 쓰고, 점수·상대 정보·판정·포기는 캔버스 위 오버레이, 힌트는 캔버스 아래
     el: h('section', { class: 'screen match' },
       h('div', { class: 'match-stage' },
         canvas,
         h('div', { class: 'hud' },
-          h('div', { class: 'opp-info' }, `${oppName}`, h('small', {}, oppStyle)),
+          h('div', { class: 'opp-info' }, h('b', { class: 'opp-name' }, oppName),
+            // 특징 칩: 라이벌 / 플레이 스타일(커트 위주·올라운더) / 실력대. (oppTags 없으면 예전처럼 한 줄 설명)
+            ...(oppTags ?? (oppStyle ? [{ label: oppStyle, kind: 'all' }] : [])).map((t) => h('span', { class: `opp-tag ${t.kind}` }, t.label))),
           h('div', { class: 'scoreboard' }, oppPanel, h('span', { class: 'vs' }, ':'), mePanel),
-          badge, judge, incoming),
+          badge, judge, incoming, laneChip),
         banner, pointBanner,
         h('button', { class: 'btn quit', type: 'button', onclick: onQuit }, quitLabel)),
       bar, coach, tip),
     setTip(text) { tip.textContent = text; tip.className = text ? 'tip on' : 'tip'; },
     /** 샷 선택 바: 간단 조작에서만 보인다 */
     setShotBar(visible) { bar.className = visible ? 'shotbar on' : 'shotbar'; },
-    setShot(key) { for (const [k, el] of Object.entries(shotBtns)) el.className = `shot-btn${k === key ? ' sel' : ''}${el.className.includes('hint') ? ' hint' : ''}`; },
+    /** 누른 버튼 잠깐 반짝 (선택 상태는 남기지 않는다: 샷 종류는 매번 상대 공을 보고 새로 정한다) */
+    flashShot(key) { presses += 1; for (const [k, el] of Object.entries(shotBtns)) el.className = `shot-btn${el.className.includes('hint') ? ' hint' : ''}${k === key ? ` press p${presses % 2}` : ''}`; },
     /** 튜토리얼: 눌러야 할 버튼을 반짝이게 */
-    setShotHint(key) { for (const [k, el] of Object.entries(shotBtns)) { const sel = el.className.includes('sel'); el.className = `shot-btn${sel ? ' sel' : ''}${k === key ? ' hint' : ''}`; } },
+    setShotHint(key) { for (const [k, el] of Object.entries(shotBtns)) { const press = el.className.match(/ press p[01]/)?.[0] ?? ''; el.className = `shot-btn${press}${k === key ? ' hint' : ''}`; } },
     /** 튜토리얼 설명 그림(룰 설명과 같은 도트 다이어그램). id 가 없으면 그림 칸을 숨긴다 */
     setCoachDiagram(id) { coachDiagram = id; coachCv.className = id ? 'coach-diagram on' : 'coach-diagram'; },
     drawCoachDiagram(t, mode) { if (coachDiagram && coachG) drawRuleDiagram(coachG, coachDiagram, t, mode); },
@@ -295,9 +305,9 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit, quitLabel = '�
       badge.className = `serve-badge ${side ?? ''}`.trim();
     },
     /** 서브 차례가 시작될 때 크게 알림 (두 애니메이션을 번갈아 써서 연속으로도 다시 재생된다) */
-    flashServe(side) {
+    flashServe(side, mode = 'simple') {
       flashes += 1;
-      banner.textContent = side === 'me' ? '내 서브!  화면을 탭하세요' : '상대 서브';
+      banner.textContent = side === 'me' ? (mode === 'simple' ? '내 서브!  아래 버튼으로 서브' : '내 서브!  화면을 탭하세요') : '상대 서브';
       banner.className = `serve-banner show ${side} f${flashes % 2}`;
     },
     setScore(me, opp, server) {
@@ -318,6 +328,8 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit, quitLabel = '�
       pointBanner.className = `point-banner show ${p.tone} b${banners % 2}`;
     },
     /** 날아오는 상대 공 종류 칩 (간단 조작). text 가 비면 숨김. key: 색 */
+    /** 코스 마커 라벨 (간단 조작): lane 이 null 이면 숨김. 코트를 탭하면 바뀌고, 버튼 스윙이 이 코스로 나간다 */
+    setLane(lane) { laneChip.textContent = lane ? `코스: ${{ left: '왼쪽', center: '가운데', right: '오른쪽' }[lane]} (코트를 탭해 바꿔요)` : ''; laneChip.className = lane ? `lane-chip on ${lane}` : 'lane-chip'; },
     setIncoming(text, key = null) { incoming.textContent = text; incoming.className = text ? `incoming on ${key ?? ''}`.trim() : 'incoming'; },
     setJudge(text) { judge.textContent = text; },
   };
@@ -329,7 +341,7 @@ export function tutorialDoneScreen({ onPlay, onAgain, onTitle, hasSave }) {
     h('p', { class: 'quote' }, '탭 타이밍 · 코스 · 탑스핀/커트 · 파워까지 모두 익혔어요.'),
     h('ul', {},
       h('li', {}, '노란 띠 안에서 탭, 붉은 띠 한가운데는 PERFECT'),
-      h('li', {}, '탭 위치 = 코스 (왼쪽 · 가운데 · 오른쪽)'),
+      h('li', {}, '코트 탭 = 코스 (왼쪽 · 가운데 · 오른쪽), 샷 버튼 = 스윙'),
       h('li', {}, '위로 쓸기 = 탑스핀, 아래로 쓸기 = 커트'),
       h('li', {}, '길게 쓸수록 강한 샷 (너무 세면 아웃)')),
     btn(hasSave ? '내 시즌으로 가기' : '새로 시작하기', onPlay, 'primary'),
