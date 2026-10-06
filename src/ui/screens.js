@@ -1,11 +1,12 @@
-import { h } from './dom.js?v=1791280542';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791280542';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791280542';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791280542';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791280542';
+import { h } from './dom.js?v=1791280858';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791280858';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791280858';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791280858';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791280858';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791280858';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791280542';
+} from '../game/season.js?v=1791280858';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -83,18 +84,22 @@ export function settingsScreen({ defs, values, onToggle, onReset, onBack }) {
     btn('돌아가기', onBack, 'primary'));
 }
 
-export function rulesScreen({ onBack }) {
-  return h('section', { class: 'screen rules' },
-    h('h2', {}, '룰 설명'),
-    h('ul', {},
-      h('li', {}, '공이 내 코트에 떨어지면 타이밍 존이 열립니다. 존 중앙에 맞춰 탭!'),
-      h('li', {}, '중앙은 PERFECT, 양옆은 GOOD, 존 밖 탭이나 노탭은 MISS(실점).'),
-      h('li', {}, '탭 위치(좌/중앙/우)로 코스를 정합니다.'),
-      h('li', {}, '위로 드래그: 탑스핀 / 아래로 드래그: 커트 / 드래그 길이: 파워.'),
-      h('li', {}, '파워가 너무 세면 아웃, 너무 낮고 평평하면 네트에 걸립니다.'),
-      h('li', {}, '11점 선취(10:10부터 2점 차), 2점마다 서브 교대.'),
-      h('li', {}, '승리 3pt, 패배 1pt. 파워/스핀/집중에 투자하세요.')),
-    btn('돌아가기', onBack, 'primary'));
+/** 룰 설명(그림): 도트 다이어그램 카드 6장. 반환 { el, draw(t) } — 앱이 프레임마다 draw(t) 로 그림을 움직인다 */
+export function rulesScreen({ onBack, mode = 'simple' }) {
+  const canvases = [];
+  const cards = ruleCards(mode).map((c) => {
+    const cv = h('canvas', { class: 'rule-canvas', width: DIAGRAM_W, height: DIAGRAM_H, 'aria-hidden': 'true' });
+    cv.width = DIAGRAM_W; cv.height = DIAGRAM_H;
+    const g = cv.getContext?.('2d'); if (g) g.imageSmoothingEnabled = false;
+    canvases.push({ id: c.id, g });
+    return h('article', { class: 'rule-card' }, cv, h('h3', {}, c.title), h('p', {}, c.text),
+      h('div', { class: 'chips' }, c.chips.map(([name, note, color]) => h('span', { class: 'rule-chip', style: `--c:${color}` }, h('b', {}, name), ` ${note}`))));
+  });
+  return {
+    el: h('section', { class: 'screen rules' }, h('h2', {}, '룰 설명'), ...cards, btn('돌아가기', onBack, 'primary')),
+    draw(t) { for (const { id, g } of canvases) if (g) drawRuleDiagram(g, id, t, mode); },
+    count: canvases.length,
+  };
 }
 
 export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, onSeasonEnd, onTutorial = null, tutorialDone = true }) {
@@ -214,7 +219,10 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit, quitLabel = '�
   const tip = h('div', { class: 'tip', 'aria-live': 'polite' }, '');
   const coachHead = h('div', { class: 'coach-head' }, ''); const coachText = h('div', { class: 'coach-text' }, '');
   const coachGoals = h('div', { class: 'coach-goals' }, ''); const coachFb = h('div', { class: 'coach-feedback' }, '');
-  const coach = h('div', { class: 'coach', 'aria-live': 'polite' }, coachHead, coachText, coachGoals, coachFb);
+  const coachCv = h('canvas', { class: 'coach-diagram', width: DIAGRAM_W, height: DIAGRAM_H, 'aria-hidden': 'true' }); coachCv.width = DIAGRAM_W; coachCv.height = DIAGRAM_H;
+  const coachG = coachCv.getContext?.('2d'); if (coachG) coachG.imageSmoothingEnabled = false;
+  let coachDiagram = null;
+  const coach = h('div', { class: 'coach', 'aria-live': 'polite' }, coachHead, h('div', { class: 'coach-body' }, coachCv, h('div', { class: 'coach-main' }, coachText, coachGoals, coachFb)));
   // 샷 선택 바(간단 조작): 공이 오기 전에 미리 고르는 큰 버튼. 마지막 선택이 유지된다
   const shotBtns = {};
   const bar = h('div', { class: 'shotbar', role: 'group', 'aria-label': '샷 종류 선택' },
@@ -245,6 +253,10 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit, quitLabel = '�
     setShot(key) { for (const [k, el] of Object.entries(shotBtns)) el.className = `shot-btn${k === key ? ' sel' : ''}${el.className.includes('hint') ? ' hint' : ''}`; },
     /** 튜토리얼: 눌러야 할 버튼을 반짝이게 */
     setShotHint(key) { for (const [k, el] of Object.entries(shotBtns)) { const sel = el.className.includes('sel'); el.className = `shot-btn${sel ? ' sel' : ''}${k === key ? ' hint' : ''}`; } },
+    /** 튜토리얼 설명 그림(룰 설명과 같은 도트 다이어그램). id 가 없으면 그림 칸을 숨긴다 */
+    setCoachDiagram(id) { coachDiagram = id; coachCv.className = id ? 'coach-diagram on' : 'coach-diagram'; },
+    drawCoachDiagram(t, mode) { if (coachDiagram && coachG) drawRuleDiagram(coachG, coachDiagram, t, mode); },
+    get coachDiagram() { return coachDiagram; },
     /** 튜토리얼 코치 패널: v = tutorial.view (null 이면 숨김) */
     setCoach(v) {
       if (!v) { coach.className = 'coach'; return; }

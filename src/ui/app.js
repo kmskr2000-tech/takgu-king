@@ -1,27 +1,28 @@
-import { h } from './dom.js?v=1791280542';
+import { h } from './dom.js?v=1791280858';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen,
-} from './screens.js?v=1791280542';
+} from './screens.js?v=1791280858';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791280542';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791280542';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791280542';
-import { SHOT_TYPES, DEFAULT_SHOT_TYPE } from '../game/controls.js?v=1791280542';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791280542';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791280542';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791280542';
-import { createAudio } from './audio.js?v=1791280542';
-import { createHaptics, react } from './feedback.js?v=1791280542';
-import { createRenderer } from './render.js?v=1791280542';
-import { createMatchController } from '../game/matchController.js?v=1791280542';
+} from './intro.js?v=1791280858';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791280858';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791280858';
+import { SHOT_TYPES, DEFAULT_SHOT_TYPE } from '../game/controls.js?v=1791280858';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791280858';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791280858';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791280858';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791280858';
+import { createAudio } from './audio.js?v=1791280858';
+import { createHaptics, react } from './feedback.js?v=1791280858';
+import { createRenderer } from './render.js?v=1791280858';
+import { createMatchController } from '../game/matchController.js?v=1791280858';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult,
-} from '../game/season.js?v=1791280542';
-import { createStore } from '../game/store.js?v=1791280542';
-import { createRng } from '../core/index.js?v=1791280542';
+} from '../game/season.js?v=1791280858';
+import { createStore } from '../game/store.js?v=1791280858';
+import { createRng } from '../core/index.js?v=1791280858';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -100,8 +101,16 @@ export function createApp(root, deps = {}) {
         },
         onTutorial: () => api.startMatch({ tutorial: true, from: 'title' }),
         onSettings: () => api.showSettings(),
-        onRules: () => mount(rulesScreen({ onBack: () => api.showTitle() })),
+        onRules: () => api.showRules(),
       }));
+    },
+    /** 룰 설명(그림): 카드의 도트 다이어그램이 시간에 따라 움직인다 */
+    showRules() {
+      const view = rulesScreen({ onBack: () => { loop = null; api.showTitle(); }, mode: settings.get().controls });
+      mount(view.el);
+      const token = {}; loop = token; const t0 = nowFn();
+      const tick = () => { if (loop !== token) return; view.draw(nowFn() - t0); raf(tick); };
+      tick();
     },
     showSettings() {
       mount(settingsScreen({
@@ -256,7 +265,7 @@ export function createApp(root, deps = {}) {
           if (tut) { // 튜토리얼: 단계 진행·코치 패널 갱신. 결과는 기록하지 않는다
             if (['serve', 'return', 'missed', 'point'].includes(e.type)) {
               const r = tut.handle(e);
-              view.setCoach(r.view); view.setShotHint(r.view.hint.button ?? null); // 눌러야 할 샷 버튼 반짝
+              view.setCoach(r.view); view.setShotHint(r.view.hint.button ?? null); view.setCoachDiagram(DIAGRAM_FOR_STEP[r.view.id] ?? null); // 눌러야 할 샷 버튼 반짝 + 설명 그림
               if (r.completed) {
                 tutorialStore.complete();
                 later(() => { if (loop === token) api.showTutorialDone(opts); }, 1500);
@@ -278,7 +287,7 @@ export function createApp(root, deps = {}) {
         },
       });
       const tipper = createTipper({ store: tipsStore, enabled: () => !tut && settings.get().tips, tips: tipsFor(mode) });
-      if (tut) { view.setCoach(tut.view); view.setShotHint(tut.view.hint.button ?? null); } // 첫 단계 안내
+      if (tut) { view.setCoach(tut.view); view.setShotHint(tut.view.hint.button ?? null); view.setCoachDiagram(DIAGRAM_FOR_STEP[tut.view.id] ?? null); } // 첫 단계 안내
       const token = {};
       loop = token;
       const toLocal = (ev) => {
@@ -316,6 +325,7 @@ export function createApp(root, deps = {}) {
         if (loop !== token) return;
         const now = clock();
         ctl.update(now);
+        if (tut) view.drawCoachDiagram(nowFn(), mode); // 튜토리얼 설명 그림(움직임)
         renderer.setHint(tut ? tut.view.hint : null); // 레인·화살표 안내(튜토리얼 단계별)
         renderer.draw(ctl, now);
         view.setScore(ctl.match.score.me, ctl.match.score.opp, ctl.match.server);

@@ -17,5 +17,10 @@
     } catch { /* 오프라인/실패: 현재 버전으로 계속 */ }
   }
   const { createApp } = await import(`./ui/app.js${q}`);
-  createApp(document.getElementById('app')).start();
+  const app = createApp(document.getElementById('app'));
+  // 직접 링크: #rules(룰 설명) / #settings(설정) — 상태가 필요 없는 화면만. 인트로는 건너뛴다
+  const hash = (typeof location !== 'undefined' && location.hash) || '';
+  if (hash === '#rules') app.showRules();
+  else if (hash === '#settings') app.showSettings();
+  else app.start();
 })();
