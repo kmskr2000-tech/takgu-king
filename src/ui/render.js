@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791278878';
-import { createEffects } from './effects.js?v=1791278878';
-import { createRng } from '../core/rng.js?v=1791278878';
+} from './sprites.js?v=1791280542';
+import { createEffects } from './effects.js?v=1791280542';
+import { createRng } from '../core/rng.js?v=1791280542';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -40,6 +40,10 @@ const C = {
   zone: 'rgba(255,220,80,0.30)', zoneEdge: '#ffd24a', perfect: 'rgba(255,120,60,0.55)', chevron: '#ffffff',
   top: '#ff5a4a', back: '#4aa3ff', floor: '#141d2a', floorLine: '#1d2a3d', wall: '#0b0f1c',
 };
+// 코스 화살표(7x7 도트): 왼쪽 탭 → 왼쪽 위로, 가운데 → 정면, 오른쪽 → 오른쪽 위로
+const ARROW_UP = ['...#...', '..###..', '.#####.', '...#...', '...#...', '...#...', '...#...'];
+const ARROW_UL = ['#####..', '####...', '###....', '#.##...', '#..##..', '....##.', '.....##'];
+const ARROW_UR = ARROW_UL.map((r) => [...r].reverse().join(''));
 const WALL_Y = 112; // 뒷벽(관중석)과 바닥의 경계 (화면 y)
 const SKY = ['#05070d', '#070b16', '#0a1022', '#0e1530', '#131a3a', '#1a2350'];
 const SHIRTS = ['#d94f4f', '#e8b83a', '#4a9de0', '#6fcf6f', '#c06be0', '#f0f0f0', '#ff8a3d'];
@@ -65,7 +69,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
   const trail = [];
   const fx = createEffects(rng);
   const st = {
-    swing: { me: null, opp: null }, meX: 50, oppX: 50, lastNow: null, lastGrade: 'GOOD', look: 'opp', shake: 0,
+    controlMode: 'advanced', meTarget: 50, meK: 3, lean: 0, lastAct: null, hint: null, swing: { me: null, opp: null }, meX: 50, oppX: 50, lastNow: null, lastGrade: 'GOOD', look: 'opp', shake: 0,
   };
 
   const R = (g, x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
@@ -182,6 +186,19 @@ export function createRenderer(canvas, { rng, options } = {}) {
     }
   }
 
+  // 간단 조작: 탭 위치 = 코스. 존 위에 구분선과 세 방향 화살표(↖ ↑ ↗)를 선수 앞에 그려 "왼쪽을 탭하면 왼쪽으로"를 보여준다
+  function drawLaneArrows(timing) {
+    if (st.controlMode !== 'simple' || !timing?.zone) return;
+    const z = timing.zone; const rowC = Math.round(groundY(Math.min(z.y, CAM.Y_NEAR))); const hwC = halfWidthAtRow(rowC);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    for (const f of [-1 / 6, 1 / 6]) ctx.fillRect(Math.round(CAM.CX + f * hwC * 2), rowC - 10, 1, 20); // 3등분 구분선
+    for (const [i, art] of [[-1, ARROW_UL], [0, ARROW_UP], [1, ARROW_UR]]) {
+      const ax = Math.round(CAM.CX + i * hwC * 0.66) - 7; const ay = rowC - 34; // 2배 도트(폰에서도 잘 보이게)
+      drawSprite(ctx, art, { '#': '#14110f' }, ax + 2, ay + 2, { scale: 2 }); // 그림자
+      drawSprite(ctx, art, { '#': '#ffd24a' }, ax, ay, { scale: 2 });
+    }
+  }
+
   function drawPlayers(ctl, now) {
     const meFrame = (() => {
       const f = swingFrame(st.swing.me == null ? null : now - st.swing.me);
@@ -244,31 +261,75 @@ export function createRenderer(canvas, { rng, options } = {}) {
     drawSprite(ctx, BALL, BALL_PALETTE, bx - Math.floor((5 * sc) / 2), by - Math.floor((5 * sc) / 2), { scale: sc });
   }
 
-  function follow(ctl, dt) {
+  // 튜토리얼 안내: 코스 레인 반짝임 + 스와이프 방향 화살표(파워 단계는 긴 화살표)
+  function drawCoachHint(now) {
+    const hn = st.hint; if (!hn) return;
+    const pulse = 0.5 + 0.5 * Math.sin(now * 7);
+    if (hn.lane) { // 가까운 쪽 코트의 왼쪽/오른쪽 3분의 1을 밝게
+      const r0 = Math.round(groundY(150)); const r1 = Math.round(groundY(262));
+      for (let row = r0; row <= r1; row++) {
+        const hw = halfWidthAtRow(row); const third = (hw * 2) / 3;
+        const x0 = hn.lane === 'left' ? CAM.CX - hw : CAM.CX + hw - third;
+        ctx.fillStyle = `rgba(255,210,74,${(0.16 + 0.2 * pulse).toFixed(2)})`; ctx.fillRect(Math.round(x0), row, Math.round(third), 1);
+      }
+    }
+    if (hn.arrow) { // 위/아래 화살표가 위아래로 움직여 "이렇게 쓸어요"를 보여준다
+      const dir = hn.arrow === 'up' ? -1 : 1; const len = hn.power ? 34 : 20;
+      const cx = CAM.CX; const base = 252 + (hn.arrow === 'up' ? 24 : -24); const move = Math.round(((now * 1.6) % 1) * len);
+      const y = base + dir * move;
+      ctx.fillStyle = '#14110f'; ctx.fillRect(cx - 3, Math.min(base, y) - 1, 6, Math.abs(y - base) + 3); // 자취(테두리)
+      ctx.fillStyle = hn.power ? '#ff5a1a' : '#ffd24a'; ctx.fillRect(cx - 2, Math.min(base, y), 4, Math.abs(y - base) + 1);
+      for (let j = 0; j < 5; j++) { // 화살촉
+        ctx.fillStyle = '#14110f'; ctx.fillRect(cx - 5 + j, y + (hn.arrow === 'up' ? j : -j) - 1, 11 - 2 * j, 3);
+        ctx.fillStyle = hn.power ? '#ff5a1a' : '#ffd24a'; ctx.fillRect(cx - 4 + j, y + (hn.arrow === 'up' ? j : -j), 9 - 2 * j, 2);
+      }
+    }
+  }
+
+  /**
+   * 선수 이동. 내 선수는 "입력의 결과"로만 움직인다 (자동으로 먼저 움직이지 않는다 → 조작 효능감):
+   *  - 평소엔 중앙에 서 있고, 공이 어디로 오든 미리 따라가지 않는다
+   *  - 탭하는 순간(grade 이벤트) 공의 위치로 재빨리 스텝하며 스윙 (헛탭이어도 닿으려는 동작)
+   *  - 샷이 나가면(hit) 고른 코스 방향으로 몸이 살짝 기운다
+   *  - 입력이 끝나고 잠시 뒤 중앙으로 복귀. 아예 안 누르면 움직이지 않는다
+   * 상대(AI)는 내 샷이 떨어질 곳으로 움직인다 (내 입력 이후이므로 입력을 앞서지 않는다)
+   */
+  function follow(ctl, dt, now) {
     const land = ctl.flight?.land?.x;
-    const incomingMe = ctl.timing != null;
-    const target = (side) => (land != null && ((side === 'me') === incomingMe) ? clamp(land, 8, 92) : 50);
     const k = Math.min(1, dt * 8);
-    st.meX += (target('me') - st.meX) * k;
-    st.oppX += (target('opp') - st.oppX) * k;
+    st.oppX += (((land != null && ctl.timing == null) ? clamp(land, 8, 92) : 50) - st.oppX) * k;
+    if (st.lastAct != null && !ctl.pendingDown && now - st.lastAct > 0.35) { st.meTarget = 50; st.meK = 4; st.lean = 0; } // 복귀
+    st.meX += (clamp(st.meTarget + st.lean, 4, 96) - st.meX) * Math.min(1, dt * st.meK);
   }
 
   return {
     effects: fx,
     state: st,
     project,
+    /** 튜토리얼 안내: { lane: 'left'|'right', arrow: 'up'|'down', power: bool } (없으면 null) */
+    setHint(h) { st.hint = h && (h.lane || h.arrow) ? h : null; },
+    setControlMode(m) { st.controlMode = m; },
     setOpponentLook(look) { st.look = look === 'rival' ? 'rival' : 'opp'; },
     /** 컨트롤러 이벤트 수신: 스윙 애니메이션 + 이펙트 */
     notify(e, now) {
-      if (e.type === 'grade') st.lastGrade = e.grade;
+      if (e.type === 'grade') {
+        st.lastGrade = e.grade;
+        // 탭 순간: 스윙 시작 + 공이 있는 곳으로 스텝 (입력이 먼저, 움직임은 그 결과)
+        st.swing.me = now; st.lastAct = now; st.meK = 16;
+        if (Number.isFinite(e.x)) st.meTarget = clamp(e.x, 8, 92);
+      }
       if (e.type === 'hit') {
         trail.length = 0; // 새 공: 이전 궤적과 이어지지 않게
-        st.swing[e.side] = now;
+        if (e.side === 'me') { // 서브/리턴 발사: 고른 코스 쪽으로 기울기 (리턴 스윙은 탭 시점에 이미 시작됨)
+          if (st.swing.me == null || now - st.swing.me > 0.3) st.swing.me = now;
+          st.lastAct = now; const lx = e.flight?.land?.x; st.lean = lx != null ? clamp((lx - 50) * 0.14, -7, 7) : 0;
+        } else st.swing[e.side] = now;
         const c0 = e.flight?.pos ? e.flight.pos(0) : { x: 50, y: e.side === 'me' ? 200 : 0, z: 12 };
         const p = project(c0.x, c0.y, c0.z ?? 0);
         if (p && opt().effects) fx.hit(p.x, p.y, e.side === 'me' ? st.lastGrade : 'GOOD', { scale: spriteScale(p.k, 1) }); // 깊이에 맞춰 스파크 크기
       }
       if (e.type === 'point') {
+        st.meTarget = 50; st.meK = 4; st.lean = 0;
         const p = project(st.meX, e.winner === 'me' ? 215 : 5);
         if (p && opt().effects) fx.score(p.x, p.y, e.winner === 'me');
         st.shake = e.winner !== 'me' && opt().effects && opt().shake ? 0.25 : 0;
@@ -279,7 +340,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
       if (!ctx) return;
       const dt = st.lastNow == null ? 0 : clamp(now - st.lastNow, 0, 0.1);
       st.lastNow = now;
-      follow(ctl, dt);
+      follow(ctl, dt, now);
       if (!opt().effects) fx.clear();
       fx.update(dt);
       st.shake = Math.max(0, st.shake - dt);
@@ -288,7 +349,9 @@ export function createRenderer(canvas, { rng, options } = {}) {
       drawStatic();
       if (opt().guide) drawZone(ctl.timing, now, ctl.t0);
       drawPlayers(ctl, now);
+      if (opt().guide) drawLaneArrows(ctl.timing); // 선수 앞(위)에
       drawServeCue(ctl, now);
+      drawCoachHint(now);
       drawBall(ctl.ballAt(now), ctl.flight?.spin ?? 0); // 공은 선수 뒤에 가려지지 않게 선수 다음에 그린다
       fx.draw(ctx);
       ctx.restore?.();

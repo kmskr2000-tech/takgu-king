@@ -18,8 +18,10 @@ const defaultFactory = () => {
 
 /** enabled(): 설정에서 사운드가 켜져 있는지. ctxFactory: 테스트 주입용 */
 export function createAudio({ enabled = () => true, ctxFactory = defaultFactory } = {}) {
-  let ctx = null;
+  let ctx = null; let suspended = false;
   return {
+    /** 광고가 재생되는 동안 효과음을 멈춘다 (광고 훅에서 호출) */
+    setSuspended(v) { suspended = !!v; },
     /** 사용자 제스처(탭/클릭) 안에서 호출: 모바일 브라우저는 그때만 오디오를 허용 */
     unlock() {
       try {
@@ -31,7 +33,7 @@ export function createAudio({ enabled = () => true, ctxFactory = defaultFactory 
     get ready() { return !!ctx; },
     /** 재생했으면 true */
     play(name) {
-      if (!enabled() || !ctx || !SFX[name]) return false;
+      if (suspended || !enabled() || !ctx || !SFX[name]) return false;
       try {
         const t0 = ctx.currentTime;
         for (const n of SFX[name]) {

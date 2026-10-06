@@ -90,3 +90,27 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 @keyframes serveflash0 { 0% { opacity: 0; transform: scale(1.5); } 12% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes serveflash1 { 0% { opacity: 0; transform: scale(1.5); } 12% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .serve-banner.show { animation: none; opacity: 1; } }
+
+/* 튜토리얼 */
+.coach { display: none; }
+.coach.on { display: block; background: rgba(14,28,52,.95); border: 2px solid var(--accent); border-radius: 8px; padding: 10px 12px; }
+.coach.done { border-color: #6fcf6f; }
+.coach-head { color: var(--accent); font-weight: 800; font-size: .9rem; letter-spacing: .5px; }
+.coach-text { color: #fff; font-weight: 700; margin: 4px 0; line-height: 1.35; }
+.coach-goals { color: #c8d3e0; font-size: .85rem; }
+.coach-feedback { color: #ffd24a; font-weight: 800; min-height: 1.3em; margin-top: 2px; }
+.btn.recommend { border-color: var(--accent); color: var(--accent); }
+.screen.tutorial-done ul { margin: 0; padding-left: 1.2em; line-height: 1.7; }
+
+/* 샷 선택 바 (간단 조작) */
+.shotbar { display: none; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.shotbar.on { display: grid; }
+.shot-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 60px; padding: 8px 4px; font: inherit; color: #fff;
+  background: #16212e; border: 2px solid var(--c, #fff); border-radius: 8px; }
+.shot-btn b { font-size: 1.05rem; color: var(--c, #fff); }
+.shot-btn small { font-size: .68rem; color: #c8d3e0; line-height: 1.2; text-align: center; }
+.shot-btn.sel { background: var(--c); box-shadow: 0 0 0 2px #000 inset; } .shot-btn.sel b, .shot-btn.sel small { color: #111; }
+.shot-btn.hint { animation: shotpulse .8s ease-in-out infinite alternate; }
+@keyframes shotpulse { from { box-shadow: 0 0 0 0 rgba(255,210,74,.0); } to { box-shadow: 0 0 0 5px rgba(255,210,74,.9); } }
+@media (prefers-reduced-motion: reduce) { .shot-btn.hint { animation: none; box-shadow: 0 0 0 4px rgba(255,210,74,.9); } }
+.match-stage { width: min(100%, calc((100dvh - 150px) * 0.5)); }

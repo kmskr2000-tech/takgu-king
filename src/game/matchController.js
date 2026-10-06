@@ -1,12 +1,13 @@
-import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791278878';
+import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791280542';
+import { simpleAim, DEFAULT_SHOT_TYPE } from './controls.js?v=1791280542';
+import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791280542';
 import {
   SIDES, STATES, GRADES, createMatch, createShot, flightOf, buildTiming, judgeTap, judgeNoTap,
   classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide,
-} from '../core/index.js?v=1791278878';
+} from '../core/index.js?v=1791280542';
 
 const OPP_SERVE_DELAY = 1.0; // 상대 서브 전 대기(초)
 const POINT_PAUSE = 1.2; // 득점 후 연출 대기(초)
-const HOLD_MAX = 0.6; // 손가락을 이만큼 이상 누르고 있으면 탭으로 자동 확정(up 유실 대비)
 
 /**
  * 경기 컨트롤러: 코어(물리/판정/AI/상태기계)를 실시간 입력에 연결한다. DOM·타이머 무관 — now(초)를 외부에서 받는다.
@@ -15,6 +16,8 @@ const HOLD_MAX = 0.6; // 손가락을 이만큼 이상 누르고 있으면 탭�
  */
 export function createMatchController({
   stats, oppParams, rng, firstServer = SIDES.ME, courtWidth = 300, onEvent = () => {}, difficulty = DEFAULT_DIFFICULTY,
+  controlMode = 'advanced', // 'simple': 탭 순간 즉시 발사(샷 종류는 getShotType) / 'advanced': 탭 + 쓸기(확정 창 COMMIT_WINDOW)
+  getShotType = () => DEFAULT_SHOT_TYPE,
 }) {
   const diff = difficultyOf(difficulty);
   const m = createMatch({ firstServer });
@@ -23,6 +26,7 @@ export function createMatchController({
     pendingDown: null, aiAt: null, aiPlan: null, resumeAt: 0, lastGrade: null,
   };
   c.stats = stats;
+  c.controlMode = controlMode;
   c.difficulty = difficulty;
 
   const emit = (e) => onEvent(e);
@@ -72,25 +76,60 @@ export function createMatchController({
 
   c.pointerDown = (now, x, y) => {
     if (c.phase === 'awaitServe') {
-      c.pendingDown = { now, x, y, judge: null };
+      if (controlMode === 'simple') { // 간단: 탭 즉시 서브 (코스 = 탭 위치, 샷 종류 = 선택한 버튼)
+        const course = courseOf(x / courtWidth);
+        const aim = simpleAim(COURSE_X[course], getShotType());
+        afterShot(m.serve(createShot({ from: { x: 50, side: SIDES.ME }, aim, stats, rng })), now, SIDES.ME);
+        emit({ type: 'serve', side: SIDES.ME });
+        return;
+      }
+      c.pendingDown = { now, x, y, judge: null, last: { x, y } };
       return;
     }
     if (c.phase === 'flight' && c.timing && !c.pendingDown) {
       const judge = judgeTap(now - c.t0, c.timing);
-      c.pendingDown = { now, x, y, judge };
-      emit({ type: 'grade', grade: judge.grade, offset: judge.offset });
+      const pos = c.flight.postPos(now - c.t0);
       c.lastGrade = judge.grade;
+      emit({ type: 'grade', grade: judge.grade, offset: judge.offset, x: pos.x }); // x: 탭 순간 공의 위치(선수 스텝·스윙 연출용)
       // 구간 밖 탭은 즉시 실점
-      if (judge.grade === GRADES.MISS) respondMe(now, null);
+      if (judge.grade === GRADES.MISS) {
+        c.pendingDown = { now, x, y, judge, last: { x, y } };
+        emit({ type: 'missed', reason: judge.offset < 0 ? 'early' : 'late' });
+        respondMe(now, null);
+        return;
+      }
+      if (controlMode === 'simple') { // 간단: 판정 즉시 샷 발사 — 손을 뗄 때까지 기다리지 않는다
+        const course = courseOf(x / courtWidth);
+        const type = getShotType();
+        const aim = simpleAim(COURSE_X[course], type);
+        if (diff.assistCourse) aim.targetX = assistTargetX(c.flight.pos(0).x, aim.targetX);
+        c.pendingDown = { now, x, y, judge, last: { x, y } };
+        const shot = createShot({
+          from: { x: pos.x, side: SIDES.ME }, aim, stats, rng, grade: judge.grade, offset: judge.offset, hitY: pos.y,
+        });
+        respondMe(now, shot, { course, spin: aim.spin, power: aim.power, shotType: type });
+        return;
+      }
+      c.pendingDown = { now, x, y, judge, last: { x, y } };
     }
   };
 
-  function respondMe(now, shot) {
+  /** 쓸기(고급 조작) 추적: 확정 순간의 손가락 위치를 쓰기 위해 마지막 위치를 기록 */
+  c.pointerMove = (now, x, y) => {
+    if (c.pendingDown) c.pendingDown.last = { x, y };
+  };
+
+  function respondMe(now, shot, gesture = null) {
+    const noTap = !c.pendingDown;
     const judge = c.pendingDown?.judge ?? judgeNoTap(c.timing);
     c.pendingDown = null;
     c.timing = null;
+    if (noTap) emit({ type: 'missed', reason: 'late' }); // 노탭: 존이 끝날 때까지 안 눌렀다
     const res = m.respond(judge, shot);
     afterShot(res, now, SIDES.ME);
+    // 내 리턴 결과(튜토리얼·통계용): 판정 + 입력한 코스/스핀/파워 + 공이 코트에 들어갔는지('in') 네트/아웃인지
+    if (gesture && shot) emit({ type: 'return', grade: judge.grade, course: gesture.course, spin: gesture.spin, power: gesture.power, shotType: gesture.shotType, kind: res.flight?.kind ?? 'in' });
+    return res;
   }
 
   c.pointerUp = (now, x, y) => {
@@ -114,7 +153,7 @@ export function createMatchController({
         from: { x: pos.x, side: SIDES.ME }, aim, stats, rng,
         grade: d.judge.grade, offset: d.judge.offset, hitY: pos.y,
       });
-      respondMe(now, shot);
+      respondMe(now, shot, g);
     }
   };
 
@@ -127,8 +166,10 @@ export function createMatchController({
   };
 
   c.update = (now) => {
-    if (c.phase === 'flight' && c.pendingDown && now - c.pendingDown.now > HOLD_MAX) {
-      c.pointerCancel(now); // up 이 오지 않는 경우 랠리 정지 방지
+    // 고급 조작: 탭 후 COMMIT_WINDOW 안에 샷을 확정한다(손을 안 떼도) → 뗄 때까지 공이 멈춰 보이지 않는다. up 이 유실돼도 막히지 않는다
+    const pd = c.pendingDown;
+    if (pd && (c.phase === 'flight' || c.phase === 'awaitServe') && now - pd.now >= COMMIT_WINDOW) {
+      c.pointerUp(now, pd.last?.x ?? pd.x, pd.last?.y ?? pd.y);
     }
     switch (c.phase) {
       case 'oppServeWait':

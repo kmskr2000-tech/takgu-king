@@ -1,6 +1,12 @@
 import {
-  DRAG_MIN, DRAG_FULL, TAP_POWER, DRAG_VERTICAL_RATIO, COURSE_X,
-} from './constants.js?v=1791278878';
+  DRAG_MIN_FRAC, DRAG_FULL_FRAC, DRAG_MIN_PX, TAP_POWER, DRAG_VERTICAL_RATIO, COURSE_X,
+} from './constants.js?v=1791280542';
+
+/** 코트 폭(px)에 맞춘 드래그 기준 (최소/풀파워) */
+export const dragThresholds = (courtWidth) => ({
+  min: Math.max(DRAG_MIN_PX, DRAG_MIN_FRAC * courtWidth),
+  full: Math.max(DRAG_MIN_PX * 4, DRAG_FULL_FRAC * courtWidth),
+});
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -23,6 +29,7 @@ export function classifyGesture({ down, up, courtWidth }) {
   const dy = up.y - down.y;
   const len = Math.hypot(dx, dy);
   const course = courseOf(down.x / courtWidth);
+  const { min: DRAG_MIN, full: DRAG_FULL } = dragThresholds(courtWidth);
 
   let spin = 0;
   const vertical = Math.abs(dy) >= DRAG_MIN && Math.abs(dy) >= Math.abs(dx) * DRAG_VERTICAL_RATIO;

@@ -39,8 +39,11 @@ export const WIN_SCORE = 11;
 export const DEUCE_AT = 10;
 
 // 입력 (px 기준, 모바일 터치)
-export const DRAG_MIN = 14; // 이 길이 미만 이동은 탭으로 간주
-export const DRAG_FULL = 160; // 이 길이 이상이면 파워 최대
+// 드래그 거리는 화면(코트) 폭 비율 — 기기 크기와 무관하게 같은 손맛. (폭 300px 기준: 최소 ≈13px, 파워 최대 ≈120px)
+export const DRAG_MIN_FRAC = 0.045; // 이 비율 미만 이동은 탭으로 간주
+export const DRAG_FULL_FRAC = 0.4; // 이 비율 이상이면 파워 최대 (0.2초 안에 쓸 수 있는 거리)
+export const DRAG_MIN_PX = 8; // 아주 작은 화면에서의 하한
+export const COMMIT_WINDOW = 0.15; // 고급 조작: 탭 후 이 시간(초) 안에 샷을 확정한다 (손을 안 떼도). 이게 없으면 뗄 때까지 공이 멈춘 듯 보인다
 export const TAP_POWER = 0.35; // 그냥 탭의 기본 파워
 export const DRAG_VERTICAL_RATIO = 0.6; // 세로 성분이 가로의 이 비율 이상이어야 스핀 드래그
 export const COURSE_X = Object.freeze({ left: 20, center: 50, right: 80 });

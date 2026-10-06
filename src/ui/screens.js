@@ -1,10 +1,11 @@
-import { h } from './dom.js?v=1791278878';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791278878';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791278878';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791278878';
+import { h } from './dom.js?v=1791280542';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791280542';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791280542';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791280542';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791280542';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791278878';
+} from '../game/season.js?v=1791280542';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -42,7 +43,7 @@ export function introScreen({ canvas, onSkip }) {
   return { el, setCaption(text) { caption.textContent = text; } };
 }
 
-export function titleScreen({ hasSave, onContinue, onNew, onSettings, onRules }) {
+export function titleScreen({ hasSave, onContinue, onNew, onTutorial = null, onSettings, onRules }) {
   const icon = h('canvas', { class: 'icon', width: 16, height: 16 });
   icon.width = 16; icon.height = 16;
   const ictx = icon.getContext?.('2d');
@@ -58,6 +59,7 @@ export function titleScreen({ hasSave, onContinue, onNew, onSettings, onRules })
       class: `btn${hasSave ? ' primary' : ''}`, type: 'button', disabled: hasSave ? null : true,
       'aria-disabled': hasSave ? null : 'true', onclick: hasSave ? onContinue : null,
     }, '이어하기'),
+    onTutorial && btn('튜토리얼', onTutorial),
     btn('설정', onSettings),
     btn('룰 설명', onRules));
 }
@@ -95,7 +97,7 @@ export function rulesScreen({ onBack }) {
     btn('돌아가기', onBack, 'primary'));
 }
 
-export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, onSeasonEnd }) {
+export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, onSeasonEnd, onTutorial = null, tutorialDone = true }) {
   const table = standings(state);
   const nm = nextMatch(state);
   const rival = nm?.opp?.rival ? RIVALS[state.league] : null;
@@ -118,6 +120,7 @@ export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, o
       h('span', { class: 'chip pts' }, `포인트 ${state.statPoints}`)),
     state.phase === 'seasonEnd' && btn('시즌 결과 보기', onSeasonEnd, 'primary'),
     nm && btn(state.phase === 'tournament' ? '토너먼트 경기 시작' : '경기 시작', onPlay, 'primary'),
+    onTutorial && btn(tutorialDone ? '튜토리얼 다시 하기' : '튜토리얼 (처음이라면 추천)', onTutorial, tutorialDone ? '' : 'recommend'),
     btn('스탯 투자', onStats),
     btn('토너먼트 대진표', onBracket),
     btn('타이틀', onTitle));
@@ -193,20 +196,34 @@ export function bracketScreen({ bracket, onBack }) {
     btn('돌아가기', onBack, 'primary'));
 }
 
-export function resultScreen({ result, onNext }) {
+export function resultScreen({ result, onNext, reward = null }) {
   return h('section', { class: 'screen result' },
     h('h2', {}, result.won ? '승리!' : result.forfeit ? '기권패' : '패배…'),
     h('p', { class: 'score' }, `${result.score.me} : ${result.score.opp}`),
     h('p', {}, `획득 포인트 +${result.gained}`),
+    result.rewarded && h('p', { class: 'win' }, `보상 지급! 포인트 +${result.gained} 추가`),
     !result.won && h('p', { class: 'quote' }, '지면 다시. 한 번 더!'),
+    reward && btn(reward.label, reward.onClick),
     btn('계속', onNext, 'primary'));
 }
 
-export function matchScreen({ oppName, oppStyle, canvas, onQuit }) {
+export function matchScreen({ oppName, oppStyle, canvas, onQuit, quitLabel = '포기', onShot = null }) {
   const oppScore = h('span', { class: 'opp-score' }, '0');
   const meScore = h('span', { class: 'me-score' }, '0');
   const judge = h('div', { class: 'judge' }, '');
   const tip = h('div', { class: 'tip', 'aria-live': 'polite' }, '');
+  const coachHead = h('div', { class: 'coach-head' }, ''); const coachText = h('div', { class: 'coach-text' }, '');
+  const coachGoals = h('div', { class: 'coach-goals' }, ''); const coachFb = h('div', { class: 'coach-feedback' }, '');
+  const coach = h('div', { class: 'coach', 'aria-live': 'polite' }, coachHead, coachText, coachGoals, coachFb);
+  // 샷 선택 바(간단 조작): 공이 오기 전에 미리 고르는 큰 버튼. 마지막 선택이 유지된다
+  const shotBtns = {};
+  const bar = h('div', { class: 'shotbar', role: 'group', 'aria-label': '샷 종류 선택' },
+    SHOT_ORDER.map((k) => {
+      const t = SHOT_TYPES[k];
+      shotBtns[k] = h('button', { class: 'shot-btn', type: 'button', 'data-shot': k, style: `--c:${t.color}`, onclick: () => onShot?.(k) },
+        h('b', {}, t.label), h('small', {}, t.desc));
+      return shotBtns[k];
+    }));
   const badge = h('div', { class: 'serve-badge' }, '');
   const banner = h('div', { class: 'serve-banner', 'aria-live': 'polite' }, '');
   let flashes = 0;
@@ -220,9 +237,23 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit }) {
           h('div', { class: 'scoreboard' }, oppScore, ' : ', meScore),
           badge, judge),
         banner,
-        h('button', { class: 'btn quit', type: 'button', onclick: onQuit }, '포기')),
-      tip),
+        h('button', { class: 'btn quit', type: 'button', onclick: onQuit }, quitLabel)),
+      bar, coach, tip),
     setTip(text) { tip.textContent = text; tip.className = text ? 'tip on' : 'tip'; },
+    /** 샷 선택 바: 간단 조작에서만 보인다 */
+    setShotBar(visible) { bar.className = visible ? 'shotbar on' : 'shotbar'; },
+    setShot(key) { for (const [k, el] of Object.entries(shotBtns)) el.className = `shot-btn${k === key ? ' sel' : ''}${el.className.includes('hint') ? ' hint' : ''}`; },
+    /** 튜토리얼: 눌러야 할 버튼을 반짝이게 */
+    setShotHint(key) { for (const [k, el] of Object.entries(shotBtns)) { const sel = el.className.includes('sel'); el.className = `shot-btn${sel ? ' sel' : ''}${k === key ? ' hint' : ''}`; } },
+    /** 튜토리얼 코치 패널: v = tutorial.view (null 이면 숨김) */
+    setCoach(v) {
+      if (!v) { coach.className = 'coach'; return; }
+      coach.className = v.completed ? 'coach on done' : 'coach on';
+      coachHead.textContent = v.completed ? '튜토리얼 완료!' : `STEP ${v.index + 1}/${v.total} · ${v.title}`;
+      coachText.textContent = v.completed ? '모든 조작을 익혔어요. 잠시 뒤 다음 화면으로 갑니다.' : v.text;
+      coachGoals.textContent = v.goals.map((g) => `${g.label} ${g.got}/${g.need}`).join('   ');
+      coachFb.textContent = v.feedback;
+    },
     /** 항상 보이는 서브 배지: 지금 서브 차례가 누구인지 */
     setServe(side) {
       badge.textContent = side === 'me' ? '내 서브' : side === 'opp' ? '상대 서브' : '';
@@ -240,4 +271,18 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit }) {
     },
     setJudge(text) { judge.textContent = text; },
   };
+}
+
+export function tutorialDoneScreen({ onPlay, onAgain, onTitle, hasSave }) {
+  return h('section', { class: 'screen tutorial-done' },
+    h('h2', {}, '튜토리얼 완료!'),
+    h('p', { class: 'quote' }, '탭 타이밍 · 코스 · 탑스핀/커트 · 파워까지 모두 익혔어요.'),
+    h('ul', {},
+      h('li', {}, '노란 띠 안에서 탭, 붉은 띠 한가운데는 PERFECT'),
+      h('li', {}, '탭 위치 = 코스 (왼쪽 · 가운데 · 오른쪽)'),
+      h('li', {}, '위로 쓸기 = 탑스핀, 아래로 쓸기 = 커트'),
+      h('li', {}, '길게 쓸수록 강한 샷 (너무 세면 아웃)')),
+    btn(hasSave ? '내 시즌으로 가기' : '새로 시작하기', onPlay, 'primary'),
+    btn('튜토리얼 다시 하기', onAgain),
+    btn('타이틀', onTitle));
 }

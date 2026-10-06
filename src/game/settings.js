@@ -1,6 +1,7 @@
 // 설정: 시즌 저장과 분리된 별도 키 (새로 시작/데이터 삭제로 지워지지 않음)
-import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791278878';
-import { BALL_SPEED, BALL_SPEED_ORDER, DEFAULT_BALL_SPEED } from './ballspeed.js?v=1791278878';
+import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791280542';
+import { BALL_SPEED, BALL_SPEED_ORDER, DEFAULT_BALL_SPEED } from './ballspeed.js?v=1791280542';
+import { CONTROL_MODES, CONTROL_ORDER, DEFAULT_CONTROL_MODE } from './controls.js?v=1791280542';
 
 export const SETTINGS_KEY = 'tabgu-king-settings-v1';
 
@@ -10,6 +11,11 @@ export const SETTING_DEFS = Object.freeze([
     key: 'difficulty', type: 'enum', label: '조작 난이도', default: DEFAULT_DIFFICULTY,
     options: DIFFICULTY_ORDER.map((v) => ({ value: v, label: DIFFICULTY[v].label, desc: DIFFICULTY[v].desc })),
     desc: '탭 판정 범위(쉬움 1.6배 / 보통 1.3배 / 어려움 기존)와 코스 자동 보정(쉬움만)',
+  },
+  {
+    key: 'controls', type: 'enum', label: '조작 방식', default: DEFAULT_CONTROL_MODE,
+    options: CONTROL_ORDER.map((v) => ({ value: v, label: CONTROL_MODES[v].label, desc: CONTROL_MODES[v].desc })),
+    desc: '간단: 탭 한 번 + 샷 선택 버튼 / 고급: 탭 + 쓸기(스핀·파워 직접 조절)',
   },
   {
     key: 'ballSpeed', type: 'enum', label: '공 속도', default: DEFAULT_BALL_SPEED,
