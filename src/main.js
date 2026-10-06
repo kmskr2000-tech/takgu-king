@@ -16,10 +16,15 @@
       }
     } catch { /* 오프라인/실패: 현재 버전으로 계속 */ }
   }
+  const hash = (typeof location !== 'undefined' && location.hash) || '';
+  // QA 직접 링크(#qa-…): 메모리 저장소로만 동작하는 정지 화면 (실제 저장 데이터 불변). 일반 사용자는 이 모듈을 불러오지 않는다
+  if (hash.startsWith('#qa-')) {
+    const { mountQa } = await import(`./ui/qa.js${q}`);
+    if (mountQa(document.getElementById('app'), hash.slice(4))) return;
+  }
   const { createApp } = await import(`./ui/app.js${q}`);
   const app = createApp(document.getElementById('app'));
   // 직접 링크: #rules(룰 설명) / #settings(설정) — 상태가 필요 없는 화면만. 인트로는 건너뛴다
-  const hash = (typeof location !== 'undefined' && location.hash) || '';
   if (hash === '#rules') app.showRules();
   else if (hash === '#settings') app.showSettings();
   else app.start();

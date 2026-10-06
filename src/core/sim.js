@@ -1,6 +1,6 @@
-import { SIDES, STATES } from './constants.js?v=1791291656';
-import { createMatch, otherSide } from './match.js?v=1791291656';
-import { aiServe, aiRespond, aiRating } from './ai.js?v=1791291656';
+import { SIDES, STATES } from './constants.js?v=1791292161';
+import { createMatch, otherSide } from './match.js?v=1791292161';
+import { aiServe, aiRespond, aiRating } from './ai.js?v=1791292161';
 
 const MAX_SHOTS = 200; // 무한 랠리 방지
 
