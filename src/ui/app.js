@@ -1,23 +1,24 @@
-import { h } from './dom.js?v=1791277282';
+import { h } from './dom.js?v=1791278878';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen,
-} from './screens.js?v=1791277282';
+} from './screens.js?v=1791278878';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791277282';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791277282';
-import { createTipsStore, createTipper } from '../game/tips.js?v=1791277282';
-import { createAudio } from './audio.js?v=1791277282';
-import { createHaptics, react } from './feedback.js?v=1791277282';
-import { createRenderer } from './render.js?v=1791277282';
-import { createMatchController } from '../game/matchController.js?v=1791277282';
+} from './intro.js?v=1791278878';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791278878';
+import { createTipsStore, createTipper } from '../game/tips.js?v=1791278878';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791278878';
+import { createAudio } from './audio.js?v=1791278878';
+import { createHaptics, react } from './feedback.js?v=1791278878';
+import { createRenderer } from './render.js?v=1791278878';
+import { createMatchController } from '../game/matchController.js?v=1791278878';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult,
-} from '../game/season.js?v=1791277282';
-import { createStore } from '../game/store.js?v=1791277282';
-import { createRng } from '../core/index.js?v=1791277282';
+} from '../game/season.js?v=1791278878';
+import { createStore } from '../game/store.js?v=1791278878';
+import { createRng } from '../core/index.js?v=1791278878';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -154,7 +155,9 @@ export function createApp(root, deps = {}) {
       const nm = nextMatch(state);
       if (!nm) { api.showHome(); return; }
       const { opp, stage } = nm;
-      const startedAt = nowFn();
+      const startedAt = nowFn(); // 포기 판정은 실시간 기준
+      const clock = createGameClock(nowFn, ballSpeedOf(settings.get().ballSpeed).scale); // 공 속도: 게임 시계 배율(경기 중 고정)
+      api.gameClock = clock;
       const canvas = h('canvas', { class: 'court' });
       const view = matchScreen({
         oppName: opp.name,
@@ -189,7 +192,7 @@ export function createApp(root, deps = {}) {
         difficulty: settings.get().difficulty, // 경기 시작 시점의 난이도 (경기 중 고정)
         courtWidth: canvas.clientWidth || 300,
         onEvent: (e) => {
-          renderer.notify(e, nowFn());
+          renderer.notify(e, clock());
           react(e, { audio, haptics });
           if (e.type === 'grade') view.setJudge(e.grade === 'MISS' ? '미스!' : e.grade === 'PERFECT' ? '퍼펙트!' : '굿');
           if (e.type === 'point') {
@@ -223,26 +226,31 @@ export function createApp(root, deps = {}) {
         if (activeId !== null) return;
         activeId = ev.pointerId ?? 0;
         canvas.setPointerCapture?.(ev.pointerId); // 캔버스 밖으로 나가도 up 수신
-        const [x, y] = toLocal(ev); ctl.pointerDown(nowFn(), x, y);
+        const [x, y] = toLocal(ev); ctl.pointerDown(clock(), x, y);
       });
       canvas.addEventListener('pointerup', (ev) => {
         if (activeId === null || (ev.pointerId ?? 0) !== activeId) return;
         activeId = null;
-        const [x, y] = toLocal(ev); ctl.pointerUp(nowFn(), x, y);
+        const [x, y] = toLocal(ev); ctl.pointerUp(clock(), x, y);
       });
       canvas.addEventListener('contextmenu', (ev) => ev.preventDefault?.()); // 길게 누르기 메뉴 차단
       canvas.addEventListener('pointercancel', (ev) => {
         if (activeId === null || (ev.pointerId ?? 0) !== activeId) return;
         activeId = null;
-        ctl.pointerCancel(nowFn());
+        ctl.pointerCancel(clock());
       });
-      ctl.start(nowFn());
+      ctl.start(clock());
+      let wasServing = false; let shownServer = null;
       const tick = () => {
         if (loop !== token) return;
-        const now = nowFn();
+        const now = clock();
         ctl.update(now);
         renderer.draw(ctl, now);
         view.setScore(ctl.match.score.me, ctl.match.score.opp, ctl.match.server);
+        const serving = ctl.phase === 'awaitServe' || ctl.phase === 'oppServeWait';
+        if (serving && !wasServing) view.flashServe(ctl.match.server); // 서브 차례가 시작되는 순간 크게 알림
+        wasServing = serving;
+        if (ctl.match.server !== shownServer) { shownServer = ctl.match.server; view.setServe(shownServer); }
         const situation = ctl.phase === 'awaitServe' ? 'awaitServe' : (ctl.phase === 'flight' && ctl.timing && !ctl.pendingDown ? 'incoming' : null);
         view.setTip(tipper.update(situation, now, ctl.t0)?.text ?? '');
         raf(tick);

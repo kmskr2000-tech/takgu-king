@@ -72,3 +72,21 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .btn.quit { position: absolute; top: 6px; right: 6px; min-height: 44px; padding: 0 14px; background: rgba(0,0,0,.55); border-color: rgba(255,255,255,.5); }
 .intro-caption { bottom: 48px; }
 .intro-hint { bottom: 12px; }
+
+.btn.equip small.unlock { display: block; color: var(--accent); font-size: .85rem; margin-top: 2px; }
+.btn.equip:disabled small.unlock { opacity: 1; }
+
+/* 서브 표시 */
+.serve-badge { display: inline-block; margin-top: 2px; padding: 2px 12px; font-size: .95rem; font-weight: 800; border-radius: 12px; border: 2px solid #000;
+  text-shadow: none; min-height: 1.6em; }
+.serve-badge:empty { visibility: hidden; }
+.serve-badge.me { background: #ffd24a; color: #1a1400; }
+.serve-badge.opp { background: #e8e8f0; color: #1b1f2a; }
+.serve-banner { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: 1.9rem; font-weight: 900; color: #fff; opacity: 0; pointer-events: none;
+  text-shadow: 2px 0 #000, -2px 0 #000, 0 2px #000, 0 -2px #000, 3px 3px 0 #000; }
+.serve-banner.me { color: #ffd24a; }
+.serve-banner.show.f0 { animation: serveflash0 1.6s ease-out forwards; }
+.serve-banner.show.f1 { animation: serveflash1 1.6s ease-out forwards; }
+@keyframes serveflash0 { 0% { opacity: 0; transform: scale(1.5); } 12% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes serveflash1 { 0% { opacity: 0; transform: scale(1.5); } 12% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .serve-banner.show { animation: none; opacity: 1; } }

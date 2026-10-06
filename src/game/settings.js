@@ -1,5 +1,6 @@
 // 설정: 시즌 저장과 분리된 별도 키 (새로 시작/데이터 삭제로 지워지지 않음)
-import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791277282';
+import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791278878';
+import { BALL_SPEED, BALL_SPEED_ORDER, DEFAULT_BALL_SPEED } from './ballspeed.js?v=1791278878';
 
 export const SETTINGS_KEY = 'tabgu-king-settings-v1';
 
@@ -9,6 +10,11 @@ export const SETTING_DEFS = Object.freeze([
     key: 'difficulty', type: 'enum', label: '조작 난이도', default: DEFAULT_DIFFICULTY,
     options: DIFFICULTY_ORDER.map((v) => ({ value: v, label: DIFFICULTY[v].label, desc: DIFFICULTY[v].desc })),
     desc: '탭 판정 범위(쉬움 1.6배 / 보통 1.3배 / 어려움 기존)와 코스 자동 보정(쉬움만)',
+  },
+  {
+    key: 'ballSpeed', type: 'enum', label: '공 속도', default: DEFAULT_BALL_SPEED,
+    options: BALL_SPEED_ORDER.map((v) => ({ value: v, label: BALL_SPEED[v].label, desc: BALL_SPEED[v].desc })),
+    desc: '공이 날아오는 빠르기 (느릴수록 판정 시간이 길어짐, 궤적·난이도 곡선은 그대로)',
   },
   bool('tips', '플레이 힌트', '처음 몇 번만 조작 방법을 짧게 알려줌'),
   bool('sound', '사운드', '타격·득점·승리 효과음'),

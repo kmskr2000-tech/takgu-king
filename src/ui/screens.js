@@ -1,10 +1,10 @@
-import { h } from './dom.js?v=1791277282';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791277282';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791277282';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791277282';
+import { h } from './dom.js?v=1791278878';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791278878';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791278878';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791278878';
 import {
-  LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats,
-} from '../game/season.js?v=1791277282';
+  LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
+} from '../game/season.js?v=1791278878';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -131,7 +131,7 @@ export function equipScreen({ state, onChange, onStart, onBack }) {
       return h('button', {
         class: `btn equip${current === id ? ' primary' : ''}`, type: 'button', disabled: has ? null : true,
         onclick: () => onChange(kind, id),
-      }, `${it.name} — ${has ? it.desc : '잠김'}`);
+      }, has ? `${it.name} — ${it.desc}` : [`${it.name} — 잠김`, h('small', { class: 'unlock' }, `해금 조건: ${unlockCondition(kind, id) ?? '???'}`)]);
     }),
   ];
   const eff = effectiveStats(state);
@@ -207,6 +207,9 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit }) {
   const meScore = h('span', { class: 'me-score' }, '0');
   const judge = h('div', { class: 'judge' }, '');
   const tip = h('div', { class: 'tip', 'aria-live': 'polite' }, '');
+  const badge = h('div', { class: 'serve-badge' }, '');
+  const banner = h('div', { class: 'serve-banner', 'aria-live': 'polite' }, '');
+  let flashes = 0;
   return {
     // 캔버스를 화면 폭 가득 쓰고, 점수·상대 정보·판정·포기는 캔버스 위 오버레이, 힌트는 캔버스 아래
     el: h('section', { class: 'screen match' },
@@ -215,10 +218,22 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit }) {
         h('div', { class: 'hud' },
           h('div', { class: 'opp-info' }, `${oppName}`, h('small', {}, oppStyle)),
           h('div', { class: 'scoreboard' }, oppScore, ' : ', meScore),
-          judge),
+          badge, judge),
+        banner,
         h('button', { class: 'btn quit', type: 'button', onclick: onQuit }, '포기')),
       tip),
     setTip(text) { tip.textContent = text; tip.className = text ? 'tip on' : 'tip'; },
+    /** 항상 보이는 서브 배지: 지금 서브 차례가 누구인지 */
+    setServe(side) {
+      badge.textContent = side === 'me' ? '내 서브' : side === 'opp' ? '상대 서브' : '';
+      badge.className = `serve-badge ${side ?? ''}`.trim();
+    },
+    /** 서브 차례가 시작될 때 크게 알림 (두 애니메이션을 번갈아 써서 연속으로도 다시 재생된다) */
+    flashServe(side) {
+      flashes += 1;
+      banner.textContent = side === 'me' ? '내 서브!  화면을 탭하세요' : '상대 서브';
+      banner.className = `serve-banner show ${side} f${flashes % 2}`;
+    },
     setScore(me, opp, server) {
       meScore.textContent = `${me}${server === 'me' ? '●' : ''}`;
       oppScore.textContent = `${opp}${server === 'opp' ? '●' : ''}`;

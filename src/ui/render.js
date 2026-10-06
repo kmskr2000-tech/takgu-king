@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791277282';
-import { createEffects } from './effects.js?v=1791277282';
-import { createRng } from '../core/rng.js?v=1791277282';
+} from './sprites.js?v=1791278878';
+import { createEffects } from './effects.js?v=1791278878';
+import { createRng } from '../core/rng.js?v=1791278878';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -186,11 +186,13 @@ export function createRenderer(canvas, { rng, options } = {}) {
     const meFrame = (() => {
       const f = swingFrame(st.swing.me == null ? null : now - st.swing.me);
       if (f) return f;
+      if (ctl.phase === 'awaitServe' && ctl.match?.server === 'me') return 1; // 서브 준비 자세(공을 든)
       return ctl.timing && now - ctl.t0 > ctl.timing.start - 0.12 ? 1 : 0; // 존이 열리기 직전 준비 자세
     })();
     const oppFrame = (() => {
       const f = swingFrame(st.swing.opp == null ? null : now - st.swing.opp);
       if (f) return f;
+      if (ctl.phase === 'oppServeWait' && ctl.match?.server === 'opp') return 1;
       return ctl.aiAt != null && now > ctl.aiAt - 0.15 ? 1 : 0;
     })();
     const po = project(st.oppX, -12); const pm = project(st.meX, 250);
@@ -198,6 +200,32 @@ export function createRenderer(canvas, { rng, options } = {}) {
     drawSprite(ctx, SPRITES.opp[oppFrame], PALETTES[st.look], Math.round(po.x - (SPRITE_W * so) / 2), Math.round(po.y - SPRITE_H * so), { scale: so });
     R(ctx, Math.round(pm.x - (SPRITE_W * sm) / 2), Math.round(pm.y - 2), SPRITE_W * sm, 3, C.shadow); // 발 그림자
     drawSprite(ctx, SPRITES.me[meFrame], PALETTES.me, Math.round(pm.x - (SPRITE_W * sm) / 2), Math.round(pm.y - SPRITE_H * sm), { scale: sm });
+  }
+
+  // 서브 차례 표시: 서버 발밑에 펄스 링 + 머리 위 ▼ + 공을 든 준비 자세 (서브 대기 구간에만)
+  const isServePhase = (ctl) => ctl.phase === 'awaitServe' || ctl.phase === 'oppServeWait';
+  function drawServeCue(ctl, now) {
+    if (!isServePhase(ctl) || !ctl.match) return;
+    const side = ctl.match.server;
+    const pos = side === 'me' ? project(st.meX, 250) : project(st.oppX, -12);
+    const sc = spriteScale(pos.k);
+    const pulse = 0.5 + 0.5 * Math.sin(now * 6);
+    const rx = Math.round(SPRITE_W * sc * 0.75 + pulse * 3); const ry = Math.max(2, Math.round(rx * 0.27));
+    ctx.fillStyle = `rgba(255,210,74,${(0.45 + 0.4 * pulse).toFixed(2)})`;
+    for (let i = 0; i < 28; i++) { // 발밑 타원 링
+      const a = (i / 28) * Math.PI * 2;
+      ctx.fillRect(Math.round(pos.x + Math.cos(a) * rx), Math.round(pos.y + Math.sin(a) * ry), 2, 2);
+    }
+    const bob = Math.round(Math.sin(now * 5) * 2); // 머리 위 ▼ (까딱까딱)
+    const ay = Math.round(pos.y - SPRITE_H * sc - 12 + bob);
+    for (let j = 0; j < 4; j++) { // 테두리 + 노랑 삼각형
+      ctx.fillStyle = '#14110f'; ctx.fillRect(Math.round(pos.x) - 4 + j, ay + j * 2 - 1, 9 - 2 * j, 3);
+      ctx.fillStyle = '#ffd24a'; ctx.fillRect(Math.round(pos.x) - 3 + j, ay + j * 2, 7 - 2 * j, 2);
+    }
+    // 라켓 든 손 위로 공을 들고 있다 (공은 서브하는 순간 비행으로 이어진다)
+    const hx = Math.round(pos.x - (SPRITE_W * sc) / 2 + 10.5 * sc); const hy = Math.round(pos.y - SPRITE_H * sc + 6 * sc - 4 * sc + bob);
+    const bs = Math.max(1, Math.round(sc / 2));
+    drawSprite(ctx, BALL, BALL_PALETTE, hx - Math.floor((5 * bs) / 2), hy - 5 * bs, { scale: bs });
   }
 
   function drawBall(ball, spin = 0) {
@@ -260,6 +288,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
       drawStatic();
       if (opt().guide) drawZone(ctl.timing, now, ctl.t0);
       drawPlayers(ctl, now);
+      drawServeCue(ctl, now);
       drawBall(ctl.ballAt(now), ctl.flight?.spin ?? 0); // 공은 선수 뒤에 가려지지 않게 선수 다음에 그린다
       fx.draw(ctx);
       ctx.restore?.();

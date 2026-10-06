@@ -1,4 +1,4 @@
-import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick } from '../core/index.js?v=1791277282';
+import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick } from '../core/index.js?v=1791278878';
 
 export const SAVE_VERSION = 2;
 export const WIN_PT = 3;
@@ -42,6 +42,18 @@ export const UNLOCKS = Object.freeze({
   first: { grips: [], rackets: ['wall'] },
   world: { grips: [], rackets: ['emperor'] },
 });
+
+/**
+ * 해금 조건 문구 (UNLOCKS 표에서 파생 → 표와 문구가 어긋나지 않는다).
+ * kind: 'grip' | 'racket'. 처음부터 쓸 수 있으면 null.
+ */
+export function unlockCondition(kind, id) {
+  const key = kind === 'grip' ? 'grips' : 'rackets';
+  const league = Object.keys(UNLOCKS).find((l) => UNLOCKS[l][key].includes(id));
+  if (!league) return null;
+  const promo = kind === 'grip' && league === 'third' ? ' (2부 승격 시)' : '';
+  return `${LEAGUE_NAMES[league].replace(' 리그', '')} 우승 시 해금${promo}`;
+}
 
 /** 장비 효과는 스탯에 합산 (최소 0) */
 export function effectiveStats(state) {
