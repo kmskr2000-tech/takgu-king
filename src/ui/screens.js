@@ -1,12 +1,12 @@
-import { h } from './dom.js?v=1791297066';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791297066';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791297066';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791297066';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791297066';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791297066';
+import { h } from './dom.js?v=1791297185';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791297185';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791297185';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791297185';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791297185';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791297185';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791297066';
+} from '../game/season.js?v=1791297185';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
