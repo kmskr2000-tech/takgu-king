@@ -1,31 +1,31 @@
-import { h } from './dom.js?v=1791290945';
+import { h } from './dom.js?v=1791291656';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen,
-} from './screens.js?v=1791290945';
+} from './screens.js?v=1791291656';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791290945';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791290945';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791290945';
-import { SHOT_TYPES, shotKeyOfSpin } from '../game/controls.js?v=1791290945';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791290945';
-import { oppProfile } from '../game/oppProfile.js?v=1791290945';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791290945';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791290945';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791290945';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791290945';
-import { createAudio } from './audio.js?v=1791290945';
-import { createBgm } from './bgm.js?v=1791290945';
-import { createHaptics, react } from './feedback.js?v=1791290945';
-import { createRenderer } from './render.js?v=1791290945';
-import { createMatchController } from '../game/matchController.js?v=1791290945';
+} from './intro.js?v=1791291656';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791291656';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791291656';
+import { SHOT_TYPES, shotKeyOfSpin } from '../game/controls.js?v=1791291656';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791291656';
+import { oppProfile } from '../game/oppProfile.js?v=1791291656';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791291656';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791291656';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791291656';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791291656';
+import { createAudio } from './audio.js?v=1791291656';
+import { createBgm } from './bgm.js?v=1791291656';
+import { createHaptics, react } from './feedback.js?v=1791291656';
+import { createRenderer } from './render.js?v=1791291656';
+import { createMatchController } from '../game/matchController.js?v=1791291656';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult, seasonGoals,
-} from '../game/season.js?v=1791290945';
-import { createStore } from '../game/store.js?v=1791290945';
-import { createRng } from '../core/index.js?v=1791290945';
+} from '../game/season.js?v=1791291656';
+import { createStore } from '../game/store.js?v=1791291656';
+import { createRng } from '../core/index.js?v=1791291656';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */

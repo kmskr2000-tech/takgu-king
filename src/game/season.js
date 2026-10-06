@@ -1,4 +1,4 @@
-import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick } from '../core/index.js?v=1791290945';
+import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick } from '../core/index.js?v=1791291656';
 
 export const SAVE_VERSION = 2;
 export const WIN_PT = 3;

@@ -162,9 +162,9 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .coach-diagram.on { display: block; }
 
 /* 시즌 시작 연출: 제목 → 목표 3줄 → 라이벌 → 시작 버튼이 차례로 나타난다. 탭하면 .skip 으로 즉시 표시 */
-.season-intro { text-align: center; }
-.season-intro .si-title small { display: block; color: #ffd24a; font-weight: 700; letter-spacing: 2px; opacity: 0; animation: siFade .5s ease-out .1s forwards; }
-.season-intro .si-title h2 { font-size: 2rem; margin: 4px 0 12px; opacity: 0; transform: scale(.7); animation: siPop .6s cubic-bezier(.2,1.4,.4,1) .35s forwards; }
+.season-intro { text-align: center; padding-top: max(44px, 9dvh); /* 상단(상태바·노치)에 닿아 잘려 보이지 않게 아래로 */ }
+.season-intro .si-title small { display: block; color: #ffd24a; font-size: 1.05rem; font-weight: 800; letter-spacing: 3px; line-height: 1.5; text-shadow: 1px 1px 0 #000; opacity: 0; animation: siFade .5s ease-out .1s forwards; }
+.season-intro .si-title h2 { font-size: 2.2rem; line-height: 1.3; margin: 6px 0 16px; color: #fff; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000; opacity: 0; transform: translateY(10px); animation: siPop .5s ease-out .35s forwards; } /* 확대(scale) 애니메이션은 글자를 흐리게 만들어 이동만 쓰고, 끝나면 transform 을 없앤다 */
 .season-intro .si-head { color: #c8d3e0; font-weight: 700; margin-bottom: 8px; opacity: 0; animation: siFade .4s ease-out 1s forwards; }
 .season-intro .goals { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
 .season-intro .goal { display: flex; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.18); opacity: 0; transform: translateX(-24px); animation: siSlide .5s ease-out forwards; animation-delay: calc(1.3s + var(--i) * .55s); }
@@ -175,8 +175,8 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .season-intro .goal-start { opacity: 0; animation: siFade .5s ease-out forwards; animation-delay: calc(1.3s + var(--i) * .55s); }
 .season-intro.skip *, .season-intro.skip .goal { animation: none !important; opacity: 1 !important; transform: none !important; }
 @keyframes siFade { to { opacity: 1; } }
-@keyframes siPop { to { opacity: 1; transform: scale(1); } }
-@keyframes siSlide { to { opacity: 1; transform: translateX(0); } }
+@keyframes siPop { to { opacity: 1; transform: none; } }
+@keyframes siSlide { to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .season-intro *, .season-intro .goal { animation: none !important; opacity: 1 !important; transform: none !important; } }
 
 /* 상성 안내: 코트 왼쪽 아래 모서리에 작게 (탑스핀 › 커트 › 일반 › 탑스핀) */

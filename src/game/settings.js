@@ -1,7 +1,7 @@
 // 설정: 시즌 저장과 분리된 별도 키 (새로 시작/데이터 삭제로 지워지지 않음)
-import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791290945';
-import { BALL_SPEED, BALL_SPEED_ORDER, DEFAULT_BALL_SPEED } from './ballspeed.js?v=1791290945';
-import { CONTROL_MODES, CONTROL_ORDER, DEFAULT_CONTROL_MODE } from './controls.js?v=1791290945';
+import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791291656';
+import { BALL_SPEED, BALL_SPEED_ORDER, DEFAULT_BALL_SPEED } from './ballspeed.js?v=1791291656';
+import { CONTROL_MODES, CONTROL_ORDER, DEFAULT_CONTROL_MODE } from './controls.js?v=1791291656';
 
 export const SETTINGS_KEY = 'tabgu-king-settings-v1';
 
