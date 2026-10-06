@@ -44,3 +44,19 @@ canvas.title-bg-canvas { width: 100%; height: 100%; object-fit: cover; object-po
 .title .btn { background: #1b2a3a; }
 .title .btn.primary { background: var(--accent); }
 .title .btn:disabled { opacity: 1; background:#121b27; color:#6f8196; border-color:#2f3f52; } /* 투명 대신 어두운 색: 뒤 배경이 비치지 않게 */
+
+/* 인트로 */
+.intro { position: fixed; inset: 0; z-index: 10; background: #05070d; display: block; padding: 0; }
+.intro-stage { position: absolute; inset: 0; display: flex; justify-content: center; }
+canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; object-position: center; image-rendering: pixelated; display: block; }
+.intro-caption { position: absolute; left: 0; right: 0; bottom: max(14vh, 96px); text-align: center; min-height: 2em; padding: 0 16px;
+  font-size: 1.5rem; font-weight: 700; color: #fff; letter-spacing: 1px; pointer-events: none;
+  text-shadow: 2px 0 #000, -2px 0 #000, 0 2px #000, 0 -2px #000, 2px 2px #000, -2px -2px #000, 2px -2px #000, -2px 2px #000; }
+.intro-skip { position: absolute; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); z-index: 2;
+  min-height: 48px; padding: 0 16px; font: inherit; color: #fff; background: rgba(0,0,0,.5); border: 2px solid rgba(255,255,255,.55); border-radius: 6px; }
+.intro-hint { position: absolute; left: 0; right: 0; bottom: max(16px, env(safe-area-inset-bottom)); text-align: center; color: #8d98a5; font-size: .85rem; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .intro { display: none; } }
+
+.tip { min-height: 2.6em; text-align: center; color: #fff; font-weight: 700; padding: 6px 10px; border-radius: 6px; visibility: hidden; background: rgba(20,40,70,.9); border: 2px solid var(--accent); }
+.tip.on { visibility: visible; }
+.btn.setting.enum small { color: #c8d3e0; }

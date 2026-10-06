@@ -79,9 +79,9 @@ export function layoutLogo() {
 
 const COLORS = { outline: '#000000', shadow: '#8a5a00', top: '#ffe680', bottom: '#ffb300' };
 
-/** 로고를 캔버스(논리 크기 LOGO_W x LOGO_H)에 그린다: 그림자 → 외곽선 → 2톤 채움 */
-export function drawLogo(ctx, colors = COLORS) {
-  const glyphs = layoutLogo();
+/** 로고를 캔버스(논리 크기 LOGO_W x LOGO_H)에 그린다: 그림자 → 외곽선 → 2톤 채움. glyphCount 로 일부 글자만 그릴 수 있다 */
+export function drawLogo(ctx, colors = COLORS, glyphCount = Infinity, firstGlyph = 0) {
+  const glyphs = layoutLogo().slice(firstGlyph, glyphCount); // [firstGlyph, glyphCount) 글자만 (인트로: 글자별 등장·두 줄 배치)
   const rects = glyphs.flatMap((g) => g.rects);
   const paint = (color, dx, dy, grow = 0) => {
     ctx.fillStyle = color;

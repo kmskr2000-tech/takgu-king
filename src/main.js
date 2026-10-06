@@ -17,5 +17,5 @@
     } catch { /* 오프라인/실패: 현재 버전으로 계속 */ }
   }
   const { createApp } = await import(`./ui/app.js${q}`);
-  createApp(document.getElementById('app')).showTitle();
+  createApp(document.getElementById('app')).start();
 })();

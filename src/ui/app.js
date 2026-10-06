@@ -1,19 +1,23 @@
-import { h } from './dom.js?v=1791276176';
+import { h } from './dom.js?v=1791276975';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
-  equipScreen, seasonResultScreen, endingScreen, settingsScreen,
-} from './screens.js?v=1791276176';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791276176';
-import { createAudio } from './audio.js?v=1791276176';
-import { createHaptics, react } from './feedback.js?v=1791276176';
-import { createRenderer } from './render.js?v=1791276176';
-import { createMatchController } from '../game/matchController.js?v=1791276176';
+  equipScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen,
+} from './screens.js?v=1791276975';
+import {
+  drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
+} from './intro.js?v=1791276975';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791276975';
+import { createTipsStore, createTipper } from '../game/tips.js?v=1791276975';
+import { createAudio } from './audio.js?v=1791276975';
+import { createHaptics, react } from './feedback.js?v=1791276975';
+import { createRenderer } from './render.js?v=1791276975';
+import { createMatchController } from '../game/matchController.js?v=1791276975';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult,
-} from '../game/season.js?v=1791276176';
-import { createStore } from '../game/store.js?v=1791276176';
-import { createRng } from '../core/index.js?v=1791276176';
+} from '../game/season.js?v=1791276975';
+import { createStore } from '../game/store.js?v=1791276975';
+import { createRng } from '../core/index.js?v=1791276975';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -28,6 +32,8 @@ export function createApp(root, deps = {}) {
   const settings = deps.settings ?? createSettings(deps.settingsStorage ?? store.storage ?? globalThis.localStorage);
   const audio = deps.audio ?? createAudio({ enabled: () => settings.get().sound });
   const haptics = deps.haptics ?? createHaptics({ enabled: () => settings.get().vibration });
+  const tipsStore = deps.tipsStore ?? createTipsStore(store.storage ?? globalThis.localStorage);
+  const reducedMotion = deps.reducedMotion ?? (() => !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
   let state = migrate(store.load());
   let loop = null; // 경기 루프 중단 플래그
 
@@ -36,6 +42,40 @@ export function createApp(root, deps = {}) {
 
   const api = {
     get state() { return state; },
+    /** 앱 첫 진입: 인트로(설정이 켜져 있고 '동작 줄이기'가 아니면) → 타이틀 */
+    start() {
+      if (!settings.get().intro || reducedMotion()) { api.showTitle(); return; }
+      api.showIntro();
+    },
+    showIntro() {
+      const canvas = h('canvas', { class: 'intro-canvas', width: INTRO_W, height: INTRO_H });
+      canvas.width = INTRO_W; canvas.height = INTRO_H;
+      const ctx = canvas.getContext?.('2d');
+      if (ctx) ctx.imageSmoothingEnabled = false;
+      const token = {};
+      loop = token;
+      let onKey = null;
+      const ictl = createIntroController({
+        onDone: () => {
+          if (onKey) globalThis.removeEventListener?.('keydown', onKey);
+          if (loop === token) { loop = null; api.showTitle(); }
+        },
+      });
+      const view = introScreen({ canvas, onSkip: () => ictl.skip() });
+      mount(view.el);
+      onKey = () => ictl.skip(); // 아무 키나 누르면 건너뜀
+      globalThis.addEventListener?.('keydown', onKey);
+      const t0 = nowFn();
+      const tick = () => {
+        if (loop !== token || ictl.done) return;
+        const t = nowFn() - t0;
+        if (ictl.update(t)) return;
+        if (ctx) drawIntro(ctx, t);
+        view.setCaption(captionAt(t)?.text ?? '');
+        raf(tick);
+      };
+      tick();
+    },
     showTitle() {
       loop = null;
       mount(titleScreen({
@@ -53,7 +93,7 @@ export function createApp(root, deps = {}) {
       mount(settingsScreen({
         defs: SETTING_DEFS,
         values: settings.get(),
-        onToggle: (k) => { settings.toggle(k); audio.unlock(); audio.play('click'); api.showSettings(); },
+        onToggle: (k) => { settings.cycle(k); audio.unlock(); audio.play('click'); api.showSettings(); },
         onReset: () => {
           if (!confirmFn('저장된 시즌 데이터가 모두 삭제됩니다. 설정은 유지됩니다. 삭제할까요?')) return;
           store.clear(); state = null; api.showTitle();
@@ -146,6 +186,7 @@ export function createApp(root, deps = {}) {
         stats: effectiveStats(state),
         oppParams: aiParamsFor(state, opp),
         rng: createRng(seed),
+        difficulty: settings.get().difficulty, // 경기 시작 시점의 난이도 (경기 중 고정)
         courtWidth: canvas.clientWidth || 300,
         onEvent: (e) => {
           renderer.notify(e, nowFn());
@@ -167,6 +208,7 @@ export function createApp(root, deps = {}) {
           }
         },
       });
+      const tipper = createTipper({ store: tipsStore, enabled: () => settings.get().tips });
       const token = {};
       loop = token;
       const toLocal = (ev) => {
@@ -177,6 +219,7 @@ export function createApp(root, deps = {}) {
       canvas.addEventListener('pointerdown', (ev) => {
         ev.preventDefault?.();
         audio.unlock();
+        tipper.acted(); // 힌트가 알려준 행동을 했으니 본 것으로 확정
         if (activeId !== null) return;
         activeId = ev.pointerId ?? 0;
         canvas.setPointerCapture?.(ev.pointerId); // 캔버스 밖으로 나가도 up 수신
@@ -200,6 +243,8 @@ export function createApp(root, deps = {}) {
         ctl.update(now);
         renderer.draw(ctl, now);
         view.setScore(ctl.match.score.me, ctl.match.score.opp, ctl.match.server);
+        const situation = ctl.phase === 'awaitServe' ? 'awaitServe' : (ctl.phase === 'flight' && ctl.timing && !ctl.pendingDown ? 'incoming' : null);
+        view.setTip(tipper.update(situation, now, ctl.t0)?.text ?? '');
         raf(tick);
       };
       raf(tick);

@@ -1,7 +1,8 @@
+import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791276975';
 import {
   SIDES, STATES, GRADES, createMatch, createShot, flightOf, buildTiming, judgeTap, judgeNoTap,
   classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide,
-} from '../core/index.js?v=1791276176';
+} from '../core/index.js?v=1791276975';
 
 const OPP_SERVE_DELAY = 1.0; // 상대 서브 전 대기(초)
 const POINT_PAUSE = 1.2; // 득점 후 연출 대기(초)
@@ -13,14 +14,16 @@ const HOLD_MAX = 0.6; // 손가락을 이만큼 이상 누르고 있으면 탭�
  * events: onEvent({type:'point'|'grade'|'serve'|'hit'|'end', ...})
  */
 export function createMatchController({
-  stats, oppParams, rng, firstServer = SIDES.ME, courtWidth = 300, onEvent = () => {},
+  stats, oppParams, rng, firstServer = SIDES.ME, courtWidth = 300, onEvent = () => {}, difficulty = DEFAULT_DIFFICULTY,
 }) {
+  const diff = difficultyOf(difficulty);
   const m = createMatch({ firstServer });
   const c = {
     match: m, phase: null, flight: null, t0: 0, timing: null,
     pendingDown: null, aiAt: null, aiPlan: null, resumeAt: 0, lastGrade: null,
   };
   c.stats = stats;
+  c.difficulty = difficulty;
 
   const emit = (e) => onEvent(e);
 
@@ -44,7 +47,7 @@ export function createMatchController({
     c.phase = 'flight';
     const receiver = otherSide(shooter);
     if (receiver === SIDES.ME) {
-      c.timing = buildTiming(res.flight, stats.focus);
+      c.timing = buildTiming(res.flight, stats.focus, { leniency: diff.leniency });
       c.pendingDown = null;
     } else {
       // AI 리턴을 지금 계산해 두고, 실제 탭 시각(미스면 창이 끝나는 시각)에 반영 → 공이 튀지 않는다
@@ -95,6 +98,7 @@ export function createMatchController({
     if (!d) return;
     const g = classifyGesture({ down: { x: d.x, y: d.y, t: d.now }, up: { x, y }, courtWidth });
     const aim = gestureToAim(g);
+    if (diff.assistCourse && c.phase === 'flight' && c.flight) aim.targetX = assistTargetX(c.flight.pos(0).x, aim.targetX); // 쉬움: 상대 위치 기준 자동 코스
     if (c.phase === 'awaitServe') {
       c.pendingDown = null;
       const shot = createShot({

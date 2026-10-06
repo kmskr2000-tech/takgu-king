@@ -1,10 +1,10 @@
-import { h } from './dom.js?v=1791276176';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791276176';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791276176';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791276176';
+import { h } from './dom.js?v=1791276975';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791276975';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791276975';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791276975';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats,
-} from '../game/season.js?v=1791276176';
+} from '../game/season.js?v=1791276975';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -32,6 +32,16 @@ function titleBackground() {
   return h('div', { class: 'title-bg', 'aria-hidden': 'true' }, cv);
 }
 
+/** 인트로 화면: 전체 화면 캔버스 + 타이핑 자막 + 건너뛰기. 화면 어디든 탭하면 건너뜀 */
+export function introScreen({ canvas, onSkip }) {
+  const caption = h('div', { class: 'intro-caption', 'aria-live': 'polite' }, '');
+  const skip = h('button', { class: 'intro-skip', type: 'button', onclick: onSkip }, '건너뛰기 ▶');
+  const el = h('section', { class: 'screen intro', onpointerdown: onSkip },
+    h('div', { class: 'intro-stage' }, canvas), caption, skip,
+    h('div', { class: 'intro-hint' }, '화면을 탭하면 건너뜁니다'));
+  return { el, setCaption(text) { caption.textContent = text; } };
+}
+
 export function titleScreen({ hasSave, onContinue, onNew, onSettings, onRules }) {
   const icon = h('canvas', { class: 'icon', width: 16, height: 16 });
   icon.width = 16; icon.height = 16;
@@ -53,12 +63,20 @@ export function titleScreen({ hasSave, onContinue, onNew, onSettings, onRules })
 }
 
 export function settingsScreen({ defs, values, onToggle, onReset, onBack }) {
-  return h('section', { class: 'screen settings' },
-    h('h2', {}, '설정'),
-    defs.map((d) => h('button', {
+  const row = (d) => {
+    if (d.type === 'enum') { // 값이 여러 개인 항목: 누를 때마다 다음 값으로
+      const cur = d.options.find((o) => o.value === values[d.key]) ?? d.options[0];
+      return h('button', { class: 'btn setting enum on', type: 'button', onclick: () => onToggle(d.key) },
+        h('span', { class: 'sname' }, d.label), h('span', { class: 'sstate' }, `${cur.label} ▸`), h('small', {}, `${cur.desc} · 누르면 바뀜`));
+    }
+    return h('button', {
       class: `btn setting${values[d.key] ? ' on' : ''}`, type: 'button', 'aria-pressed': values[d.key] ? 'true' : 'false',
       onclick: () => onToggle(d.key),
-    }, h('span', { class: 'sname' }, d.label), h('span', { class: 'sstate' }, values[d.key] ? '켜짐' : '꺼짐'), h('small', {}, d.desc))),
+    }, h('span', { class: 'sname' }, d.label), h('span', { class: 'sstate' }, values[d.key] ? '켜짐' : '꺼짐'), h('small', {}, d.desc));
+  };
+  return h('section', { class: 'screen settings' },
+    h('h2', {}, '설정'),
+    defs.map(row),
     btn('저장 데이터 삭제', onReset, 'danger'),
     btn('돌아가기', onBack, 'primary'));
 }
@@ -188,11 +206,13 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit }) {
   const oppScore = h('span', { class: 'opp-score' }, '0');
   const meScore = h('span', { class: 'me-score' }, '0');
   const judge = h('div', { class: 'judge' }, '');
+  const tip = h('div', { class: 'tip', 'aria-live': 'polite' }, '');
   return {
     el: h('section', { class: 'screen match' },
       h('div', { class: 'opp-info' }, `${oppName}`, h('small', {}, oppStyle)),
       h('div', { class: 'scoreboard' }, oppScore, ' : ', meScore),
-      canvas, judge, btn('포기', onQuit)),
+      canvas, judge, tip, btn('포기', onQuit)),
+    setTip(text) { tip.textContent = text; tip.className = text ? 'tip on' : 'tip'; },
     setScore(me, opp, server) {
       meScore.textContent = `${me}${server === 'me' ? '●' : ''}`;
       oppScore.textContent = `${opp}${server === 'opp' ? '●' : ''}`;

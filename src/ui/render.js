@@ -1,8 +1,8 @@
 // 경기 화면 Canvas 렌더러 (도트 스타일: 저해상도 내부 버퍼 → CSS 로 확대, 스무딩 끔)
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791276176';
-import { createEffects } from './effects.js?v=1791276176';
+} from './sprites.js?v=1791276975';
+import { createEffects } from './effects.js?v=1791276975';
 
 export const VIEW_W = 160;
 export const VIEW_H = 300;
@@ -89,21 +89,37 @@ export function createRenderer(canvas, { rng, options } = {}) {
     for (let j = 0; j < h; j += 2) ctx.fillRect(x, y + j, w, 1);
   }
 
-  function drawZone(timing) {
+  function drawZone(timing, now, t0) {
     if (!timing?.zone) return;
-    const { y, half } = timing.zone;
-    const top = Math.round(sy(y - half)); const h = Math.max(3, Math.round(2 * half * SC));
+    const z = timing.zone;
+    // 실제로 탭을 받아주는 범위(난이도 완화 포함)를 그린다. 구버전 데이터는 ±half 로 대체
+    const yA = z.yStart ?? z.y - z.half; const yB = z.yEnd ?? z.y + z.half;
+    const top = Math.round(sy(Math.min(yA, yB))); const h = Math.max(3, Math.round(Math.abs(yB - yA) * SC));
     dither(TX, top, TW, h, C.zone);
     ctx.fillStyle = C.zoneEdge; ctx.fillRect(TX, top, TW, 1); ctx.fillRect(TX, top + h - 1, TW, 1); // 경계선
-    const ph = (timing.perfectHalf / timing.halfTime) * half;
-    const pt = Math.round(sy(y - ph)); const phh = Math.max(2, Math.round(2 * ph * SC));
+    let pt; let phh;
+    if (z.yPerfectStart != null) {
+      pt = Math.round(sy(Math.min(z.yPerfectStart, z.yPerfectEnd))); phh = Math.max(2, Math.round(Math.abs(z.yPerfectEnd - z.yPerfectStart) * SC));
+    } else {
+      const ph = (timing.perfectHalf / timing.halfTime) * z.half;
+      pt = Math.round(sy(z.y - ph)); phh = Math.max(2, Math.round(2 * ph * SC));
+    }
     ctx.fillStyle = C.perfect; ctx.fillRect(TX, pt, TW, phh);
     ctx.fillStyle = C.chevron; // 중앙 화살표 (>> 모양)
-    const cy = Math.round(sy(y));
+    const cy = Math.round(sy(z.y));
     for (let i = 0; i < 3; i++) {
       const cx = TX + 14 + i * 46;
       ctx.fillRect(cx, cy - 2, 1, 1); ctx.fillRect(cx + 1, cy - 1, 1, 1); ctx.fillRect(cx + 2, cy, 1, 1);
       ctx.fillRect(cx + 1, cy + 1, 1, 1); ctx.fillRect(cx, cy + 2, 1, 1);
+    }
+    // 타이밍 신호: 중심 시각 직전/직후 0.14초 동안 중앙선이 반짝이고 양끝에 표시가 켜진다 ("지금!")
+    if (timing.center != null && t0 != null) {
+      const rem = timing.center - (now - t0);
+      if (Math.abs(rem) < 0.14) {
+        ctx.fillStyle = Math.floor(now * 20) % 2 ? '#ffffff' : '#ffd24a';
+        ctx.fillRect(TX - 3, cy, TW + 6, 2);
+        ctx.fillRect(TX - 6, cy - 3, 4, 8); ctx.fillRect(TX + TW + 2, cy - 3, 4, 8);
+      }
     }
   }
 
@@ -175,7 +191,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
       ctx.save?.();
       if (st.shake > 0) ctx.translate?.(Math.round((Math.random() - 0.5) * 3), 0); // 실점 시 짧은 흔들림
       drawFloorAndTable();
-      if (opt().guide) drawZone(ctl.timing);
+      if (opt().guide) drawZone(ctl.timing, now, ctl.t0);
       drawPlayers(ctl, now);
       drawBall(ctl.ballAt(now), ctl.flight?.spin ?? 0);
       fx.draw(ctx);
