@@ -1,8 +1,8 @@
 // 경기 화면 Canvas 렌더러 (도트 스타일: 저해상도 내부 버퍼 → CSS 로 확대, 스무딩 끔)
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791275126';
-import { createEffects } from './effects.js?v=1791275126';
+} from './sprites.js?v=1791275435';
+import { createEffects } from './effects.js?v=1791275435';
 
 export const VIEW_W = 160;
 export const VIEW_H = 300;
@@ -29,7 +29,9 @@ export function swingFrame(sinceHit) {
   return 0;
 }
 
-export function createRenderer(canvas, { rng } = {}) {
+export function createRenderer(canvas, { rng, options } = {}) {
+  // 설정(이펙트/흔들림/가이드)은 프레임마다 읽는다 → 토글 즉시 반영
+  const opt = () => ({ effects: true, shake: true, guide: true, ...(options?.() ?? {}) });
   canvas.width = VIEW_W;
   canvas.height = VIEW_H;
   const ctx = canvas.getContext('2d');
@@ -154,25 +156,26 @@ export function createRenderer(canvas, { rng } = {}) {
         trail.length = 0; // 새 공: 이전 궤적과 이어지지 않게
         st.swing[e.side] = now;
         const p = e.flight?.pos ? e.flight.pos(0) : { x: 50, y: e.side === 'me' ? 170 : 30 };
-        fx.hit(sx(p.x), sy(p.y), e.side === 'me' ? st.lastGrade : 'GOOD');
+        if (opt().effects) fx.hit(sx(p.x), sy(p.y), e.side === 'me' ? st.lastGrade : 'GOOD');
       }
       if (e.type === 'point') {
-        fx.score(sx(st.meX), sy(e.winner === 'me' ? 190 : 10), e.winner === 'me');
-        st.shake = e.winner === 'me' ? 0 : 0.25;
+        if (opt().effects) fx.score(sx(st.meX), sy(e.winner === 'me' ? 190 : 10), e.winner === 'me');
+        st.shake = e.winner !== 'me' && opt().effects && opt().shake ? 0.25 : 0;
       }
-      if (e.type === 'end' && e.winner === 'me') fx.cheer(VIEW_W, VIEW_H);
+      if (e.type === 'end' && e.winner === 'me' && opt().effects) fx.cheer(VIEW_W, VIEW_H);
     },
     draw(ctl, now) {
       if (!ctx) return;
       const dt = st.lastNow == null ? 0 : clamp(now - st.lastNow, 0, 0.1);
       st.lastNow = now;
       follow(ctl, dt);
+      if (!opt().effects) fx.clear();
       fx.update(dt);
       st.shake = Math.max(0, st.shake - dt);
       ctx.save?.();
       if (st.shake > 0) ctx.translate?.(Math.round((Math.random() - 0.5) * 3), 0); // 실점 시 짧은 흔들림
       drawFloorAndTable();
-      drawZone(ctl.timing);
+      if (opt().guide) drawZone(ctl.timing);
       drawPlayers(ctl, now);
       drawBall(ctl.ballAt(now), ctl.flight?.spin ?? 0);
       fx.draw(ctx);

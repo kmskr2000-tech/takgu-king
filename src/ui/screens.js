@@ -1,9 +1,10 @@
-import { h } from './dom.js?v=1791275126';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791275126';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791275126';
+import { h } from './dom.js?v=1791275435';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791275435';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791275435';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791275435';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats,
-} from '../game/season.js?v=1791275126';
+} from '../game/season.js?v=1791275435';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -22,18 +23,44 @@ function pixelLogo() {
   return h('h1', { class: 'logo-pixel' }, cv, h('span', { class: 'sr-only' }, LOGO_TEXT));
 }
 
-export function titleScreen({ hasSave, onContinue, onNew, onRules }) {
+/** 타이틀 배경: 화면 전체를 덮는 도트 경기장 (장식이라 스크린리더에서 숨김) */
+function titleBackground() {
+  const cv = h('canvas', { class: 'title-bg-canvas', width: TB_W, height: TB_H });
+  cv.width = TB_W; cv.height = TB_H;
+  const c = cv.getContext?.('2d');
+  if (c) { c.imageSmoothingEnabled = false; drawTitleBackground(c); }
+  return h('div', { class: 'title-bg', 'aria-hidden': 'true' }, cv);
+}
+
+export function titleScreen({ hasSave, onContinue, onNew, onSettings, onRules }) {
   const icon = h('canvas', { class: 'icon', width: 16, height: 16 });
   icon.width = 16; icon.height = 16;
   const ictx = icon.getContext?.('2d');
   if (ictx) { ictx.imageSmoothingEnabled = false; drawSprite(ictx, ICON_PADDLE, ICON_PALETTE, 0, 0); }
   return h('section', { class: 'screen title' },
+    titleBackground(),
     icon,
     pixelLogo(),
     h('p', { class: 'sub' }, '지면 다시. 한 점씩, 한 경기씩.'),
-    hasSave && btn('이어하기', onContinue, 'primary'),
-    btn('새로 시작', onNew, hasSave ? '' : 'primary'),
+    btn('새로 시작', onNew, 'primary'),
+    // 이어하기는 항상 새로 시작 바로 아래. 저장된 시즌이 없으면 비활성
+    h('button', {
+      class: `btn${hasSave ? ' primary' : ''}`, type: 'button', disabled: hasSave ? null : true,
+      'aria-disabled': hasSave ? null : 'true', onclick: hasSave ? onContinue : null,
+    }, '이어하기'),
+    btn('설정', onSettings),
     btn('룰 설명', onRules));
+}
+
+export function settingsScreen({ defs, values, onToggle, onReset, onBack }) {
+  return h('section', { class: 'screen settings' },
+    h('h2', {}, '설정'),
+    defs.map((d) => h('button', {
+      class: `btn setting${values[d.key] ? ' on' : ''}`, type: 'button', 'aria-pressed': values[d.key] ? 'true' : 'false',
+      onclick: () => onToggle(d.key),
+    }, h('span', { class: 'sname' }, d.label), h('span', { class: 'sstate' }, values[d.key] ? '켜짐' : '꺼짐'), h('small', {}, d.desc))),
+    btn('저장 데이터 삭제', onReset, 'danger'),
+    btn('돌아가기', onBack, 'primary'));
 }
 
 export function rulesScreen({ onBack }) {

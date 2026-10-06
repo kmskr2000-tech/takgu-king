@@ -27,3 +27,18 @@ canvas.icon { width:96px; height:96px; image-rendering:pixelated; align-self:cen
 h1.logo-pixel { margin: 12px 0 0; display:flex; justify-content:center; }
 canvas.logo-canvas { width: 100%; max-width: 440px; height: auto; image-rendering: pixelated; }
 .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+
+.btn.setting { display:grid; grid-template-columns: 1fr auto; text-align:left; row-gap:2px; }
+.btn.setting small { grid-column: 1 / -1; color: var(--dim); }
+.btn.setting .sstate { color: var(--dim); font-weight:700; }
+.btn.setting.on { border-color: var(--accent); }
+.btn.setting.on .sstate { color: var(--accent); }
+.btn.danger { border-color:#b44; color:#f99; }
+
+.title-bg { position: fixed; inset: 0; z-index: -1; background: #070c18; overflow: hidden; }
+canvas.title-bg-canvas { width: 100%; height: 100%; object-fit: cover; object-position: center bottom; image-rendering: pixelated; display:block; }
+.title-bg::after { content:''; position:absolute; inset:0; background: linear-gradient(to bottom, rgba(7,12,24,.25), rgba(7,12,24,0) 35%, rgba(7,12,24,.35)); pointer-events:none; }
+.title .sub { text-shadow: 0 1px 0 #000, 1px 0 0 #000, -1px 0 0 #000, 0 -1px 0 #000; color:#c8d3e0; }
+.title .btn { background: rgba(27,42,58,.92); }
+.title .btn.primary { background: var(--accent); }
+.title .btn:disabled { opacity: .55; }
