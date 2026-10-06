@@ -1,10 +1,10 @@
-import { h } from './dom.js?v=1791275499';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791275499';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791275499';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791275499';
+import { h } from './dom.js?v=1791275602';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791275602';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791275602';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791275602';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats,
-} from '../game/season.js?v=1791275499';
+} from '../game/season.js?v=1791275602';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },

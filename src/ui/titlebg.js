@@ -1,9 +1,10 @@
 // 타이틀 배경: 도트 경기장 야경. 저해상도(TB_W x TB_H) 캔버스에 그려 CSS 로 확대한다.
-import { createRng } from '../core/rng.js?v=1791275499';
+import { createRng } from '../core/rng.js?v=1791275602';
 
 export const TB_W = 120;
 export const TB_H = 214;
 
+const FLAG_Y = 36; // 깃발 줄 높이: 라켓 아이콘(위)과 로고(아래) 사이 빈 구간
 const SKY = ['#070c18', '#0a1022', '#0e1530', '#131a3a', '#1a1f45', '#222450', '#2b2658']; // 위 → 아래 계단 그라데이션
 const SHIRTS = ['#d94f4f', '#e8b83a', '#4a9de0', '#6fcf6f', '#c06be0', '#f0f0f0', '#ff8a3d'];
 const SKINS = ['#f2c9a0', '#e0a97a', '#c68b5e', '#f7d7b5'];
@@ -44,10 +45,10 @@ export function drawTitleBackground(ctx, { seed = 7 } = {}) {
   // 3) 깃발 줄 (처진 줄 + 삼각 깃발)
   for (let x = 0; x < TB_W; x++) {
     const sag = Math.round(Math.sin((x / TB_W) * Math.PI * 3) * 3);
-    rect(x, 26 + sag + 3, 1, 1, '#5a5f8a');
+    rect(x, FLAG_Y + sag + 3, 1, 1, '#5a5f8a');
     if (x % 8 === 3) {
       const c = SHIRTS[(x / 8 | 0) % SHIRTS.length];
-      rect(x - 1, 26 + sag + 4, 3, 1, c); rect(x - 1, 26 + sag + 5, 3, 1, c); rect(x, 26 + sag + 6, 1, 1, c);
+      rect(x - 1, FLAG_Y + sag + 4, 3, 1, c); rect(x - 1, FLAG_Y + sag + 5, 3, 1, c); rect(x, FLAG_Y + sag + 6, 1, 1, c);
     }
   }
 

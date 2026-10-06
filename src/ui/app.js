@@ -1,19 +1,19 @@
-import { h } from './dom.js?v=1791275499';
+import { h } from './dom.js?v=1791275602';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonResultScreen, endingScreen, settingsScreen,
-} from './screens.js?v=1791275499';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791275499';
-import { createAudio } from './audio.js?v=1791275499';
-import { createHaptics, react } from './feedback.js?v=1791275499';
-import { createRenderer } from './render.js?v=1791275499';
-import { createMatchController } from '../game/matchController.js?v=1791275499';
+} from './screens.js?v=1791275602';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791275602';
+import { createAudio } from './audio.js?v=1791275602';
+import { createHaptics, react } from './feedback.js?v=1791275602';
+import { createRenderer } from './render.js?v=1791275602';
+import { createMatchController } from '../game/matchController.js?v=1791275602';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult,
-} from '../game/season.js?v=1791275499';
-import { createStore } from '../game/store.js?v=1791275499';
-import { createRng } from '../core/index.js?v=1791275499';
+} from '../game/season.js?v=1791275602';
+import { createStore } from '../game/store.js?v=1791275602';
+import { createRng } from '../core/index.js?v=1791275602';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
