@@ -35,7 +35,8 @@ canvas.logo-canvas { width: 100%; max-width: 440px; height: auto; image-renderin
 .btn.setting.on .sstate { color: var(--accent); }
 .btn.danger { border-color:#b44; color:#f99; }
 
-.title-bg { position: fixed; inset: 0; z-index: -1; background: #070c18; overflow: hidden; }
+.title-bg { position: fixed; inset: 0; z-index: 0; background: #070c18; overflow: hidden; } /* body 배경이 있어 -1 이면 가려진다 */
+.title > *:not(.title-bg) { position: relative; z-index: 1; }
 canvas.title-bg-canvas { width: 100%; height: 100%; object-fit: cover; object-position: center bottom; image-rendering: pixelated; display:block; }
 .title-bg::after { content:''; position:absolute; inset:0; background: linear-gradient(to bottom, rgba(7,12,24,.25), rgba(7,12,24,0) 35%, rgba(7,12,24,.35)); pointer-events:none; }
 .title .sub { text-shadow: 0 1px 0 #000, 1px 0 0 #000, -1px 0 0 #000, 0 -1px 0 #000; color:#c8d3e0; }
