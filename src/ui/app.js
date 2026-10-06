@@ -1,30 +1,31 @@
-import { h } from './dom.js?v=1791290560';
+import { h } from './dom.js?v=1791290945';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen,
-} from './screens.js?v=1791290560';
+} from './screens.js?v=1791290945';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791290560';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791290560';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791290560';
-import { SHOT_TYPES, shotKeyOfSpin } from '../game/controls.js?v=1791290560';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791290560';
-import { oppProfile } from '../game/oppProfile.js?v=1791290560';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791290560';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791290560';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791290560';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791290560';
-import { createAudio } from './audio.js?v=1791290560';
-import { createHaptics, react } from './feedback.js?v=1791290560';
-import { createRenderer } from './render.js?v=1791290560';
-import { createMatchController } from '../game/matchController.js?v=1791290560';
+} from './intro.js?v=1791290945';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791290945';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791290945';
+import { SHOT_TYPES, shotKeyOfSpin } from '../game/controls.js?v=1791290945';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791290945';
+import { oppProfile } from '../game/oppProfile.js?v=1791290945';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791290945';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791290945';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791290945';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791290945';
+import { createAudio } from './audio.js?v=1791290945';
+import { createBgm } from './bgm.js?v=1791290945';
+import { createHaptics, react } from './feedback.js?v=1791290945';
+import { createRenderer } from './render.js?v=1791290945';
+import { createMatchController } from '../game/matchController.js?v=1791290945';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult, seasonGoals,
-} from '../game/season.js?v=1791290560';
-import { createStore } from '../game/store.js?v=1791290560';
-import { createRng } from '../core/index.js?v=1791290560';
+} from '../game/season.js?v=1791290945';
+import { createStore } from '../game/store.js?v=1791290945';
+import { createRng } from '../core/index.js?v=1791290945';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -38,11 +39,15 @@ export function createApp(root, deps = {}) {
   const later = deps.later ?? ((fn, ms) => setTimeout(fn, ms));
   const settings = deps.settings ?? createSettings(deps.settingsStorage ?? store.storage ?? globalThis.localStorage);
   const audio = deps.audio ?? createAudio({ enabled: () => settings.get().sound });
+  // 배경음악: 사운드·배경음악 설정이 모두 켜져 있을 때만. 오디오는 사용자 제스처 뒤에 열리므로 열리는 순간 이어서 시작한다
+  const bgm = deps.bgm ?? createBgm({ getCtx: () => audio.context ?? null, enabled: () => settings.get().sound && settings.get().bgm });
+  audio.onUnlock?.(() => bgm.sync());
+  globalThis.document?.addEventListener?.('visibilitychange', () => bgm.setSuspended(!!globalThis.document.hidden)); // 백그라운드 탭에서는 멈춤
   const haptics = deps.haptics ?? createHaptics({ enabled: () => settings.get().vibration });
   // 광고 훅: 기본은 '광고 없음'(provider 없음) → 동작 변화 없음. 나중에 provider 만 꽂으면 아래 자연스러운 끊김(AD_SLOTS)에서 동작
   const ads = deps.ads ?? createAdManager({
     provider: providerFromWindow(globalThis), nowFn, storage: store.storage,
-    onEvent: (e) => { if (e.type === 'start') audio.setSuspended?.(true); if (e.type === 'end') audio.setSuspended?.(false); }, // 광고 중 효과음 정지
+    onEvent: (e) => { if (e.type === 'start') { audio.setSuspended?.(true); bgm.setSuspended(true); } if (e.type === 'end') { audio.setSuspended?.(false); bgm.setSuspended(false); } }, // 광고 중 효과음·배경음악 정지
   });
   const tutorialStore = deps.tutorialStore ?? createTutorialStore(store.storage ?? globalThis.localStorage);
   const tipsStore = deps.tipsStore ?? createTipsStore(store.storage ?? globalThis.localStorage);
@@ -58,6 +63,7 @@ export function createApp(root, deps = {}) {
     get state() { return state; },
     get tutorialStore() { return tutorialStore; },
     get ads() { return ads; },
+    get bgm() { return bgm; },
     /** 앱 첫 진입: 인트로(설정이 켜져 있고 '동작 줄이기'가 아니면) → 타이틀 */
     start() {
       if (!settings.get().intro || reducedMotion()) { api.showTitle(); return; }
@@ -93,7 +99,7 @@ export function createApp(root, deps = {}) {
       tick();
     },
     showTitle() {
-      loop = null;
+      loop = null; bgm.play('title');
       mount(titleScreen({
         hasSave: !!state,
         onContinue: () => api.showHome(),
@@ -118,7 +124,7 @@ export function createApp(root, deps = {}) {
       mount(settingsScreen({
         defs: SETTING_DEFS,
         values: settings.get(),
-        onToggle: (k) => { settings.cycle(k); audio.unlock(); audio.play('click'); api.showSettings(); },
+        onToggle: (k) => { settings.cycle(k); audio.unlock(); bgm.sync(); audio.play('click'); api.showSettings(); },
         onReset: () => {
           if (!confirmFn('저장된 시즌 데이터가 모두 삭제됩니다. 설정은 유지됩니다. 삭제할까요?')) return;
           store.clear(); state = null; api.showTitle();
@@ -132,7 +138,7 @@ export function createApp(root, deps = {}) {
       mount(seasonIntroScreen({ intro: seasonGoals(state), onStart: () => api.showHome() }).el);
     },
     showHome() {
-      loop = null;
+      loop = null; bgm.play('title');
       mount(leagueHomeScreen({
         state,
         onPlay: () => api.showEquip(),
@@ -164,7 +170,7 @@ export function createApp(root, deps = {}) {
       }));
     },
     showResult(result) {
-      loop = null;
+      loop = null; bgm.play('title');
       const token = {}; resultToken = token;
       ads.prepare('doublePoints'); // 광고 훅: 보상형(결과 화면에서 포인트 2배) 미리 준비
       const render = (res) => {
@@ -246,8 +252,8 @@ export function createApp(root, deps = {}) {
           api.showResult({ won: false, score, gained, forfeit: true });
         },
       });
-      mount(view.el);
-      view.setShotBar(mode === 'simple'); view.setLane(mode === 'simple' ? 'center' : null);
+      mount(view.el); bgm.play('match');
+      view.setShotBar(mode === 'simple'); view.setLane(mode === 'simple' ? 'center' : null); view.setRps(mode === 'simple' && !tut);
       const renderer = createRenderer(canvas, { options: () => settings.get() });
       renderer.setControlMode(mode);
       audio.unlock(); // 경기 시작 클릭(사용자 제스처) 안에서 오디오 허용

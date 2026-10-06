@@ -45,8 +45,9 @@ export function simpleAim(targetX, shotKey) {
  */
 export const BEATS = Object.freeze({ topspin: 'cut', cut: 'normal', normal: 'topspin' });
 export const MATCHUP_FX = Object.freeze({
-  win: { leniency: 1.25, error: 0.7, aiSigma: 1.3 },
-  lose: { leniency: 0.8, error: 1.4, aiSigma: 0.8 },
+  // 유효타 밴드(타이밍 존) 배율: 유리하면 확 넓고(×1.6) 불리하면 확 좁다(×0.65) — 체감이 되도록 (PERFECT 구간 0.3 보다는 항상 넓게 유지)
+  win: { leniency: 1.6, error: 0.7, aiSigma: 1.3 },
+  lose: { leniency: 0.65, error: 1.4, aiSigma: 0.8 },
   even: { leniency: 1, error: 1, aiSigma: 1 },
 });
 const SPIN_CLASS_AT = 0.5;

@@ -18,8 +18,11 @@ const defaultFactory = () => {
 
 /** enabled(): 설정에서 사운드가 켜져 있는지. ctxFactory: 테스트 주입용 */
 export function createAudio({ enabled = () => true, ctxFactory = defaultFactory } = {}) {
-  let ctx = null; let suspended = false;
+  let ctx = null; let suspended = false; const unlockListeners = [];
   return {
+    /** 오디오가 (처음) 열렸을 때 불리는 콜백 등록 — 배경음악이 사용자 제스처 뒤에 시작하도록 */
+    onUnlock(fn) { unlockListeners.push(fn); },
+    get context() { return ctx; },
     /** 광고가 재생되는 동안 효과음을 멈춘다 (광고 훅에서 호출) */
     setSuspended(v) { suspended = !!v; },
     /** 사용자 제스처(탭/클릭) 안에서 호출: 모바일 브라우저는 그때만 오디오를 허용 */
@@ -28,6 +31,7 @@ export function createAudio({ enabled = () => true, ctxFactory = defaultFactory 
         if (!ctx) ctx = ctxFactory();
         if (ctx?.state === 'suspended') ctx.resume?.();
       } catch { ctx = null; }
+      if (ctx) for (const fn of unlockListeners) { try { fn(); } catch { /* 무시 */ } }
       return !!ctx;
     },
     get ready() { return !!ctx; },

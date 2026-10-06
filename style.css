@@ -178,3 +178,7 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 @keyframes siPop { to { opacity: 1; transform: scale(1); } }
 @keyframes siSlide { to { opacity: 1; transform: translateX(0); } }
 @media (prefers-reduced-motion: reduce) { .season-intro *, .season-intro .goal { animation: none !important; opacity: 1 !important; transform: none !important; } }
+
+/* 상성 안내: 코트 왼쪽 아래 모서리에 작게 (탑스핀 › 커트 › 일반 › 탑스핀) */
+.rps { position: absolute; left: 4px; bottom: 4px; z-index: 4; display: none; align-items: center; gap: 2px; padding: 2px 6px; border-radius: 8px; background: rgba(8,12,22,.72); font-size: .58rem; font-weight: 800; pointer-events: none; text-shadow: 0 1px 0 #000; }
+.rps.on { display: flex; } .rps .arrow { color: #c8d3e0; font-style: normal; }

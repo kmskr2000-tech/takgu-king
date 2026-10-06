@@ -1,12 +1,12 @@
-import { h } from './dom.js?v=1791290560';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791290560';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791290560';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791290560';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791290560';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791290560';
+import { h } from './dom.js?v=1791290945';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791290945';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791290945';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791290945';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791290945';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791290945';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791290560';
+} from '../game/season.js?v=1791290945';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -237,6 +237,10 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
   const mePanel = h('div', { class: 'panel me', 'aria-label': '내 점수' }, h('div', { class: 'who' }, meServe, '나'), meScore, mePlus);
   const incoming = h('div', { class: 'incoming', 'aria-live': 'polite' }, '');
   const laneChip = h('div', { class: 'lane-chip' }, '');
+  // 상성 안내(작게, 코트 아래 모서리): 탑스핀 > 커트 > 일반 > 탑스핀. 색은 공/버튼 색과 같다
+  const rps = h('div', { class: 'rps', 'aria-label': '상성: 탑스핀은 커트에, 커트는 일반에, 일반은 탑스핀에 강함' },
+    ...[['topspin', SHOT_TYPES.topspin], ['cut', SHOT_TYPES.cut], ['normal', SHOT_TYPES.normal], ['topspin', SHOT_TYPES.topspin]].flatMap(([k, t], i) => [
+      i > 0 && h('i', { class: 'arrow' }, '›'), h('b', { class: `k ${k}`, style: `color:${t.color}` }, t.label)]));
   const pbTitle = h('b', {}, ''); const pbDetail = h('span', {}, ''); const pbTip = h('small', {}, '');
   const pointBanner = h('div', { class: 'point-banner', 'aria-live': 'assertive' }, pbTitle, pbDetail, pbTip);
   const judge = h('div', { class: 'judge' }, '');
@@ -276,7 +280,7 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
             ...(oppTags ?? (oppStyle ? [{ label: oppStyle, kind: 'all' }] : [])).map((t) => h('span', { class: `opp-tag ${t.kind}` }, t.label))),
           h('div', { class: 'scoreboard' }, oppPanel, h('span', { class: 'vs' }, ':'), mePanel),
           badge, judge, incoming, laneChip),
-        banner, pointBanner,
+        banner, pointBanner, rps,
         h('button', { class: 'btn quit', type: 'button', onclick: onQuit }, quitLabel)),
       bar, coach, tip),
     setTip(text) { tip.textContent = text; tip.className = text ? 'tip on' : 'tip'; },
@@ -330,6 +334,8 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
     /** 날아오는 상대 공 종류 칩 (간단 조작). text 가 비면 숨김. key: 색 */
     /** 코스 마커 라벨 (간단 조작): lane 이 null 이면 숨김. 코트를 탭하면 바뀌고, 버튼 스윙이 이 코스로 나간다 */
     setLane(lane) { laneChip.textContent = lane ? `코스: ${{ left: '왼쪽', center: '가운데', right: '오른쪽' }[lane]} (코트를 탭해 바꿔요)` : ''; laneChip.className = lane ? `lane-chip on ${lane}` : 'lane-chip'; },
+    /** 상성 안내 표시 여부 (간단 조작·본 경기에서만) */
+    setRps(visible) { rps.className = visible ? 'rps on' : 'rps'; },
     setIncoming(text, key = null) { incoming.textContent = text; incoming.className = text ? `incoming on ${key ?? ''}`.trim() : 'incoming'; },
     setJudge(text) { judge.textContent = text; },
   };

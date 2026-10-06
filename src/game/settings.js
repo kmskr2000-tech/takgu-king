@@ -1,7 +1,7 @@
 // 설정: 시즌 저장과 분리된 별도 키 (새로 시작/데이터 삭제로 지워지지 않음)
-import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791290560';
-import { BALL_SPEED, BALL_SPEED_ORDER, DEFAULT_BALL_SPEED } from './ballspeed.js?v=1791290560';
-import { CONTROL_MODES, CONTROL_ORDER, DEFAULT_CONTROL_MODE } from './controls.js?v=1791290560';
+import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791290945';
+import { BALL_SPEED, BALL_SPEED_ORDER, DEFAULT_BALL_SPEED } from './ballspeed.js?v=1791290945';
+import { CONTROL_MODES, CONTROL_ORDER, DEFAULT_CONTROL_MODE } from './controls.js?v=1791290945';
 
 export const SETTINGS_KEY = 'tabgu-king-settings-v1';
 
@@ -23,7 +23,8 @@ export const SETTING_DEFS = Object.freeze([
     desc: '공이 날아오는 빠르기 (느릴수록 판정 시간이 길어짐, 궤적·난이도 곡선은 그대로)',
   },
   bool('tips', '플레이 힌트', '처음 몇 번만 조작 방법을 짧게 알려줌'),
-  bool('sound', '사운드', '타격·득점·승리 효과음'),
+  bool('sound', '사운드', '타격·득점·승리 효과음 (끄면 배경음악도 함께 꺼짐)'),
+  bool('bgm', '배경음악', '도트 풍 배경음악 (메뉴·경기)'),
   bool('vibration', '진동', '타격·득점 때 폰이 진동 (지원 기기만)'),
   bool('effects', '이펙트', '타격 스파크, 득점 폭죽, 환호'),
   bool('shake', '화면 흔들림', '실점했을 때 화면이 살짝 흔들림'),
