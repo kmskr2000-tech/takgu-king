@@ -1,16 +1,16 @@
-import { h } from './dom.js?v=1791274869';
+import { h } from './dom.js?v=1791275126';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonResultScreen, endingScreen,
-} from './screens.js?v=1791274869';
-import { createRenderer } from './render.js?v=1791274869';
-import { createMatchController } from '../game/matchController.js?v=1791274869';
+} from './screens.js?v=1791275126';
+import { createRenderer } from './render.js?v=1791275126';
+import { createMatchController } from '../game/matchController.js?v=1791275126';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult,
-} from '../game/season.js?v=1791274869';
-import { createStore } from '../game/store.js?v=1791274869';
-import { createRng } from '../core/index.js?v=1791274869';
+} from '../game/season.js?v=1791275126';
+import { createStore } from '../game/store.js?v=1791275126';
+import { createRng } from '../core/index.js?v=1791275126';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */

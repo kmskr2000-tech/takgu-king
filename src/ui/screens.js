@@ -1,8 +1,9 @@
-import { h } from './dom.js?v=1791274869';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791274869';
+import { h } from './dom.js?v=1791275126';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791275126';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791275126';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats,
-} from '../game/season.js?v=1791274869';
+} from '../game/season.js?v=1791275126';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -12,6 +13,15 @@ const STAT_INFO = {
 
 const btn = (text, onclick, cls = '') => h('button', { class: `btn ${cls}`.trim(), onclick, type: 'button' }, text);
 
+/** 도트 로고: 캔버스에 직접 그린 글자. 스크린리더/검색용 텍스트는 숨겨서 함께 둔다 */
+function pixelLogo() {
+  const cv = h('canvas', { class: 'logo-canvas', 'aria-hidden': 'true', width: LOGO_W, height: LOGO_H });
+  cv.width = LOGO_W; cv.height = LOGO_H;
+  const c = cv.getContext?.('2d');
+  if (c) { c.imageSmoothingEnabled = false; drawLogo(c); }
+  return h('h1', { class: 'logo-pixel' }, cv, h('span', { class: 'sr-only' }, LOGO_TEXT));
+}
+
 export function titleScreen({ hasSave, onContinue, onNew, onRules }) {
   const icon = h('canvas', { class: 'icon', width: 16, height: 16 });
   icon.width = 16; icon.height = 16;
@@ -19,7 +29,7 @@ export function titleScreen({ hasSave, onContinue, onNew, onRules }) {
   if (ictx) { ictx.imageSmoothingEnabled = false; drawSprite(ictx, ICON_PADDLE, ICON_PALETTE, 0, 0); }
   return h('section', { class: 'screen title' },
     icon,
-    h('h1', { class: 'logo' }, '탁구왕 키우기'),
+    pixelLogo(),
     h('p', { class: 'sub' }, '지면 다시. 한 점씩, 한 경기씩.'),
     hasSave && btn('이어하기', onContinue, 'primary'),
     btn('새로 시작', onNew, hasSave ? '' : 'primary'),

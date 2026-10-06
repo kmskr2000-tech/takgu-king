@@ -24,3 +24,6 @@ canvas.court { width:min(100%, calc(62vh * 160 / 300)); height:auto; aspect-rati
 .quote { text-align:center; color:var(--dim); }
 canvas.icon { width:96px; height:96px; image-rendering:pixelated; align-self:center; margin-top:32px; }
 .logo { margin-top: 8px; letter-spacing: 2px; text-shadow: 2px 0 #000, -2px 0 #000, 0 2px #000, 0 -2px #000, 4px 4px 0 #8a5a00; }
+h1.logo-pixel { margin: 12px 0 0; display:flex; justify-content:center; }
+canvas.logo-canvas { width: 100%; max-width: 440px; height: auto; image-rendering: pixelated; }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
