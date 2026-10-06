@@ -1,8 +1,8 @@
 // 경기 화면 Canvas 렌더러 (도트 스타일: 저해상도 내부 버퍼 → CSS 로 확대, 스무딩 끔)
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791275602';
-import { createEffects } from './effects.js?v=1791275602';
+} from './sprites.js?v=1791276176';
+import { createEffects } from './effects.js?v=1791276176';
 
 export const VIEW_W = 160;
 export const VIEW_H = 300;
