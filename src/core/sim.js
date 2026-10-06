@@ -1,6 +1,6 @@
-import { SIDES, STATES } from './constants.js?v=1791280858';
-import { createMatch, otherSide } from './match.js?v=1791280858';
-import { aiServe, aiRespond, aiRating } from './ai.js?v=1791280858';
+import { SIDES, STATES } from './constants.js?v=1791287394';
+import { createMatch, otherSide } from './match.js?v=1791287394';
+import { aiServe, aiRespond, aiRating } from './ai.js?v=1791287394';
 
 const MAX_SHOTS = 200; // 무한 랠리 방지
 
@@ -12,7 +12,7 @@ function playPoint(m, params, rng) {
   while (m.state === STATES.RALLY && guard++ < MAX_SHOTS) {
     const receiver = otherSide(m.rally.hitter);
     const foeX = m.rally.flight.land ? 100 - m.rally.flight.land.x : 50;
-    const { judgement, shot } = aiRespond(params[receiver], rng, receiver, m.rally.flight, foeX);
+    const { judgement, shot } = aiRespond(params[receiver], rng, receiver, m.rally.flight, foeX, 'even', { read: false }); // AI 끼리는 상성을 읽지 않는다 (리그 곡선은 플레이어 상성과 무관하게 유지)
     res = m.respond(judgement, shot);
   }
   if (m.state === STATES.RALLY) throw new Error('랠리가 끝나지 않음');

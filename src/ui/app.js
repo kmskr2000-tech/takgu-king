@@ -1,28 +1,29 @@
-import { h } from './dom.js?v=1791280858';
+import { h } from './dom.js?v=1791287394';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen,
-} from './screens.js?v=1791280858';
+} from './screens.js?v=1791287394';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791280858';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791280858';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791280858';
-import { SHOT_TYPES, DEFAULT_SHOT_TYPE } from '../game/controls.js?v=1791280858';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791280858';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791280858';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791280858';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791280858';
-import { createAudio } from './audio.js?v=1791280858';
-import { createHaptics, react } from './feedback.js?v=1791280858';
-import { createRenderer } from './render.js?v=1791280858';
-import { createMatchController } from '../game/matchController.js?v=1791280858';
+} from './intro.js?v=1791287394';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791287394';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791287394';
+import { SHOT_TYPES, DEFAULT_SHOT_TYPE, shotKeyOfSpin } from '../game/controls.js?v=1791287394';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791287394';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791287394';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791287394';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791287394';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791287394';
+import { createAudio } from './audio.js?v=1791287394';
+import { createHaptics, react } from './feedback.js?v=1791287394';
+import { createRenderer } from './render.js?v=1791287394';
+import { createMatchController } from '../game/matchController.js?v=1791287394';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult,
-} from '../game/season.js?v=1791280858';
-import { createStore } from '../game/store.js?v=1791280858';
-import { createRng } from '../core/index.js?v=1791280858';
+} from '../game/season.js?v=1791287394';
+import { createStore } from '../game/store.js?v=1791287394';
+import { createRng } from '../core/index.js?v=1791287394';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -214,6 +215,7 @@ export function createApp(root, deps = {}) {
       const clock = createGameClock(nowFn, tut ? 0.6 : ballSpeedOf(settings.get().ballSpeed).scale); // 공 속도(튜토리얼은 더 느리게): 게임 시계 배율(경기 중 고정)
       api.gameClock = clock;
       const mode = settings.get().controls; // 조작 방식은 경기 시작 시점 값으로 고정
+      let lastMiss = null;
       let shotType = DEFAULT_SHOT_TYPE; // 간단 조작: 마지막으로 고른 샷 종류가 유지된다
       const canvas = h('canvas', { class: 'court' });
       const view = matchScreen({
@@ -252,15 +254,21 @@ export function createApp(root, deps = {}) {
         oppParams: tut ? TRAINER_PARAMS : aiParamsFor(state, opp),
         rng: createRng(seed),
         difficulty: tut ? 'tutorial' : settings.get().difficulty, // 경기 시작 시점의 난이도 (경기 중 고정)
-        controlMode: mode, getShotType: () => shotType,
+        controlMode: mode, getShotType: () => shotType, useMatchup: !tut, // 튜토리얼은 상성 없이 기본기부터
         courtWidth: canvas.clientWidth || 300,
         onEvent: (e) => {
           renderer.notify(e, clock());
           react(e, { audio, haptics });
-          if (e.type === 'grade') view.setJudge(e.grade === 'MISS' ? '미스!' : e.grade === 'PERFECT' ? '퍼펙트!' : '굿');
+          if (e.type === 'grade') {
+            const mu = e.matchup === 'win' ? ' · 상성 유리!' : e.matchup === 'lose' ? ' · 상성 불리…' : '';
+            view.setJudge((e.grade === 'MISS' ? '미스!' : e.grade === 'PERFECT' ? '퍼펙트!' : '굿') + (e.grade === 'MISS' ? '' : mu));
+          }
+          if (e.type === 'missed') lastMiss = e; // 직전 타이밍 실수(일찍/늦게/무탭): 실점 원인 표시에 쓴다
           if (e.type === 'point') {
             view.setScore(e.score.me, e.score.opp, null);
-            view.setJudge(e.winner === 'me' ? '득점!' : '실점…');
+            view.flashScore(e.winner);
+            view.setJudge('');
+            view.setPoint(describePoint(e, lastMiss)); lastMiss = null;
           }
           if (tut) { // 튜토리얼: 단계 진행·코치 패널 갱신. 결과는 기록하지 않는다
             if (['serve', 'return', 'missed', 'point'].includes(e.type)) {
@@ -330,10 +338,14 @@ export function createApp(root, deps = {}) {
         renderer.draw(ctl, now);
         view.setScore(ctl.match.score.me, ctl.match.score.opp, ctl.match.server);
         const serving = ctl.phase === 'awaitServe' || ctl.phase === 'oppServeWait';
-        if (serving && !wasServing) view.flashServe(ctl.match.server); // 서브 차례가 시작되는 순간 크게 알림
+        if (serving && !wasServing) { view.flashServe(ctl.match.server); view.setPoint(null); } // 다음 서브가 시작되면 득점/실점 배너를 치운다
+        if (serving && !wasServing) view.setJudge(''); // 서브 차례가 시작되는 순간 크게 알림
         wasServing = serving;
         if (ctl.match.server !== shownServer) { shownServer = ctl.match.server; view.setServe(shownServer); }
         const situation = ctl.phase === 'awaitServe' ? 'awaitServe' : (ctl.phase === 'flight' && ctl.timing && !ctl.pendingDown ? 'incoming' : null);
+        // 간단 조작: 날아오는 공의 종류 칩 (이걸 보고 상성에 맞는 샷을 고른다). 튜토리얼에서는 숨김
+        const inKey = mode === 'simple' && !tut && situation === 'incoming' && ctl.flight ? shotKeyOfSpin(ctl.flight.spin) : null;
+        view.setIncoming(inKey ? incomingLabel(inKey) : '', inKey);
         view.setTip(tipper.update(situation, now, ctl.t0)?.text ?? '');
         raf(tick);
       };

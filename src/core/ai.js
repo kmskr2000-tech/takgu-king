@@ -1,6 +1,6 @@
-import { GRADES, COURSE_X } from './constants.js?v=1791280858';
-import { buildTiming, judgeTap } from './timing.js?v=1791280858';
-import { createShot } from './shot.js?v=1791280858';
+import { GRADES, COURSE_X } from './constants.js?v=1791287394';
+import { buildTiming, judgeTap } from './timing.js?v=1791287394';
+import { createShot } from './shot.js?v=1791287394';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -53,8 +53,8 @@ export function aiStats(p) {
 export const aiRating = (p) =>
   0.4 * p.returnRate + 0.25 * p.accuracy + 0.15 * p.power + 0.1 * p.spinUse + 0.1 * p.courseAim;
 
-function chooseSpin(p, rng) {
-  if (rng.next() >= p.spinUse && p.style !== 'cut') return 0;
+function chooseSpin(p, rng, boost = 0) {
+  if (rng.next() >= p.spinUse + boost && p.style !== 'cut') return 0;
   if (p.style === 'cut') return rng.next() < 0.7 ? -1 : 0; // 커트 위주
   return rng.next() < 0.75 ? 1 : -1;
 }
@@ -69,11 +69,11 @@ function chooseTargetX(p, rng, foeX) {
   return cols[Math.floor(rng.next() * 3)];
 }
 
-function buildAiShot(p, rng, side, from, hitY, grade, offset, foeX, powerCap = 1) {
-  const spin = chooseSpin(p, rng);
+function buildAiShot(p, rng, side, from, hitY, grade, offset, foeX, powerCap = 1, { powerBonus = 0, forceSpin = null, spinBoost = 0 } = {}) {
+  const spin = forceSpin ?? chooseSpin(p, rng, spinBoost);
   const aim = {
     targetX: chooseTargetX(p, rng, foeX),
-    power: Math.min(powerCap, clamp(0.25 + 0.5 * p.power + 0.1 * rng.signed(), 0.1, 1)),
+    power: Math.min(powerCap, clamp(0.25 + 0.5 * p.power + 0.1 * rng.signed() + powerBonus, 0.1, 1)),
     spin,
   };
   if (spin < 0) aim.depth = 60;
@@ -94,7 +94,19 @@ export function aiServe(p, rng, side, foeX = 50) {
 // 빠른 공일수록 오차가 커지는 반면 판정 창은 좁아져(timing.halfTime) 파워/스핀이 AI 리턴을 어렵게 한다.
 const SIGMA_FLOOR = 0.055;
 const SIGMA_RANGE = 0.25;
-const CUT_POWER_CAP = 0.55; // 커트를 받은 뒤엔 강타 봉쇄 (설계서 3.3)
+/**
+ * 전략 템포 (튜닝 상수). 받은 공의 스핀에 따라 AI 의 대응이 달라진다:
+ *  - 커트(수비)를 받으면 강타를 못 치고(파워 상한) 스핀 없이 약하게 돌려준다 → 내가 리셋하고 다음 공격을 준비
+ *  - 탑스핀(공격)을 받아내면 역습: 더 세고 스핀을 쓰는 공을 돌려준다 → 내게 오는 공이 빨라져 존이 좁아진다
+ * (p.counter === false 인 상대(튜토리얼 코치)는 역습하지 않는다)
+ */
+// 상성: 내 샷이 상대 공에 유리했으면(win) 상대 탭 오차가 커지고, 불리했으면(lose) 작아진다 (controls.js MATCHUP_FX.aiSigma 와 같은 값)
+export const AI_MATCHUP_SIGMA = { win: 1.3, lose: 0.8, even: 1 };
+// 상성 읽기: AI 가 내가 방금 친 샷 종류를 읽고 그 상성(나를 이기는 종류)으로 되받을 확률. 리그가 높을수록 읽는다.
+// → 한 가지 샷만 반복하면 읽혀서 불리해지고, 날아오는 공 종류에 맞춰 고르는 쪽이 유리하다. (코치/튜토리얼은 league 가 없어 읽지 않는다)
+export const AI_READ = { amateur: 0, third: 0.25, second: 0.4, first: 0.55, world: 0.7 };
+const COUNTER_SPIN = { topspin: 0, cut: 1, normal: -1 }; // 내 샷 종류 → AI 가 고를 스핀 (내 탑스핀 ← 일반, 내 일반 ← 커트, 내 커트 ← 탑스핀)
+export const AI_TEMPO = { cutPowerCap: 0.4, cutNoSpin: true, cutSigmaMult: 0.9, counterBonus: 0.45, counterSpinBoost: 0.6, spinThreshold: 0.5 };
 
 export const tapSigma = (p, speed) =>
   (SIGMA_FLOOR + SIGMA_RANGE * (1 - p.returnRate)) * clamp(speed / 220, 0.8, 1.8);
@@ -110,15 +122,24 @@ function gauss(rng) {
  * 탭 시각 = 중심 + N(0, σ), 실제 judgeTap 으로 PERFECT/GOOD/MISS 판정.
  * 반환: { judgement: {grade, offset}, shot|null, t(탭 시각, 공 발사 기준 초), timing }
  */
-export function aiRespond(p, rng, side, flight, foeX = 50) {
+export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { read = true } = {}) {
   const timing = buildTiming(flight, aiStats(p).focus * 0.5); // AI 는 판정 폭 보정을 절반만 받는다
-  const t = timing.center + gauss(rng) * tapSigma(p, Math.abs(flight.vyPost));
+  const inSpin = flight.spin ?? 0;
+  const cutIn = inSpin < -AI_TEMPO.spinThreshold; const topIn = inSpin > AI_TEMPO.spinThreshold;
+  const t = timing.center + gauss(rng) * tapSigma(p, Math.abs(flight.vyPost)) * (cutIn ? AI_TEMPO.cutSigmaMult : 1) * (AI_MATCHUP_SIGMA[matchup] ?? 1);
   const judgement = judgeTap(t, timing);
   if (judgement.grade === GRADES.MISS) return { judgement, shot: null, t, timing };
   const pos = flight.postPos(t);
+  const mine = inSpin > AI_TEMPO.spinThreshold ? 'topspin' : inSpin < -AI_TEMPO.spinThreshold ? 'cut' : 'normal';
+  const reads = read && p.counter !== false && rng.next() < (AI_READ[p.league] ?? 0) * (TIER_MULT[p.tier] ?? 1);
   const shot = buildAiShot(
     p, rng, side, pos.x, pos.y, judgement.grade, clamp(judgement.offset, -1, 1), foeX,
-    flight.spin < 0 ? CUT_POWER_CAP : 1,
+    cutIn ? AI_TEMPO.cutPowerCap : 1,
+    {
+      forceSpin: reads ? COUNTER_SPIN[mine] : cutIn && AI_TEMPO.cutNoSpin ? 0 : null,
+      powerBonus: topIn && p.counter !== false ? AI_TEMPO.counterBonus : 0,
+      spinBoost: topIn && p.counter !== false ? AI_TEMPO.counterSpinBoost : 0,
+    },
   );
   return { judgement, shot, t, timing };
 }

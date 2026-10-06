@@ -15,6 +15,7 @@ export const TIPS_SIMPLE = Object.freeze([
   { id: 'zone', when: 'incoming', text: '공이 노란 띠에 들어오면 탭! 가운데(붉은 띠)가 PERFECT' },
   { id: 'course', when: 'incoming', text: '탭하는 위치로 공을 보내요: 왼쪽 탭 → 왼쪽, 오른쪽 탭 → 오른쪽' },
   { id: 'shot', when: 'incoming', text: '아래 버튼으로 샷을 골라요: 탑스핀=빠르고 낮게, 커트=느리고 높게' },
+  { id: 'matchup', when: 'incoming', text: '상성! 탑스핀은 커트에, 커트는 일반에, 일반은 탑스핀에 강해요. 상대 공을 보고 골라요' },
 ]);
 export const tipsFor = (mode) => (mode === 'advanced' ? TIPS : TIPS_SIMPLE);
 const ALL_TIP_IDS = new Set([...TIPS, ...TIPS_SIMPLE].map((t) => t.id));

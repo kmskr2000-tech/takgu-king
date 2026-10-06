@@ -1,12 +1,12 @@
-import { h } from './dom.js?v=1791280858';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791280858';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791280858';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791280858';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791280858';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791280858';
+import { h } from './dom.js?v=1791287394';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791287394';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791287394';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791287394';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791287394';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791287394';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791280858';
+} from '../game/season.js?v=1791287394';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -215,6 +215,14 @@ export function resultScreen({ result, onNext, reward = null }) {
 export function matchScreen({ oppName, oppStyle, canvas, onQuit, quitLabel = '포기', onShot = null }) {
   const oppScore = h('span', { class: 'opp-score' }, '0');
   const meScore = h('span', { class: 'me-score' }, '0');
+  // 점수판: '나'와 '상대'를 라벨·색으로 구분. 점수를 딴 쪽은 +1 이 튀어 오른다. 서브권은 ● 점
+  const oppPlus = h('span', { class: 'plus' }, ''); const mePlus = h('span', { class: 'plus' }, '');
+  const oppServe = h('i', { class: 'srv' }, ''); const meServe = h('i', { class: 'srv' }, '');
+  const oppPanel = h('div', { class: 'panel opp', 'aria-label': '상대 점수' }, h('div', { class: 'who' }, oppServe, '상대'), oppScore, oppPlus);
+  const mePanel = h('div', { class: 'panel me', 'aria-label': '내 점수' }, h('div', { class: 'who' }, meServe, '나'), meScore, mePlus);
+  const incoming = h('div', { class: 'incoming', 'aria-live': 'polite' }, '');
+  const pbTitle = h('b', {}, ''); const pbDetail = h('span', {}, ''); const pbTip = h('small', {}, '');
+  const pointBanner = h('div', { class: 'point-banner', 'aria-live': 'assertive' }, pbTitle, pbDetail, pbTip);
   const judge = h('div', { class: 'judge' }, '');
   const tip = h('div', { class: 'tip', 'aria-live': 'polite' }, '');
   const coachHead = h('div', { class: 'coach-head' }, ''); const coachText = h('div', { class: 'coach-text' }, '');
@@ -229,12 +237,12 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit, quitLabel = '�
     SHOT_ORDER.map((k) => {
       const t = SHOT_TYPES[k];
       shotBtns[k] = h('button', { class: 'shot-btn', type: 'button', 'data-shot': k, style: `--c:${t.color}`, onclick: () => onShot?.(k) },
-        h('b', {}, t.label), h('small', {}, t.desc));
+        h('b', {}, t.label), h('em', {}, t.tag), h('small', {}, t.desc));
       return shotBtns[k];
     }));
   const badge = h('div', { class: 'serve-badge' }, '');
   const banner = h('div', { class: 'serve-banner', 'aria-live': 'polite' }, '');
-  let flashes = 0;
+  let flashes = 0; let pops = 0; let banners = 0;
   return {
     // 캔버스를 화면 폭 가득 쓰고, 점수·상대 정보·판정·포기는 캔버스 위 오버레이, 힌트는 캔버스 아래
     el: h('section', { class: 'screen match' },
@@ -242,9 +250,9 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit, quitLabel = '�
         canvas,
         h('div', { class: 'hud' },
           h('div', { class: 'opp-info' }, `${oppName}`, h('small', {}, oppStyle)),
-          h('div', { class: 'scoreboard' }, oppScore, ' : ', meScore),
-          badge, judge),
-        banner,
+          h('div', { class: 'scoreboard' }, oppPanel, h('span', { class: 'vs' }, ':'), mePanel),
+          badge, judge, incoming),
+        banner, pointBanner,
         h('button', { class: 'btn quit', type: 'button', onclick: onQuit }, quitLabel)),
       bar, coach, tip),
     setTip(text) { tip.textContent = text; tip.className = text ? 'tip on' : 'tip'; },
@@ -278,9 +286,24 @@ export function matchScreen({ oppName, oppStyle, canvas, onQuit, quitLabel = '�
       banner.className = `serve-banner show ${side} f${flashes % 2}`;
     },
     setScore(me, opp, server) {
-      meScore.textContent = `${me}${server === 'me' ? '●' : ''}`;
-      oppScore.textContent = `${opp}${server === 'opp' ? '●' : ''}`;
+      meScore.textContent = String(me); oppScore.textContent = String(opp);
+      meServe.textContent = server === 'me' ? '●' : ''; oppServe.textContent = server === 'opp' ? '●' : '';
     },
+    /** 점수를 딴 쪽 패널을 강조하고 +1 을 띄운다 (두 클래스를 번갈아 써서 연속 득점도 다시 재생) */
+    flashScore(side) {
+      pops += 1; const [on, off, plus, other] = side === 'me' ? [mePanel, oppPanel, mePlus, oppPlus] : [oppPanel, mePanel, oppPlus, mePlus];
+      on.className = `panel ${side} scored p${pops % 2}`; off.className = `panel ${side === 'me' ? 'opp' : 'me'}`;
+      plus.textContent = '+1'; other.textContent = '';
+    },
+    /** 득점/실점 배너: p = describePoint 결과 {tone,title,detail,tip} (null 이면 숨김) */
+    setPoint(p) {
+      if (!p) { pointBanner.className = 'point-banner'; pbTitle.textContent = ''; pbDetail.textContent = ''; pbTip.textContent = ''; return; }
+      banners += 1;
+      pbTitle.textContent = p.title; pbDetail.textContent = p.detail; pbTip.textContent = p.tip ?? '';
+      pointBanner.className = `point-banner show ${p.tone} b${banners % 2}`;
+    },
+    /** 날아오는 상대 공 종류 칩 (간단 조작). text 가 비면 숨김. key: 색 */
+    setIncoming(text, key = null) { incoming.textContent = text; incoming.className = text ? `incoming on ${key ?? ''}`.trim() : 'incoming'; },
     setJudge(text) { judge.textContent = text; },
   };
 }

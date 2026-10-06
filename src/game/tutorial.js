@@ -150,7 +150,7 @@ export const TUTORIAL_STATS = Object.freeze({ power: 4, spin: 4, focus: 4 });
  */
 export const TRAINER_PARAMS = Object.freeze({
   style: 'balanced', league: 'amateur', tier: 'low',
-  returnRate: 0.9, accuracy: 0.7, spinUse: 0, courseAim: 0, power: 0.1,
+  returnRate: 0.9, accuracy: 0.7, spinUse: 0, courseAim: 0, power: 0.1, counter: false, // 코치는 역습하지 않는다
 });
 
 export function createTutorialStore(storage = globalThis.localStorage) {

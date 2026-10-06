@@ -66,7 +66,30 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .match-stage { position: relative; width: min(100%, calc((100dvh - 96px) * 0.5)); margin: 0 auto; }
 .hud { position: absolute; top: 6px; left: 0; right: 0; text-align: center; pointer-events: none; color: #fff;
   text-shadow: 1px 0 #000, -1px 0 #000, 0 1px #000, 0 -1px #000, 2px 2px 0 #000; }
-.hud .scoreboard { font-size: 2.2rem; line-height: 1.1; }
+.hud .scoreboard { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 2.2rem; line-height: 1; letter-spacing: 0; }
+.hud .scoreboard .vs { opacity: .6; font-size: 1.6rem; }
+.hud .scoreboard .panel { position: relative; min-width: 84px; padding: 3px 12px 5px; border-radius: 10px; background: rgba(10,16,28,.72); border: 2px solid transparent; transition: transform .15s; }
+.hud .scoreboard .panel.opp { border-color: #ff7a6a; } .hud .scoreboard .panel.me { border-color: #5ab8ff; }
+.hud .scoreboard .who { font-size: .72rem; font-weight: 700; letter-spacing: 1px; display: flex; justify-content: center; gap: 4px; }
+.hud .scoreboard .panel.opp .who { color: #ff9d90; } .hud .scoreboard .panel.me .who { color: #8fd0ff; }
+.hud .scoreboard .srv { font-style: normal; color: #ffd24a; min-width: 1ch; }
+.hud .scoreboard .plus { position: absolute; right: -4px; top: -10px; font-size: 1.05rem; font-weight: 800; color: #ffd24a; opacity: 0; }
+.hud .scoreboard .panel.scored { background: rgba(255,210,74,.28); border-color: #ffd24a; animation: scorepop .9s ease-out; }
+.hud .scoreboard .panel.scored.p1 { animation-name: scorepop2; }
+.hud .scoreboard .panel.scored .plus { opacity: 1; animation: plusrise .9s ease-out; }
+@keyframes scorepop { 0% { transform: scale(1.35); } 100% { transform: scale(1); } }
+@keyframes scorepop2 { 0% { transform: scale(1.35); } 100% { transform: scale(1); } }
+@keyframes plusrise { 0% { transform: translateY(8px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-4px); opacity: 1; } }
+.hud .incoming { position: absolute; left: 0; right: 0; top: 112px; display: none; font-weight: 800; font-size: .95rem; }
+.hud .incoming.on { display: block; } .hud .incoming.topspin { color: #ff8a7a; } .hud .incoming.cut { color: #7cc0ff; } .hud .incoming.normal { color: #f4f4f4; }
+.point-banner { position: absolute; left: 8%; right: 8%; top: 38%; display: none; flex-direction: column; align-items: center; gap: 4px; padding: 12px 10px; border-radius: 14px; text-align: center; color: #fff; pointer-events: none; z-index: 5; border: 3px solid #fff; background: rgba(8,12,22,.88); }
+.point-banner.show { display: flex; animation: bannerin .35s ease-out; } .point-banner.show.b1 { animation-name: bannerin2; }
+.point-banner.win { border-color: #5ae08a; } .point-banner.lose { border-color: #ff6a5a; }
+.point-banner b { font-size: 2rem; } .point-banner.win b { color: #6af0a0; } .point-banner.lose b { color: #ff8a7a; }
+.point-banner span { font-size: 1.05rem; font-weight: 700; } .point-banner small { font-size: .85rem; color: #ffd24a; }
+@keyframes bannerin { 0% { transform: scale(.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes bannerin2 { 0% { transform: scale(.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .hud .scoreboard .panel.scored, .hud .scoreboard .plus, .point-banner.show { animation: none; } }
 .hud .opp-info { font-weight: 700; } .hud .opp-info small { display: block; color: #c8d3e0; font-weight: 400; }
 .hud .judge { position: absolute; left: 0; right: 0; top: 84px; font-size: 1.3rem; }
 .btn.quit { position: absolute; top: 6px; right: 6px; min-height: 44px; padding: 0 14px; background: rgba(0,0,0,.55); border-color: rgba(255,255,255,.5); }
@@ -108,6 +131,8 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .shot-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 60px; padding: 8px 4px; font: inherit; color: #fff;
   background: #16212e; border: 2px solid var(--c, #fff); border-radius: 8px; }
 .shot-btn b { font-size: 1.05rem; color: var(--c, #fff); }
+.shot-btn em { font-style: normal; font-size: .72rem; font-weight: 700; color: #ffd24a; }
+.shot-btn.sel em { color: #111; }
 .shot-btn small { font-size: .68rem; color: #c8d3e0; line-height: 1.2; text-align: center; }
 .shot-btn.sel { background: var(--c); box-shadow: 0 0 0 2px #000 inset; } .shot-btn.sel b, .shot-btn.sel small { color: #111; }
 .shot-btn.hint { animation: shotpulse .8s ease-in-out infinite alternate; }
