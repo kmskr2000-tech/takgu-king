@@ -64,11 +64,11 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 /* 경기 화면: 원근 뷰를 화면 폭 가득, HUD 는 캔버스 위 오버레이 */
 .screen.match { gap: 8px; }
 .match-stage { position: relative; width: min(100%, calc((100dvh - 96px) * 0.5)); margin: 0 auto; }
-.hud { position: absolute; top: 6px; left: 0; right: 0; text-align: center; pointer-events: none; color: #fff;
+.hud { position: absolute; top: 6px; left: 0; right: 0; z-index: 20; text-align: center; pointer-events: none; color: #fff; /* 득점/실점·서브 배너(z-index 5) 위에 항상 선명하게 */
   text-shadow: 1px 0 #000, -1px 0 #000, 0 1px #000, 0 -1px #000, 2px 2px 0 #000; }
 .hud .scoreboard { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 2.2rem; line-height: 1; letter-spacing: 0; }
 .hud .scoreboard .vs { opacity: .6; font-size: 1.6rem; }
-.hud .scoreboard .panel { position: relative; min-width: 84px; padding: 3px 12px 5px; border-radius: 10px; background: rgba(10,16,28,.72); border: 2px solid transparent; transition: transform .15s; }
+.hud .scoreboard .panel { position: relative; min-width: 84px; padding: 3px 12px 5px; border-radius: 10px; background: rgb(10,16,28); border: 2px solid transparent; transition: transform .15s; }
 .hud .scoreboard .panel.opp { border-color: #ff7a6a; } .hud .scoreboard .panel.me { border-color: #5ab8ff; }
 .hud .scoreboard .who { font-size: .72rem; font-weight: 700; letter-spacing: 1px; display: flex; justify-content: center; gap: 4px; }
 .hud .scoreboard .panel.opp .who { color: #ff9d90; } .hud .scoreboard .panel.me .who { color: #8fd0ff; }
@@ -82,7 +82,7 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 @keyframes plusrise { 0% { transform: translateY(8px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-4px); opacity: 1; } }
 .hud .incoming { position: absolute; left: 0; right: 0; top: 112px; display: none; font-weight: 800; font-size: .95rem; }
 .hud .incoming.on { display: block; } .hud .incoming.topspin { color: #ff8a7a; } .hud .incoming.cut { color: #7cc0ff; } .hud .incoming.normal { color: #f4f4f4; }
-.point-banner { position: absolute; left: 8%; right: 8%; top: 38%; display: none; flex-direction: column; align-items: center; gap: 4px; padding: 12px 10px; border-radius: 14px; text-align: center; color: #fff; pointer-events: none; z-index: 5; border: 3px solid #fff; background: rgba(8,12,22,.88); }
+.point-banner { position: absolute; left: 8%; right: 8%; top: max(170px, 42%); /* HUD(점수판·판정·공 종류 칩) 아래에서만 뜬다 */ display: none; flex-direction: column; align-items: center; gap: 4px; padding: 12px 10px; border-radius: 14px; text-align: center; color: #fff; pointer-events: none; z-index: 5; border: 3px solid #fff; background: rgba(8,12,22,.82); }
 .point-banner.show { display: flex; animation: bannerin .35s ease-out; } .point-banner.show.b1 { animation-name: bannerin2; }
 .point-banner.win { border-color: #5ae08a; } .point-banner.lose { border-color: #ff6a5a; }
 .point-banner b { font-size: 2rem; } .point-banner.win b { color: #6af0a0; } .point-banner.lose b { color: #ff8a7a; }
@@ -105,7 +105,7 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .serve-badge:empty { visibility: hidden; }
 .serve-badge.me { background: #ffd24a; color: #1a1400; }
 .serve-badge.opp { background: #e8e8f0; color: #1b1f2a; }
-.serve-banner { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: 1.9rem; font-weight: 900; color: #fff; opacity: 0; pointer-events: none;
+.serve-banner { position: absolute; left: 0; right: 0; top: max(170px, 42%); z-index: 5; text-align: center; font-size: 1.9rem; font-weight: 900; color: #fff; opacity: 0; pointer-events: none;
   text-shadow: 2px 0 #000, -2px 0 #000, 0 2px #000, 0 -2px #000, 3px 3px 0 #000; }
 .serve-banner.me { color: #ffd24a; }
 .serve-banner.show.f0 { animation: serveflash0 1.6s ease-out forwards; }
