@@ -94,13 +94,13 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 @keyframes bannerin2 { 0% { transform: scale(.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .hud .scoreboard .panel.scored, .hud .scoreboard .plus, .point-banner.show { animation: none; } }
 .hud .opp-info { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; padding: 0 6px; line-height: 1.2; }
-.hud .opp-name { font-size: 1.05rem; font-weight: 900; }
+.hud .opp-name { font-size: 1.05rem; font-weight: 900; white-space: nowrap; }
 .hud .opp-tag { font-size: .62rem; font-weight: 800; padding: 1px 6px; border-radius: 9px; border: 1px solid #000; text-shadow: none; color: #111; background: #c8d3e0; }
 .hud .opp-tag.rival { background: #ffd24a; } .hud .opp-tag.cut { background: #7cc0ff; } .hud .opp-tag.all { background: #c8d3e0; } .hud .opp-tag.coach { background: #8be0a0; }
 .hud .opp-tag.tier-low { background: #9ad8a0; } .hud .opp-tag.tier-mid { background: #ffd89a; } .hud .opp-tag.tier-high { background: #ff9d90; } .hud .judge { font-size: 1.05rem; min-height: 0; }
 .btn.quit { flex: none; width: 64px; min-height: 44px; padding: 0 6px; font-size: .8rem; background: rgba(0,0,0,.55); border-color: rgba(255,255,255,.5); pointer-events: auto; }
 .hud-top { display: flex; align-items: flex-start; gap: 4px; padding: 0 4px; }
-.hud-top .hud-side { flex: none; width: 64px; } /* 포기 버튼과 같은 폭의 빈칸: 이름·칩을 가운데에 맞춘다 */
+.hud-top .hud-side { display: none; } /* 좁은 캔버스(튜토리얼)에서 이름이 세로로 쪼개지지 않도록 대칭 빈칸을 두지 않는다 */
 .hud-top .opp-info { flex: 1; min-width: 0; }
 .hud-sub { pointer-events: none; }
 .intro-caption { bottom: 48px; }
