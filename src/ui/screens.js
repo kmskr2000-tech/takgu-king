@@ -1,12 +1,12 @@
-import { h } from './dom.js?v=1791292161';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791292161';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791292161';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791292161';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791292161';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791292161';
+import { h } from './dom.js?v=1791297066';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791297066';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791297066';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791297066';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791297066';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791297066';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791292161';
+} from '../game/season.js?v=1791297066';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -275,14 +275,20 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
       h('div', { class: 'match-stage' },
         canvas,
         h('div', { class: 'hud' },
-          h('div', { class: 'opp-info' }, h('b', { class: 'opp-name' }, oppName),
-            // 특징 칩: 라이벌 / 플레이 스타일(커트 위주·올라운더) / 실력대. (oppTags 없으면 예전처럼 한 줄 설명)
-            ...(oppTags ?? (oppStyle ? [{ label: oppStyle, kind: 'all' }] : [])).map((t) => h('span', { class: `opp-tag ${t.kind}` }, t.label))),
+          // 윗줄: [빈칸 | 상대 이름·칩 | 포기]. 포기 버튼을 흐름 안에 둬서 점수판·칩과 겹치지 않는다
+          h('div', { class: 'hud-top' },
+            h('span', { class: 'hud-side', 'aria-hidden': 'true' }),
+            h('div', { class: 'opp-info' }, h('b', { class: 'opp-name' }, oppName),
+              // 특징 칩: 라이벌 / 플레이 스타일(커트 위주·올라운더) / 실력대. (oppTags 없으면 예전처럼 한 줄 설명)
+              ...(oppTags ?? (oppStyle ? [{ label: oppStyle, kind: 'all' }] : [])).map((t) => h('span', { class: `opp-tag ${t.kind}` }, t.label))),
+            h('button', { class: 'btn quit', type: 'button', onclick: onQuit }, quitLabel)),
           h('div', { class: 'scoreboard' }, oppPanel, h('span', { class: 'vs' }, ':'), mePanel),
-          badge, judge, incoming, laneChip),
+          // 판정·공 종류·코스 라벨은 고정 px 가 아니라 점수판 아래로 흐른다 (이름·칩이 두 줄이 돼도 안 겹침)
+          h('div', { class: 'hud-sub' }, badge, judge, incoming, laneChip)),
         banner, pointBanner, rps,
-        h('button', { class: 'btn quit', type: 'button', onclick: onQuit }, quitLabel)),
-      bar, coach, tip),
+        // 힌트는 캔버스 아래 칸이 아니라 캔버스 위에 겹쳐 표시 (비어 있어도 자리를 차지하던 빈 줄 제거)
+        tip),
+      bar, coach),
     setTip(text) { tip.textContent = text; tip.className = text ? 'tip on' : 'tip'; },
     /** 샷 선택 바: 간단 조작에서만 보인다 */
     setShotBar(visible) { bar.className = visible ? 'shotbar on' : 'shotbar'; },
@@ -341,15 +347,21 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
   };
 }
 
-export function tutorialDoneScreen({ onPlay, onAgain, onTitle, hasSave }) {
+export function tutorialDoneScreen({ onPlay, onAgain, onTitle, hasSave, mode }) {
+  const simple = mode !== 'advanced';
   return h('section', { class: 'screen tutorial-done' },
     h('h2', {}, '튜토리얼 완료!'),
-    h('p', { class: 'quote' }, '탭 타이밍 · 코스 · 탑스핀/커트 · 파워까지 모두 익혔어요.'),
-    h('ul', {},
-      h('li', {}, '노란 띠 안에서 탭, 붉은 띠 한가운데는 PERFECT'),
-      h('li', {}, '코트 탭 = 코스 (왼쪽 · 가운데 · 오른쪽), 샷 버튼 = 스윙'),
-      h('li', {}, '위로 쓸기 = 탑스핀, 아래로 쓸기 = 커트'),
-      h('li', {}, '길게 쓸수록 강한 샷 (너무 세면 아웃)')),
+    h('p', { class: 'quote' }, simple ? '타이밍 · 코스 · 샷 고르기 · 상성까지 모두 익혔어요.' : '탭 타이밍 · 코스 · 탑스핀/커트 · 파워까지 모두 익혔어요.'),
+    h('ul', {}, ...(simple ? [
+      '노란 띠 안에서 샷 버튼, 붉은 띠 한가운데는 PERFECT',
+      '코트 탭 = 코스 (왼쪽 · 가운데 · 오른쪽), 샷 버튼을 누르는 순간 = 스윙',
+      '상대 공을 보고 고르기: 탑스핀 > 커트 > 일반 > 탑스핀',
+    ] : [
+      '노란 띠 안에서 탭, 붉은 띠 한가운데는 PERFECT',
+      '탭 위치 = 코스 (왼쪽 · 가운데 · 오른쪽)',
+      '위로 쓸기 = 탑스핀, 아래로 쓸기 = 커트',
+      '길게 쓸수록 강한 샷 (너무 세면 아웃)',
+    ]).map((t) => h('li', {}, t))),
     btn(hasSave ? '내 시즌으로 가기' : '새로 시작하기', onPlay, 'primary'),
     btn('튜토리얼 다시 하기', onAgain),
     btn('타이틀', onTitle));

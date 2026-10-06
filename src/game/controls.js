@@ -1,6 +1,6 @@
 // 조작 방식. 간단(기본): 탭 한 번이 곧 샷 — 코스는 탭 위치, 샷 종류는 미리 고른 버튼. 고급: 탭 + 쓸기(스핀/파워).
 export const CONTROL_MODES = Object.freeze({
-  simple: { label: '간단', desc: '탭 한 번으로 치기. 샷 종류는 아래 버튼으로 미리 고르고, 코스는 탭 위치로' },
+  simple: { label: '간단', desc: '샷 버튼을 누르는 순간이 스윙. 코스는 코트를 탭해 정하고, 샷 종류는 상대 공을 보고 골라요' },
   advanced: { label: '고급', desc: '탭하면서 위/아래로 쓸어 스핀·파워를 직접 조절 (기존 방식)' },
 });
 export const CONTROL_ORDER = Object.freeze(['simple', 'advanced']);
@@ -15,10 +15,10 @@ export const SHOT_TYPES = Object.freeze({
   //  - leniency: 내 타이밍 존(받아주는 범위) 배율 / error: 샷 오차 배율 → 공격은 위험(좁고 흔들림), 수비는 안정(넓고 정확)
   //  - 탑스핀(공격·위험): 빠른 공으로 상대를 압박하지만, 존이 좁고 막히면 상대가 역습한다(AI_TEMPO.counter*)
   //  - 커트(수비·안정): 존이 넓고 안전, 상대는 약하게·스핀 없이 돌려준다(리셋). 단 커트만으로는 점수를 못 낸다
-  normal: { label: '일반', tag: '기본', power: 0.5, spin: 0, leniency: 1.0, error: 1.0, desc: '존 보통 · 무난하게', color: '#f4f4f4' },
-  topspin: { label: '탑스핀', tag: '공격·위험', power: 0.6, spin: 1, leniency: 0.6, error: 2.0, desc: '빠른 압박 · 존 좁음 · 역습 주의', color: '#ff5a4a' },
+  normal: { label: '일반', tag: '기본', power: 0.5, spin: 0, leniency: 1.0, error: 1.0, desc: '탑스핀 공에 강함 · 무난하게', color: '#f4f4f4' },
+  topspin: { label: '탑스핀', tag: '공격·위험', power: 0.6, spin: 1, leniency: 0.6, error: 2.0, desc: '커트 공에 강함 · 빠른 압박 · 역습 주의', color: '#ff5a4a' },
   // 커트 파워 0.5: 파워 0.8 은 제어 상한(0.65)을 넘어 깊이 날아가 늦은 타이밍에 아웃이 났다 (어느 타격 위치에서도 목표에 100% 착지)
-  cut: { label: '커트', tag: '수비·안정', power: 0.5, spin: -1, depth: 60, leniency: 1.4, error: 0.5, desc: '존 넓음 · 상대 강타 봉쇄', color: '#4aa3ff' },
+  cut: { label: '커트', tag: '수비·안정', power: 0.5, spin: -1, depth: 60, leniency: 1.4, error: 0.5, desc: '일반 공에 강함 · 상대 강타 봉쇄', color: '#4aa3ff' },
 });
 
 /** 상대 공의 빠르기(바운드 후 속도): 상황 판단 안내용. fast → 커트로 리셋, slow → 탑스핀 공격 기회 */
