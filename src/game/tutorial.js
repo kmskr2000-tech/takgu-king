@@ -95,6 +95,7 @@ export function feedbackFor(e, step) {
     if (e.kind === 'net') return step?.id === 'power' ? '약하게 걸렸어요 — 그래도 길게 쓸어 강타는 성공!' : '공이 네트에 걸렸어요. 조금 더 길게 쓸어 파워를 올려보세요.';
     if (e.kind === 'out') return '너무 세서 아웃! 파워를 줄이거나 위로 쓸어 탑스핀을 걸어보세요.';
     if (e.grade === 'PERFECT') return 'PERFECT!';
+    if (e.grade === 'BAD') return '아슬아슬! 띠 가장자리예요 — 가운데를 노려요.';
     if (e.grade === 'GOOD') return step?.id === 'perfect' ? '좋아요! 붉은 띠 한가운데를 노려보세요.' : '좋아요!';
   }
   return '';

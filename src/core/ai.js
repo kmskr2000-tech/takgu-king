@@ -1,6 +1,7 @@
-import { GRADES, COURSE_X } from './constants.js?v=1791297279';
-import { buildTiming, judgeTap } from './timing.js?v=1791297279';
-import { createShot } from './shot.js?v=1791297279';
+import { GRADES, COURSE_X } from './constants.js?v=1791327984';
+import { buildTiming, judgeTap } from './timing.js?v=1791327984';
+import { MIN_REACTION_S } from './constants.js?v=1791327984';
+import { createShot, flightOf, powerCap } from './shot.js?v=1791327984';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -35,7 +36,8 @@ export function makeAiParams(league, tier = 'mid', style = 'balanced') {
   if (!base) throw new Error(`알 수 없는 리그: ${league}`);
   const mult = TIER_MULT[tier];
   if (!mult) throw new Error(`알 수 없는 등급: ${tier}`);
-  const p = { style, league, tier };
+  const p = { style, league, tier, variety: LEAGUE_VARIETY[league] ?? 0 };
+  if (tier === 'rival') p.rhythm = RIVAL_RHYTHM[league];
   for (const k of Object.keys(base)) p[k] = clamp(base[k] * mult, 0, 1);
   return p;
 }
@@ -54,7 +56,7 @@ export const aiRating = (p) =>
   0.4 * p.returnRate + 0.25 * p.accuracy + 0.15 * p.power + 0.1 * p.spinUse + 0.1 * p.courseAim;
 
 function chooseSpin(p, rng, boost = 0) {
-  if (rng.next() >= p.spinUse + boost && p.style !== 'cut') return 0;
+  if (rng.next() >= Math.max(p.spinUse, p.variety ?? 0) + boost && p.style !== 'cut') return 0;
   if (p.style === 'cut') return rng.next() < 0.7 ? -1 : 0; // 커트 위주
   return rng.next() < 0.75 ? 1 : -1;
 }
@@ -69,17 +71,28 @@ function chooseTargetX(p, rng, foeX) {
   return cols[Math.floor(rng.next() * 3)];
 }
 
-function buildAiShot(p, rng, side, from, hitY, grade, offset, foeX, powerCap = 1, { powerBonus = 0, forceSpin = null, spinBoost = 0 } = {}) {
+// 제어 가능한 파워 상한 (플레이어와 같은 규칙, shot.js powerCap): 하위 리그(아마추어~2부) AI 가 역습 보너스로 자기 능력 밖 강타를 쳐서 스스로 아웃나는 것을 막는다.
+// → 하위 리그도 랠리가 이어지고(스팸 한 가지 샷으로 AI 자멸을 기다릴 수 없다) 공은 여전히 느리다. 상위 리그는 거의 영향 없음.
+const CAPPED_LEAGUES = new Set(['amateur', 'third', 'second']); // 상위 리그의 역습 강타(와 그 실수)는 기존 밸런스 유지
+const controllable = (p, spin, power, on) => (on && CAPPED_LEAGUES.has(p.league) ? Math.min(power, powerCap(aiStats(p), spin)) : power);
+
+function buildAiShot(p, rng, side, from, hitY, grade, offset, foeX, powerCap = 1, { powerBonus = 0, forceSpin = null, spinBoost = 0, capPower = false } = {}) {
   const spin = forceSpin ?? chooseSpin(p, rng, spinBoost);
   const aim = {
     targetX: chooseTargetX(p, rng, foeX),
-    power: Math.min(powerCap, clamp(0.25 + 0.5 * p.power + 0.1 * rng.signed() + powerBonus, 0.1, 1)),
+    power: Math.min(powerCap, controllable(p, spin, clamp(0.25 + 0.5 * p.power + (p.rhythm?.tempoBase ?? 0) + (p.rhythm?.tempoVar ?? 0.1) * (p.rhythmMult ?? 1) * rng.signed() + powerBonus, 0.1, 1), capPower)),
     spin,
   };
   if (spin < 0) aim.depth = 60;
-  return createShot({
-    from: { x: from, side }, aim, stats: aiStats(p), rng, grade, offset, hitY,
-  });
+  const make = () => createShot({ from: { x: from, side }, aim, stats: aiStats(p), rng, grade, offset, hitY });
+  let shot = make();
+  // 공정성 하한(설계안 §6.4): 바운드 → 밴드 중심이 MIN_REACTION_S 보다 짧은 공은 만들지 않는다 (파워를 낮춰 다시)
+  for (let i = 0; i < 6; i++) {
+    const f = flightOf(shot);
+    if (f.kind !== 'in' || buildTiming(f, 0).center - f.tLand >= MIN_REACTION_S) break;
+    aim.power = Math.max(0.1, aim.power - 0.08); shot = make();
+  }
+  return shot;
 }
 
 /**
@@ -102,9 +115,34 @@ const SIGMA_RANGE = 0.25;
  */
 // 상성: 내 샷이 상대 공에 유리했으면(win) 상대 탭 오차가 커지고, 불리했으면(lose) 작아진다 (controls.js MATCHUP_FX.aiSigma 와 같은 값)
 export const AI_MATCHUP_SIGMA = { win: 1.3, lose: 0.8, even: 1 };
+// 상성 × 내 타격 등급 (간단 조작·상성 사용 시, 리듬 재설계 v2): 타이밍 정확도(PERFECT)가 상성보다 우선하도록 PERFECT 압박을 상성과 곱으로 준다.
+// 키 `${상성}:${등급}`. 시뮬(scripts/sim-matchup.mjs): 유리+GOOD 보다 중립+PERFECT 가 더 압박적이어야 한다.
+Object.assign(AI_MATCHUP_SIGMA, {
+  'win:PERFECT': 1.6, 'win:GOOD': 1.25, 'even:PERFECT': 1.25, 'even:GOOD': 1, 'lose:PERFECT': 1.1, 'lose:GOOD': 0.9,
+  'win:BAD': 1.0, 'even:BAD': 0.8, 'lose:BAD': 0.7, // BAD(아슬아슬) 타격은 위력이 약해 상대가 받기 쉽다
+});
 // 상성 읽기: AI 가 내가 방금 친 샷 종류를 읽고 그 상성(나를 이기는 종류)으로 되받을 확률. 리그가 높을수록 읽는다.
 // → 한 가지 샷만 반복하면 읽혀서 불리해지고, 날아오는 공 종류에 맞춰 고르는 쪽이 유리하다. (코치/튜토리얼은 league 가 없어 읽지 않는다)
-export const AI_READ = { amateur: 0, third: 0.25, second: 0.4, first: 0.55, world: 0.7 };
+export const AI_READ = { amateur: 0.9, third: 0.9, second: 0.8, first: 0.55, world: 0.7 };
+// 읽는 속도 (하위 리그 밸런스): 내가 같은 종류를 연속 N번 이상 써야 AI 가 확률 100% 로 편중을 읽는다. 약한 리그일수록 N 이 커서 천천히 읽는다.
+// 읽기 확률 = AI_READ × 등급 × min(1, 연속 횟수 / N). N=1 이면 매번(기존 동작). streak 를 안 넘기면(AI끼리·구 코드) 기존 동작.
+export const AI_READ_NEED = { amateur: 3, third: 3, second: 2, first: 1, world: 1 };
+// 구질 다양성 하한: 낮은 리그도 스핀(탑스핀/커트)을 섞어 쳐서 "공 읽기 → 샷 고르기" 연습이 되게 한다. 속도(power)는 리그 기준대로 느리다.
+// 예상 반응: 편중(연속 2회+)을 읽은 AI 의 탭 오차 배율. 낮을수록 잘 받아낸다.
+// 최하위권(low 등급) 스팸 억제 (약하게): 등급 배율(×0.8)로 읽기가 너무 둔해져 한 가지 샷 반복이 통하던 것을 보정 — 조금 더 일찍·확실하게 읽는다. '쉽다'는 유지(AI 정확도·반응은 그대로).
+export const LOW_TIER_READ = { need: 0.67, prob: 1.15 };
+export const AI_READ_ANTICIPATE = 0.3;
+export const AI_ANTICIPATE_FROM = { amateur: 2, third: 2, second: 3, first: 4, world: 4 }; // 연속 몇 번째부터 예상하나 (상위 리그는 상성 전략의 자연스러운 반복과 겹치지 않게 길게)
+// 리듬 시그니처 (설계안 §6.3, 라이벌 전용): tempoVar = 공 속도(파워) 변동폭(기본 0.1), tempoBase = 기본 템포 가산.
+// 모든 변칙은 MIN_REACTION_S(공정성 하한) 아래로 내려가지 않는다 — buildAiShot 이 강제.
+export const RIVAL_RHYTHM = {
+  amateur: { tempoVar: 0.03, tempoBase: 0 }, // 동호회장: 규칙적·안정
+  third: { tempoVar: 0.06, tempoBase: 0.1 }, // 고등학생 천재: 고템포로 몰아침
+  second: { tempoVar: 0.18, tempoBase: 0 }, // 전직 실업팀: 노련한 템포 변화
+  first: { tempoVar: 0.16, tempoBase: 0.04 }, // 국가대표 후보: 복합
+  world: { tempoVar: 0.2, tempoBase: 0.04 }, // 황제: 고도 변칙(읽기 어렵지만 가능 — 하한 준수)
+};
+export const LEAGUE_VARIETY = { amateur: 0.35, third: 0.35, second: 0.4, first: 0.55, world: 0.7 };
 const COUNTER_SPIN = { topspin: 0, cut: 1, normal: -1 }; // 내 샷 종류 → AI 가 고를 스핀 (내 탑스핀 ← 일반, 내 일반 ← 커트, 내 커트 ← 탑스핀)
 export const AI_TEMPO = { cutPowerCap: 0.4, cutNoSpin: true, cutSigmaMult: 0.9, counterBonus: 0.45, counterSpinBoost: 0.6, spinThreshold: 0.5 };
 
@@ -122,16 +160,19 @@ function gauss(rng) {
  * 탭 시각 = 중심 + N(0, σ), 실제 judgeTap 으로 PERFECT/GOOD/MISS 판정.
  * 반환: { judgement: {grade, offset}, shot|null, t(탭 시각, 공 발사 기준 초), timing }
  */
-export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { read = true } = {}) {
-  const timing = buildTiming(flight, aiStats(p).focus * 0.5); // AI 는 판정 폭 보정을 절반만 받는다
+export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { read = true, streak = null, capPower = streak != null } = {}) {
+  const timing = buildTiming(flight, aiStats(p).focus * 0.5, { bad: true }); // AI 는 판정 폭 보정을 절반만 받는다 (AI 도 같은 4단계 등급)
   const inSpin = flight.spin ?? 0;
   const cutIn = inSpin < -AI_TEMPO.spinThreshold; const topIn = inSpin > AI_TEMPO.spinThreshold;
-  const t = timing.center + gauss(rng) * tapSigma(p, Math.abs(flight.vyPost)) * (cutIn ? AI_TEMPO.cutSigmaMult : 1) * (AI_MATCHUP_SIGMA[matchup] ?? 1);
+  const slow = streak == null ? 1 : Math.min(1, streak / Math.max(0.5, (AI_READ_NEED[p.league] ?? 1) * (p.readNeedMult ?? 1) * (p.tier === 'low' ? LOW_TIER_READ.need : 1))); // 읽는 속도: 연속으로 쓸수록 확실히 읽는다
+  const reads = read && p.counter !== false && rng.next() < Math.min(0.95, (AI_READ[p.league] ?? 0) * (TIER_MULT[p.tier] ?? 1) * (p.readProbMult ?? 1) * (p.tier === 'low' ? LOW_TIER_READ.prob : 1)) * slow;
+  // 같은 종류를 되풀이하면(연속 N회 이상) 읽은 AI 는 그 공을 예상하고 있다 → 탭 오차가 줄어 더 잘 받아낸다 (스팸 억제)
+  const anticipate = reads && streak != null && streak >= (AI_ANTICIPATE_FROM[p.league] ?? 3) ? AI_READ_ANTICIPATE : 1;
+  const t = timing.center + gauss(rng) * tapSigma(p, Math.abs(flight.vyPost)) * (cutIn ? AI_TEMPO.cutSigmaMult : 1) * (AI_MATCHUP_SIGMA[matchup] ?? 1) * anticipate * (p.reactMult ?? 1);
   const judgement = judgeTap(t, timing);
   if (judgement.grade === GRADES.MISS) return { judgement, shot: null, t, timing };
   const pos = flight.postPos(t);
   const mine = inSpin > AI_TEMPO.spinThreshold ? 'topspin' : inSpin < -AI_TEMPO.spinThreshold ? 'cut' : 'normal';
-  const reads = read && p.counter !== false && rng.next() < (AI_READ[p.league] ?? 0) * (TIER_MULT[p.tier] ?? 1);
   const shot = buildAiShot(
     p, rng, side, pos.x, pos.y, judgement.grade, clamp(judgement.offset, -1, 1), foeX,
     cutIn ? AI_TEMPO.cutPowerCap : 1,
@@ -139,6 +180,7 @@ export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { r
       forceSpin: reads ? COUNTER_SPIN[mine] : cutIn && AI_TEMPO.cutNoSpin ? 0 : null,
       powerBonus: topIn && p.counter !== false ? AI_TEMPO.counterBonus : 0,
       spinBoost: topIn && p.counter !== false ? AI_TEMPO.counterSpinBoost : 0,
+      capPower,
     },
   );
   return { judgement, shot, t, timing };

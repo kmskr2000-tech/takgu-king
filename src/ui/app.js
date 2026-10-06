@@ -1,31 +1,32 @@
-import { h } from './dom.js?v=1791297279';
+import { h } from './dom.js?v=1791327984';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen,
-} from './screens.js?v=1791297279';
+} from './screens.js?v=1791327984';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791297279';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791297279';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791297279';
-import { SHOT_TYPES, shotKeyOfSpin } from '../game/controls.js?v=1791297279';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791297279';
-import { oppProfile } from '../game/oppProfile.js?v=1791297279';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791297279';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791297279';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791297279';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791297279';
-import { createAudio } from './audio.js?v=1791297279';
-import { createBgm } from './bgm.js?v=1791297279';
-import { createHaptics, react } from './feedback.js?v=1791297279';
-import { createRenderer } from './render.js?v=1791297279';
-import { createMatchController } from '../game/matchController.js?v=1791297279';
+} from './intro.js?v=1791327984';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791327984';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791327984';
+import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791327984';
+import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791327984';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791327984';
+import { oppProfile } from '../game/oppProfile.js?v=1791327984';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791327984';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791327984';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791327984';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791327984';
+import { createAudio } from './audio.js?v=1791327984';
+import { createBgm } from './bgm.js?v=1791327984';
+import { createHaptics, react } from './feedback.js?v=1791327984';
+import { createRenderer } from './render.js?v=1791327984';
+import { createMatchController } from '../game/matchController.js?v=1791327984';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult, seasonGoals,
-} from '../game/season.js?v=1791297279';
-import { createStore } from '../game/store.js?v=1791297279';
-import { createRng } from '../core/index.js?v=1791297279';
+} from '../game/season.js?v=1791327984';
+import { createStore } from '../game/store.js?v=1791327984';
+import { createRng } from '../core/index.js?v=1791327984';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -110,6 +111,8 @@ export function createApp(root, deps = {}) {
         onTutorial: () => api.startMatch({ tutorial: true, from: 'title' }),
         onSettings: () => api.showSettings(),
         onRules: () => api.showRules(),
+        level: gameLevelOf(settings.get().gameLevel),
+        onLevel: () => { settings.cycle('gameLevel'); api.showTitle(); },
       }));
     },
     /** 룰 설명(그림): 카드의 도트 다이어그램이 시간에 따라 움직인다 */
@@ -261,7 +264,7 @@ export function createApp(root, deps = {}) {
       const seed = deps.seed ?? ((Date.now() & 0xffffffff) >>> 0); // deps.seed: QA 정지 화면용 고정 시드
       const ctl = createMatchController({
         stats: tut ? TUTORIAL_STATS : effectiveStats(state),
-        oppParams: tut ? TRAINER_PARAMS : aiParamsFor(state, opp),
+        oppParams: tut ? TRAINER_PARAMS : applyGameLevel(aiParamsFor(state, opp), settings.get().gameLevel), // 경기 시작 시점의 게임 난이도 (경기 중 고정)
         rng: createRng(seed),
         difficulty: tut ? 'tutorial' : settings.get().difficulty, // 경기 시작 시점의 난이도 (경기 중 고정)
         controlMode: mode, useMatchup: !tut, // 튜토리얼은 상성 없이 기본기부터
@@ -271,8 +274,8 @@ export function createApp(root, deps = {}) {
           react(e, { audio, haptics });
           if (e.type === 'lane') { view.setLane(e.lane); renderer.setLane(e.lane); }
           if (e.type === 'grade') {
-            const mu = e.matchup === 'win' ? ' · 상성 유리!' : e.matchup === 'lose' ? ' · 상성 불리…' : '';
-            view.setJudge((e.grade === 'MISS' ? '미스!' : e.grade === 'PERFECT' ? '퍼펙트!' : '굿') + (e.grade === 'MISS' ? '' : mu));
+            const mu = e.matchup === 'win' ? ' · 카운터!' : e.matchup === 'lose' ? ' · 역회전에 밀렸다…' : '';
+            view.setJudge((e.grade === 'MISS' ? '미스!' : e.grade === 'PERFECT' ? '퍼펙트!' : e.grade === 'BAD' ? '아슬아슬…' : '굿') + (e.grade === 'MISS' ? '' : mu));
           }
           if (e.type === 'missed') lastMiss = e; // 직전 타이밍 실수(일찍/늦게/무탭): 실점 원인 표시에 쓴다
           if (e.type === 'point') {
@@ -339,7 +342,7 @@ export function createApp(root, deps = {}) {
         ctl.pointerCancel(clock());
       });
       ctl.start(clock());
-      let wasServing = false; let shownServer = null;
+      let wasServing = false; let shownServer = null; let shownHint = null;
       const tick = () => {
         if (loop !== token) return;
         const now = clock();
@@ -356,7 +359,13 @@ export function createApp(root, deps = {}) {
         const situation = ctl.phase === 'awaitServe' ? 'awaitServe' : (ctl.phase === 'flight' && ctl.timing && !ctl.pendingDown ? 'incoming' : null);
         // 간단 조작: 날아오는 공의 종류 칩 (이걸 보고 상성에 맞는 샷을 고른다). 튜토리얼에서는 숨김
         const inKey = mode === 'simple' && !tut && situation === 'incoming' && ctl.flight ? shotKeyOfSpin(ctl.flight.spin) : null;
-        view.setIncoming(inKey ? incomingLabel(inKey) : '', inKey);
+        const hidden = inKey && ctl.spinHidden(now); // 구질 위장(상위 리그): 타구 직후엔 종류를 알려주지 않는다
+        view.setIncoming(inKey && !hidden ? incomingLabel(inKey) : '', hidden ? null : inKey);
+        // 힌트: 처음 HINT_MATCHES 경기까지 이기는 버튼을 반짝인다 (튜토리얼은 단계별 힌트가 따로 있다)
+        if (!tut && mode === 'simple') {
+          const want = inKey && !hidden && ads.lifetimeMatches < HINT_MATCHES ? counterOf(inKey) : null;
+          if (want !== shownHint) { shownHint = want; view.setShotHint(want); }
+        }
         view.setTip(tipper.update(situation, now, ctl.t0)?.text ?? '');
         raf(tick);
       };

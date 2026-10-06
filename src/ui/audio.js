@@ -3,11 +3,14 @@ export const SFX = Object.freeze({
   hit: [{ f: 520, d: 0.04, type: 'square', v: 0.07 }],
   good: [{ f: 600, d: 0.06, type: 'square', v: 0.1 }],
   perfect: [{ f: 660, d: 0.05, type: 'square', v: 0.12 }, { f: 990, d: 0.1, at: 0.05, type: 'square', v: 0.12 }],
+  bad: [{ f: 330, d: 0.07, type: 'square', v: 0.07 }], // 아슬아슬: 작고 낮게
   miss: [{ f: 220, d: 0.16, type: 'sawtooth', v: 0.1, slide: -110 }],
   pointMe: [{ f: 523, d: 0.08, type: 'square', v: 0.12 }, { f: 659, d: 0.08, at: 0.08, type: 'square', v: 0.12 }, { f: 784, d: 0.16, at: 0.16, type: 'square', v: 0.12 }],
   pointOpp: [{ f: 330, d: 0.12, type: 'triangle', v: 0.14 }, { f: 220, d: 0.22, at: 0.12, type: 'triangle', v: 0.14 }],
   win: [{ f: 523, d: 0.12, type: 'square', v: 0.12 }, { f: 659, d: 0.12, at: 0.12, type: 'square', v: 0.12 }, { f: 784, d: 0.12, at: 0.24, type: 'square', v: 0.12 }, { f: 1047, d: 0.4, at: 0.36, type: 'square', v: 0.12 }],
   lose: [{ f: 392, d: 0.18, type: 'triangle', v: 0.14 }, { f: 330, d: 0.18, at: 0.18, type: 'triangle', v: 0.14 }, { f: 262, d: 0.4, at: 0.36, type: 'triangle', v: 0.14 }],
+  counter: [{ f: 880, d: 0.05, at: 0.02, type: 'square', v: 0.1 }, { f: 1320, d: 0.09, at: 0.07, type: 'square', v: 0.1 }], // 상성 유리: 경쾌하게
+  blocked: [{ f: 180, d: 0.1, type: 'triangle', v: 0.14 }], // 상성 불리: 둔탁하게
   click: [{ f: 440, d: 0.03, type: 'square', v: 0.06 }],
 });
 

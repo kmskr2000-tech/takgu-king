@@ -1,10 +1,14 @@
-import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791297279';
-import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER } from './controls.js?v=1791297279';
-import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791297279';
+import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791327984';
+import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791327984';
+import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791327984';
+import { DISGUISE_S } from './controls.js?v=1791327984';
 import {
   SIDES, STATES, GRADES, createMatch, createShot, flightOf, buildTiming, judgeTap, judgeNoTap,
   classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide,
-} from '../core/index.js?v=1791297279';
+} from '../core/index.js?v=1791327984';
+
+/** 난수 배율 래퍼: createShot 의 실수 난수(signed)만 k 배. k=1 이면 기존과 비트 동일 */
+export const scaledRng = (rng, k) => (k === 1 ? rng : { next: rng.next, signed: () => rng.signed() * k });
 
 const OPP_SERVE_DELAY = 1.0; // 상대 서브 전 대기(초)
 const POINT_PAUSE = 1.2; // 득점 후 연출 대기(초)
@@ -27,17 +31,26 @@ export function createMatchController({
     if (!useMatchup || controlMode !== 'simple' || !c.flight || c.flight.kind !== 'in') return 'even';
     return matchupOf(type, shotKeyOfSpin(c.flight.spin));
   };
-  const leniencyFor = (type) => diff.leniency * (controlMode === 'simple' ? shotTypeOf(type).leniency * MATCHUP_FX[matchupFor(type)].leniency : 1);
-  // 노탭 만료: 어떤 종류를 눌러도 받아줄 수 있는 가장 넓은 존이 끝난 뒤
-  const maxLeniency = diff.leniency * (controlMode === 'simple' ? Math.max(...SHOT_ORDER.map((k) => shotTypeOf(k).leniency)) * (useMatchup ? MATCHUP_FX.win.leniency : 1) : 1);
-  const timingFor = (flight, lenient) => buildTiming(flight, stats.focus, { leniency: lenient });
+  // 리듬 재설계 v2: 밴드는 "내가 누른 구질의 리듬"(위치·폭)만 바꾼다. 상성은 밴드 폭을 바꾸지 않는다(상성 효과는 실수 배율·상대 오차).
+  const simple = controlMode === 'simple';
+  // 상성 실수 배율 (등급별). 상성을 쓰지 않으면(튜토리얼·고급 조작) 기존과 동일한 1
+  const noiseFor = (mu, grade) => (useMatchup ? MATCHUP_FX[mu].noise[grade] ?? 1 : 1);
+  const leniencyFor = (type) => diff.leniency * (simple ? shotTypeOf(type).leniency : 1);
+  const shiftFor = (type) => (simple ? RHYTHM_SHIFT[type] ?? 0 : 0);
+  const timingFor = (flight, lenient, shift = 0) => buildTiming(flight, stats.focus, { leniency: lenient, shift, bad: true });
+  const bandFor = (flight, type) => timingFor(flight, leniencyFor(type), shiftFor(type));
+  // 노탭 만료: 어떤 종류를 눌러도 받아줄 수 있는 가장 늦은 밴드가 끝난 뒤
+  const maxEnd = (flight) => Math.max(...SHOT_ORDER.map((k) => bandFor(flight, k).end));
   const m = createMatch({ firstServer });
   const c = {
     match: m, phase: null, flight: null, t0: 0, timing: null,
-    pendingDown: null, aiAt: null, aiPlan: null, resumeAt: 0, lastGrade: null,
+    pendingDown: null, aiAt: null, aiPlan: null, resumeAt: 0, lastGrade: null, lastGradeMe: null, streak: 0, streakKey: null, bands: null,
   };
   c.matchup = (type) => matchupFor(type); // 누른 종류 기준 상성 (테스트·UI)
   c.lane = 'center'; // 간단 조작: 코스 마커 (코트 탭으로 정함, 버튼 스윙이 이 코스로 나간다)
+  // 구질 위장(상위 리그): 타구 직후 잠깐 공 색·종류 칩을 중립으로 보여 읽기 단서를 늦춘다. 판정·상성은 진짜 스핀 기준
+  c.disguiseS = useMatchup && simple ? DISGUISE_S[oppParams?.league] ?? 0 : 0;
+  c.spinHidden = (now) => c.disguiseS > 0 && !!c.flight && c.flight.dir > 0 && now - c.t0 < c.disguiseS;
   c.stats = stats;
   c.controlMode = controlMode;
   c.difficulty = difficulty;
@@ -66,13 +79,15 @@ export function createMatchController({
     c.phase = 'flight';
     const receiver = otherSide(shooter);
     if (receiver === SIDES.ME) {
-      c.timing = timingFor(res.flight, diff.leniency); // 화면 표시용 중립 존
-      c.timingEnd = controlMode === 'simple' ? timingFor(res.flight, maxLeniency).end : c.timing.end;
+      c.timing = timingFor(res.flight, diff.leniency); // 중립(일반) 밴드 — 고급 조작 판정·기본 표시
+      c.bands = simple ? Object.fromEntries(SHOT_ORDER.map((k) => [k, bandFor(res.flight, k)])) : null; // 간단 조작: 구질별 리듬 밴드 3개(텔레그래핑 표시용)
+      c.timingEnd = simple ? maxEnd(res.flight) : c.timing.end;
       c.pendingDown = null;
     } else {
       // AI 리턴을 지금 계산해 두고, 실제 탭 시각(미스면 창이 끝나는 시각)에 반영 → 공이 튀지 않는다
       const foeX = 100 - (res.flight.land?.x ?? 50);
-      const plan = aiRespond(oppParams, rng, SIDES.OPP, res.flight, foeX, c.lastMatchup);
+      const key = useMatchup && simple ? `${c.lastMatchup}:${c.lastGradeMe ?? GRADES.GOOD}` : 'even';
+      const plan = aiRespond(oppParams, rng, SIDES.OPP, res.flight, foeX, key, { streak: c.streak });
       c.aiPlan = plan;
       c.aiAt = now + (plan.judgement.grade === GRADES.MISS ? plan.timing.end : plan.t);
     }
@@ -114,13 +129,13 @@ export function createMatchController({
     const key = SHOT_ORDER.includes(type) ? type : 'normal';
     if (c.phase === 'awaitServe') {
       const aim = simpleAim(COURSE_X[c.lane], key);
-      c.lastMyShot = key;
+      c.lastMyShot = key; c.lastMatchup = 'even'; c.lastGradeMe = null;
       afterShot(m.serve(createShot({ from: { x: 50, side: SIDES.ME }, aim, stats, rng })), now, SIDES.ME);
       emit({ type: 'serve', side: SIDES.ME, shotType: key });
       return true;
     }
     if (c.phase !== 'flight' || !c.timing || c.pendingDown) return false;
-    const judge = judgeTap(now - c.t0, timingFor(c.flight, leniencyFor(key)));
+    const judge = judgeTap(now - c.t0, c.bands?.[key] ?? bandFor(c.flight, key));
     const pos = c.flight.postPos(now - c.t0);
     const mu = matchupFor(key); // 판정 시점의 상성 (샷을 만들고 나면 flight 가 바뀐다)
     c.lastGrade = judge.grade;
@@ -130,7 +145,7 @@ export function createMatchController({
     if (diff.assistCourse) aim.targetX = assistTargetX(c.flight.pos(0).x, aim.targetX);
     c.pendingDown = { now, x: 0, y: 0, judge, last: { x: 0, y: 0 } };
     const shot = createShot({
-      from: { x: pos.x, side: SIDES.ME }, aim, stats, rng, grade: judge.grade, offset: judge.offset * shotTypeOf(key).error * MATCHUP_FX[mu].error, hitY: pos.y, // 공격은 오차↑, 수비는 오차↓, 상성 유리/불리는 추가 배율
+      from: { x: pos.x, side: SIDES.ME }, aim, stats, rng: scaledRng(rng, noiseFor(mu, judge.grade)), grade: judge.grade, offset: judge.offset * shotTypeOf(key).error, hitY: pos.y, // 공격은 오차↑, 수비는 오차↓ / 상성은 실수 난수 배율(불리 ↑, 유리 ↓)
     });
     respondMe(now, shot, { course: c.lane, spin: aim.spin, power: aim.power, shotType: key, matchup: mu });
     return true;
@@ -161,6 +176,10 @@ export function createMatchController({
     const noTap = !c.pendingDown;
     const judge = c.pendingDown?.judge ?? judgeNoTap(c.timing);
     c.lastMatchup = gesture?.matchup ?? 'even'; // 내 샷의 상성 → 상대 반응(AI 탭 오차)에 반영
+    c.lastGradeMe = judge.grade; // 내 타격 등급 → 상대 압박(PERFECT 일수록 AI 가 흔들린다)
+    if (shot && gesture?.shotType) { // 패턴 읽기: 같은 종류를 연속으로 쓴 횟수 (AI 가 편중을 읽는다)
+      c.streak = gesture.shotType === c.streakKey ? c.streak + 1 : 1; c.streakKey = gesture.shotType;
+    }
     c.pendingDown = null;
     c.timing = null;
     c.lastMyShot = shot ? gesture?.shotType ?? null : c.lastMyShot ?? null;

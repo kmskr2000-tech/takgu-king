@@ -1,12 +1,12 @@
-import { h } from './dom.js?v=1791297279';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791297279';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791297279';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791297279';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791297279';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791297279';
+import { h } from './dom.js?v=1791327984';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791327984';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791327984';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791327984';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791327984';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791327984';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791297279';
+} from '../game/season.js?v=1791327984';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -44,7 +44,7 @@ export function introScreen({ canvas, onSkip }) {
   return { el, setCaption(text) { caption.textContent = text; } };
 }
 
-export function titleScreen({ hasSave, onContinue, onNew, onTutorial = null, onSettings, onRules }) {
+export function titleScreen({ hasSave, onContinue, onNew, onTutorial = null, onSettings, onRules, level = null, onLevel = null }) {
   const icon = h('canvas', { class: 'icon', width: 16, height: 16 });
   icon.width = 16; icon.height = 16;
   const ictx = icon.getContext?.('2d');
@@ -61,6 +61,9 @@ export function titleScreen({ hasSave, onContinue, onNew, onTutorial = null, onS
       'aria-disabled': hasSave ? null : 'true', onclick: hasSave ? onContinue : null,
     }, '이어하기'),
     onTutorial && btn('튜토리얼', onTutorial),
+    // 게임 난이도(보통/어려움/매우 어려움): 누를 때마다 다음 단계. 상대 AI 배율(리그 난이도에 곱)
+    level && onLevel && h('button', { class: 'btn level', type: 'button', 'aria-label': `게임 난이도 ${level.label}`, onclick: onLevel },
+      h('span', { class: 'sname' }, '게임 난이도'), h('span', { class: 'sstate' }, `${level.label} ▸`)),
     btn('설정', onSettings),
     btn('룰 설명', onRules));
 }

@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791297279';
-import { createEffects } from './effects.js?v=1791297279';
-import { createRng } from '../core/rng.js?v=1791297279';
+} from './sprites.js?v=1791327984';
+import { createEffects } from './effects.js?v=1791327984';
+import { createRng } from '../core/rng.js?v=1791327984';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -157,16 +157,25 @@ export function createRenderer(canvas, { rng, options } = {}) {
     return [r0, r1];
   }
 
-  function drawZone(timing, now, t0) {
+  // 구질별 리듬 밴드 색 (버튼 색과 같다): 탑스핀 빨강 / 일반 노랑 / 커트 파랑
+  const BAND_COLORS = { cut: ['rgba(74,163,255,0.26)', 'rgba(150,205,255,0.85)'], normal: [null, null], topspin: ['rgba(255,90,74,0.26)', 'rgba(255,150,130,0.85)'] };
+  function drawZone(ctl, now) {
+    const timing = ctl.timing; const t0 = ctl.t0;
     if (!timing?.zone) return;
+    // 밴드는 바운드 뒤에 나타난다 (바운드가 읽기의 기준점 — 설계안 §1.1). 구버전 시험 데이터(flight 없음)는 항상 표시
+    if (ctl.flight?.tLand != null && now - t0 < ctl.flight.tLand) return;
     const z = timing.zone;
     // 실제로 탭을 받아주는 범위(난이도 완화 포함)를 그린다. 구버전 데이터는 ±half 로 대체
     const yA = z.yStart ?? z.y - z.half; const yB = z.yEnd ?? z.y + z.half;
+    if (ctl.bands) { // 간단 조작: 구질별 리듬 밴드 3색을 겹쳐 그린다 (자기 구질의 타이밍을 버튼 색으로 읽는다)
+      for (const k of ['cut', 'topspin']) { const b = ctl.bands[k]; band(b.zone.yStart, b.zone.yEnd, BAND_COLORS[k][0]); }
+    }
     const [r0, r1] = band(yA, yB, C.zone);
     ctx.fillStyle = C.zoneEdge;
     for (const row of [r0, r1]) { const hw = halfWidthAtRow(row); ctx.fillRect(Math.round(CAM.CX - hw), row, Math.round(hw * 2), 1); }
     if (z.yPerfectStart != null) band(z.yPerfectStart, z.yPerfectEnd, C.perfect, 1);
     else { const ph = (timing.perfectHalf / timing.halfTime) * z.half; band(z.y - ph, z.y + ph, C.perfect, 1); }
+    if (ctl.bands) for (const k of ['cut', 'topspin']) { const b = ctl.bands[k]; band(b.zone.yPerfectStart, b.zone.yPerfectEnd, BAND_COLORS[k][1], 1); }
     const cy = Math.round(groundY(Math.min(z.y, CAM.Y_NEAR)));
     ctx.fillStyle = C.chevron; // 중앙 화살표 (>>)
     for (let i = 0; i < 3; i++) {
@@ -174,14 +183,15 @@ export function createRenderer(canvas, { rng, options } = {}) {
       ctx.fillRect(cx, cy - 3, 2, 2); ctx.fillRect(cx + 2, cy - 1, 2, 2); ctx.fillRect(cx + 4, cy + 1, 2, 2);
       ctx.fillRect(cx + 2, cy + 3, 2, 2); ctx.fillRect(cx, cy + 5, 2, 2);
     }
-    // 타이밍 신호: 중심 시각 직전/직후 0.14초 동안 중앙선이 반짝이고 양끝에 표시가 켜진다 ("지금!")
-    if (timing.center != null && t0 != null) {
-      const rem = timing.center - (now - t0);
-      if (Math.abs(rem) < 0.14) {
-        const hw = Math.round(halfWidthAtRow(cy));
+    // 타이밍 신호: 중심 시각 직전/직후 0.14초 동안 중앙선이 반짝이고 양끝에 표시가 켜진다 ("지금!"). 구질별 밴드가 있으면 각 밴드 중심에서
+    const centers = ctl.bands ? Object.values(ctl.bands).map((b) => ({ c: b.center, y: b.zone.y })) : [{ c: timing.center, y: z.y }];
+    if (t0 != null) for (const cc of centers) {
+      const rem = cc.c - (now - t0);
+      if (Math.abs(rem) < 0.07) {
+        const row = Math.round(groundY(Math.min(cc.y, CAM.Y_NEAR))); const hw = Math.round(halfWidthAtRow(row));
         ctx.fillStyle = Math.floor(now * 20) % 2 ? '#ffffff' : '#ffd24a';
-        ctx.fillRect(CAM.CX - hw - 3, cy, hw * 2 + 6, 3);
-        ctx.fillRect(CAM.CX - hw - 7, cy - 5, 5, 13); ctx.fillRect(CAM.CX + hw + 2, cy - 5, 5, 13);
+        ctx.fillRect(CAM.CX - hw - 3, row, hw * 2 + 6, 3);
+        ctx.fillRect(CAM.CX - hw - 7, row - 5, 5, 13); ctx.fillRect(CAM.CX + hw + 2, row - 5, 5, 13);
       }
     }
   }
@@ -330,7 +340,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
     /** 컨트롤러 이벤트 수신: 스윙 애니메이션 + 이펙트 */
     notify(e, now) {
       if (e.type === 'grade') {
-        st.lastGrade = e.grade;
+        st.lastGrade = e.grade; st.lastMatchup = e.matchup ?? 'even';
         // 탭 순간: 스윙 시작 + 공이 있는 곳으로 스텝 (입력이 먼저, 움직임은 그 결과)
         st.swing.me = now; st.lastAct = now; st.meK = 16;
         if (Number.isFinite(e.x)) st.meTarget = clamp(e.x, 8, 92);
@@ -343,7 +353,8 @@ export function createRenderer(canvas, { rng, options } = {}) {
         } else st.swing[e.side] = now;
         const c0 = e.flight?.pos ? e.flight.pos(0) : { x: 50, y: e.side === 'me' ? 200 : 0, z: 12 };
         const p = project(c0.x, c0.y, c0.z ?? 0);
-        if (p && opt().effects) fx.hit(p.x, p.y, e.side === 'me' ? st.lastGrade : 'GOOD', { scale: spriteScale(p.k, 1) }); // 깊이에 맞춰 스파크 크기
+        if (p && opt().effects) fx.hit(p.x, p.y, e.side === 'me' ? (st.lastMatchup === 'win' ? 'PERFECT' : st.lastGrade) : 'GOOD', { scale: spriteScale(p.k, 1) * (e.side === 'me' && st.lastMatchup === 'win' ? 1.4 : 1) }); // 상성 유리(카운터)는 스파크가 크고 금색
+        if (e.side === 'me' && st.lastMatchup === 'lose' && opt().effects && opt().shake) st.shake = 0.12; // 상성 불리: 둔탁하게 밀리는 느낌 // 깊이에 맞춰 스파크 크기
       }
       if (e.type === 'point') {
         st.meTarget = 50; st.meK = 4; st.lean = 0;
@@ -364,13 +375,13 @@ export function createRenderer(canvas, { rng, options } = {}) {
       ctx.save?.();
       if (st.shake > 0) ctx.translate?.(Math.round((Math.random() - 0.5) * 3), 0); // 실점 시 짧은 흔들림
       drawStatic();
-      if (opt().guide) drawZone(ctl.timing, now, ctl.t0);
+      if (opt().guide) drawZone(ctl, now);
       drawPlayers(ctl, now);
       if (opt().guide) drawLaneArrows(ctl.timing); // 선수 앞(위)에
       drawServeCue(ctl, now);
       drawCoachHint(now);
       drawLane(now);
-      drawBall(ctl.ballAt(now), ctl.flight?.spin ?? 0); // 공은 선수 뒤에 가려지지 않게 선수 다음에 그린다
+      drawBall(ctl.ballAt(now), ctl.spinHidden?.(now) ? 0 : (ctl.flight?.spin ?? 0)); // 구질 위장 중엔 중립색 // 공은 선수 뒤에 가려지지 않게 선수 다음에 그린다
       fx.draw(ctx);
       ctx.restore?.();
     },

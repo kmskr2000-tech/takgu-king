@@ -1,7 +1,7 @@
 import {
   NET_Y, HIT_Z, SPEED_MIN, SPEED_MAX, SPIN_SPEED_TOP, SPIN_SPEED_BACK, GRADES,
-} from './constants.js?v=1791297279';
-import { gravityFor, simulateFlight } from './physics.js?v=1791297279';
+} from './constants.js?v=1791327984';
+import { gravityFor, simulateFlight } from './physics.js?v=1791327984';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -24,6 +24,7 @@ const speedFor = (power, spin) =>
 /** 판정 등급에 따른 샷 보정 (PERFECT: 파워/스핀 보너스, 오차 감소) */
 export function gradeModifier(grade, offset = 0) {
   if (grade === GRADES.PERFECT) return { power: 1.15, spin: 1.2, error: 0.5 };
+  if (grade === GRADES.BAD) return { power: 0.85, spin: 0.9, error: 2.0 }; // 아슬아슬: 위력↓ 오차↑
   return { power: 1, spin: 1, error: 0.8 + 0.8 * Math.min(1, Math.abs(offset)) };
 }
 

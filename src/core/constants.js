@@ -25,10 +25,14 @@ export const ZONE_HALF = 25;
 export const PERFECT_RATIO = 0.3; // 존 중앙 30% 구간
 export const FOCUS_WIDEN = 0.06; // 집중 1당 판정 폭 증가율
 export const MIN_HALF_TIME = 0.06;
+/** 공정성 하한(설계안 §6.4): 바운드→밴드 중심까지 이 시간(초) 아래로 내려가는 AI 공은 만들지 않는다 (사용자 지시 200ms. 게임 난이도 배율로도 우회 불가) */
+export const MIN_REACTION_S = 0.2;
 export const BOUNCE_GRACE = 0.05; // 바운드 직후 리턴 불가 유예(초)
 
 export const SIDES = Object.freeze({ ME: 'me', OPP: 'opp' });
-export const GRADES = Object.freeze({ PERFECT: 'PERFECT', GOOD: 'GOOD', MISS: 'MISS' });
+export const GRADES = Object.freeze({ PERFECT: 'PERFECT', GOOD: 'GOOD', BAD: 'BAD', MISS: 'MISS' });
+// BAD(아슬아슬): 받아주는 범위(leniency) 바깥쪽 이 비율 이상. 리턴은 성공하지만 위력↓ 오차↑ 네트율↑ (타이밍 4단계: PERFECT/GOOD/BAD/MISS)
+export const BAD_FRACTION = 0.75;
 export const STATES = Object.freeze({
   SERVE: 'SERVE',
   RALLY: 'RALLY',

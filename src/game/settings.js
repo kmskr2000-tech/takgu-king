@@ -1,12 +1,18 @@
 // 설정: 시즌 저장과 분리된 별도 키 (새로 시작/데이터 삭제로 지워지지 않음)
-import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791297279';
-import { BALL_SPEED, BALL_SPEED_ORDER, DEFAULT_BALL_SPEED } from './ballspeed.js?v=1791297279';
-import { CONTROL_MODES, CONTROL_ORDER, DEFAULT_CONTROL_MODE } from './controls.js?v=1791297279';
+import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791327984';
+import { BALL_SPEED, BALL_SPEED_ORDER, DEFAULT_BALL_SPEED } from './ballspeed.js?v=1791327984';
+import { GAME_LEVELS, GAME_LEVEL_ORDER, DEFAULT_GAME_LEVEL } from './gamelevel.js?v=1791327984';
+import { CONTROL_MODES, CONTROL_ORDER, DEFAULT_CONTROL_MODE } from './controls.js?v=1791327984';
 
 export const SETTINGS_KEY = 'tabgu-king-settings-v1';
 
 const bool = (key, label, desc) => ({ key, type: 'bool', label, desc });
 export const SETTING_DEFS = Object.freeze([
+  {
+    key: 'gameLevel', type: 'enum', label: '게임 난이도', default: DEFAULT_GAME_LEVEL,
+    options: GAME_LEVEL_ORDER.map((v) => ({ value: v, label: GAME_LEVELS[v].label, desc: GAME_LEVELS[v].desc })),
+    desc: '상대 AI 의 정확도·반응·패턴 읽기·리듬 변칙을 리그 난이도에 곱함 (타이틀 화면에서도 고를 수 있음)',
+  },
   {
     key: 'difficulty', type: 'enum', label: '조작 난이도', default: DEFAULT_DIFFICULTY,
     options: DIFFICULTY_ORDER.map((v) => ({ value: v, label: DIFFICULTY[v].label, desc: DIFFICULTY[v].desc })),
