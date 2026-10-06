@@ -1,8 +1,8 @@
 // 인트로: "지면 다시" 4장면 (패배 → 다짐 → 랠리 → 로고). 장면은 시간 t(초)만 받는 순수 함수라 결정적이고 테스트 가능하다.
 // 화면비에 따라 캔버스가 cover 로 잘리므로 핵심 콘텐츠는 안전영역 x 14~106, y 22~192 안에 둔다.
 export const SAFE = Object.freeze({ x0: 14, x1: 106, y0: 22, y1: 192 });
-import { SPRITES, PALETTES, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791287394';
-import { drawLogo, layoutLogo, LOGO_H } from './logo.js?v=1791287394';
+import { SPRITES, PALETTES, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791288146';
+import { drawLogo, layoutLogo, LOGO_H } from './logo.js?v=1791288146';
 
 export const INTRO_W = 120;
 export const INTRO_H = 214;

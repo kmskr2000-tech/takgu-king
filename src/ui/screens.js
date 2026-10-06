@@ -1,12 +1,12 @@
-import { h } from './dom.js?v=1791287394';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791287394';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791287394';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791287394';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791287394';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791287394';
+import { h } from './dom.js?v=1791288146';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791288146';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791288146';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791288146';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791288146';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791288146';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791287394';
+} from '../game/season.js?v=1791288146';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -102,7 +102,7 @@ export function rulesScreen({ onBack, mode = 'simple' }) {
   };
 }
 
-export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, onSeasonEnd, onTutorial = null, tutorialDone = true }) {
+export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, onSeasonEnd }) {
   const table = standings(state);
   const nm = nextMatch(state);
   const rival = nm?.opp?.rival ? RIVALS[state.league] : null;
@@ -115,7 +115,7 @@ export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, o
   return h('section', { class: 'screen home' },
     h('header', {}, h('h2', {}, `${LEAGUE_NAMES[state.league]} ${state.season}시즌`), h('span', { class: 'week' }, header)),
     h('table', { class: 'standings' },
-      h('thead', {}, h('tr', {}, ['순위', '팀', '승점', '승', '패'].map((t) => h('th', {}, t)))),
+      h('thead', {}, h('tr', {}, ['순위', '선수', '승점', '승', '패'].map((t) => h('th', {}, t)))),
       h('tbody', {}, table.map((t) => h('tr', { class: t.me ? 'me' : '' },
         h('td', {}, t.rank), h('td', {}, t.name), h('td', {}, t.points), h('td', {}, t.wins), h('td', {}, t.losses))))),
     h('div', { class: 'next' }, nextLine),
@@ -125,10 +125,25 @@ export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, o
       h('span', { class: 'chip pts' }, `포인트 ${state.statPoints}`)),
     state.phase === 'seasonEnd' && btn('시즌 결과 보기', onSeasonEnd, 'primary'),
     nm && btn(state.phase === 'tournament' ? '토너먼트 경기 시작' : '경기 시작', onPlay, 'primary'),
-    onTutorial && btn(tutorialDone ? '튜토리얼 다시 하기' : '튜토리얼 (처음이라면 추천)', onTutorial, tutorialDone ? '' : 'recommend'),
     btn('스탯 투자', onStats),
     btn('토너먼트 대진표', onBracket),
     btn('타이틀', onTitle));
+}
+
+/**
+ * 시즌 시작 연출: 리그 이름이 떠오른 뒤 이번 시즌 목표가 하나씩 나타나고, 마지막에 라이벌과 시작 버튼.
+ * 화면을 탭하면 애니메이션을 건너뛴다(모두 즉시 표시). 동작 줄이기 설정이면 CSS 에서 바로 표시.
+ */
+export function seasonIntroScreen({ intro, onStart }) {
+  const items = intro.goals.map((g, i) => h('li', { class: 'goal', style: `--i:${i}` },
+    h('span', { class: 'goal-icon', 'aria-hidden': 'true' }, g.icon), h('div', {}, h('b', {}, g.label), h('span', {}, g.text))));
+  const rival = intro.rival && h('p', { class: 'goal-rival', style: `--i:${intro.goals.length}` }, `라이벌 ${intro.rival.name} — “${intro.rival.line}”`);
+  const startBtn = h('button', { class: 'btn primary goal-start', type: 'button', style: `--i:${intro.goals.length + 1}`, onclick: (ev) => { ev?.stopPropagation?.(); onStart(); } }, '시즌 시작!');
+  const el = h('section', { class: 'screen season-intro', onpointerdown: () => { el.className = 'screen season-intro skip'; } },
+    h('div', { class: 'si-title' }, h('small', {}, intro.subtitle), h('h2', {}, intro.title)),
+    h('div', { class: 'si-head' }, '이번 시즌 목표'),
+    h('ul', { class: 'goals' }, ...items), rival || '', startBtn);
+  return { el, skip() { el.className = 'screen season-intro skip'; }, count: items.length };
 }
 
 export function equipScreen({ state, onChange, onStart, onBack }) {
@@ -160,7 +175,7 @@ export function seasonResultScreen({ summary, onNext }) {
   return h('section', { class: 'screen season-result' },
     h('h2', {}, summary.champion ? '리그 챔피언!' : '시즌 종료'),
     h('p', {}, `${LEAGUE_NAMES[summary.league]} 정규 ${summary.rank}위`),
-    h('p', {}, `우승팀: ${summary.championName}`),
+    h('p', {}, `우승자: ${summary.championName}`),
     summary.champion && h('p', { class: 'pts' }, `우승 보너스 +${summary.bonus}pt`),
     summary.promoted && h('p', { class: 'win' }, `${LEAGUE_NAMES[summary.nextLeague]}로 승격!`),
     !summary.champion && h('p', { class: 'quote' }, '지면 다시. 같은 리그에서 다음 시즌!'),
@@ -197,7 +212,7 @@ export function bracketScreen({ bracket, onBack }) {
     h('h2', {}, '토너먼트 대진표'),
     bracket
       ? [h('h3', {}, '4강'), ...bracket.semis.map(slot), h('h3', {}, '결승'), slot(bracket.final)]
-      : h('p', {}, '정규 리그 9경기가 끝나면 상위 4팀이 진출합니다.'),
+      : h('p', {}, '정규 리그 9경기가 끝나면 상위 4명이 진출합니다.'),
     btn('돌아가기', onBack, 'primary'));
 }
 

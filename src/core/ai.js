@@ -1,6 +1,6 @@
-import { GRADES, COURSE_X } from './constants.js?v=1791287394';
-import { buildTiming, judgeTap } from './timing.js?v=1791287394';
-import { createShot } from './shot.js?v=1791287394';
+import { GRADES, COURSE_X } from './constants.js?v=1791288146';
+import { buildTiming, judgeTap } from './timing.js?v=1791288146';
+import { createShot } from './shot.js?v=1791288146';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -20,10 +20,10 @@ export const LEAGUE_BASE = Object.freeze({
   world: { returnRate: 0.88, accuracy: 0.78, spinUse: 0.70, courseAim: 0.75, power: 0.72 },
 });
 
-/** 팀 내 난이도 배분 (설계서 5.3): 하위 -20%, 중위 0, 상위 +20%, 라이벌 +40% */
+/** 선수 난이도 배분 (설계서 5.3): 하위 -20%, 중위 0, 상위 +20%, 라이벌 +40% */
 export const TIER_MULT = Object.freeze({ low: 0.8, mid: 1.0, high: 1.2, rival: 1.4 });
 
-/** 10팀 중 나를 뺀 9팀의 등급: 하위3, 중위4, 상위2 (순위 index 0=가장 약함) */
+/** 10명 중 나를 뺀 9명의 등급: 하위3, 중위4, 상위2 (순위 index 0=가장 약함) */
 export const TIER_LAYOUT = Object.freeze(['low', 'low', 'low', 'mid', 'mid', 'mid', 'mid', 'high', 'high']);
 
 /**

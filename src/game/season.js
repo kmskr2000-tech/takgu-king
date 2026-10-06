@@ -1,4 +1,4 @@
-import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick } from '../core/index.js?v=1791287394';
+import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick } from '../core/index.js?v=1791288146';
 
 export const SAVE_VERSION = 2;
 export const WIN_PT = 3;
@@ -18,9 +18,16 @@ export const RIVALS = Object.freeze({
   world: { name: '탁구 황제', style: 'balanced', line: '지면 다시. 그게 나의 길이다.' },
 });
 
-const TEAM_POOL = [
-  '번개 클럽', '푸른 파도', '붉은 여우', '철새 탁구단', '한강 스매시', '달빛 스핀', '황금 라켓', '북극곰 팀', '새벽 랠리',
-];
+// 리그는 개인전: 상대 선수는 리그마다 개성 있는 별명을 가진다 (라이벌은 RIVALS). 한 리그에 비라이벌 8명
+export const PLAYER_NAMES = Object.freeze({
+  amateur: ['점심시간 박과장', '새벽반 영희', '막내 준호', '배달왕 대성', '고딩 민재', '야간조 미라', '터줏대감 할배', '슬리퍼 철수'],
+  third: ['번개손 민수', '회전마녀 소라', '돌직구 태호', '그림자 지훈', '불꽃 서연', '철가면 동혁', '바람 도윤', '황소 상철'],
+  second: ['칼날 서진', '안개 하윤', '쇠망치 대현', '여우 지아', '폭풍 우빈', '늑대 재민', '느림보 거북', '독수리 채원'],
+  first: ['백전노장 오사장', '총알 현우', '얼음여왕 세아', '천재소년 리안', '강철 마동', '질풍 다온', '달인 구본', '검은 호랑이'],
+  world: ['은빛 칼날 이안', '불사조 사라', '북극성 선', '번개왕 장', '침묵의 사냥꾼', '황금손 마르코', '폭군 이반', '안개 속 하루'],
+});
+// 예전 저장(팀 이름) 호환: 이 이름이면 새 선수 이름으로 바꿔 불러온다
+const LEGACY_TEAM_NAMES = ['번개 클럽', '푸른 파도', '붉은 여우', '철새 탁구단', '한강 스매시', '달빛 스핀', '황금 라켓', '북극곰 팀', '새벽 랠리'];
 
 // ---- 장비 (설계서 7.3, 7.4) ----
 export const GRIPS = Object.freeze({
@@ -72,7 +79,7 @@ export function equip(state, grip, racket) {
 }
 
 // ---- 일정 ----
-/** 원형 대진(circle method): 10팀 → 9라운드 × 5경기, 모든 팀 쌍이 정확히 한 번씩 */
+/** 원형 대진(circle method): 10명 → 9라운드 × 5경기, 모든 선수 쌍이 정확히 한 번씩 */
 export function roundRobin(n = 10) {
   const ids = Array.from({ length: n }, (_, i) => i);
   const rounds = [];
@@ -80,19 +87,19 @@ export function roundRobin(n = 10) {
     const pairs = [];
     for (let i = 0; i < n / 2; i++) pairs.push([ids[i], ids[n - 1 - i]]);
     rounds.push(pairs);
-    ids.splice(1, 0, ids.pop()); // 첫 팀 고정, 나머지 회전
+    ids.splice(1, 0, ids.pop()); // 첫 선수 고정, 나머지 회전
   }
   return rounds;
 }
 
 function buildTeams(league) {
-  const rivalIdx = 8; // 상위권 한 팀을 라이벌로
+  const rivalIdx = 8; // 상위권 한 명을 라이벌로
   const teams = [{ id: 0, name: '나', me: true }];
   TIER_LAYOUT.forEach((tier, i) => {
     const isRival = i === rivalIdx;
     teams.push({
       id: i + 1,
-      name: isRival ? RIVALS[league].name : TEAM_POOL[i],
+      name: isRival ? RIVALS[league].name : PLAYER_NAMES[league][i],
       tier: isRival ? 'rival' : tier,
       style: isRival ? RIVALS[league].style : 'balanced',
       rival: isRival,
@@ -101,7 +108,7 @@ function buildTeams(league) {
   return teams.map((t) => ({ ...t, points: 0, wins: 0, losses: 0, diff: 0 }));
 }
 
-/** 시즌 초기화: 팀/일정/기록 리셋 (스탯·장비·포인트는 유지) */
+/** 시즌 초기화: 선수/일정/기록 리셋 (스탯·장비·포인트는 유지) */
 export function startSeason(state, league = state.league) {
   state.league = league;
   state.teams = buildTeams(league);
@@ -136,7 +143,7 @@ export const leagueIndex = (state) => LEAGUES.indexOf(state.league);
 /** 저장 데이터 마이그레이션: v1 → v2 (일정/로그/국면 보강). 알 수 없으면 null */
 export function migrate(raw) {
   if (!raw || typeof raw !== 'object' || !raw.stats || !LEAGUES.includes(raw.league)) return null;
-  if (raw.version === SAVE_VERSION && raw.teams && raw.schedule) return raw;
+  if (raw.version === SAVE_VERSION && raw.teams && raw.schedule) { renameLegacyTeams(raw); return raw; }
   const s = newGame(raw.league);
   s.stats = { power: raw.stats.power ?? 3, spin: raw.stats.spin ?? 3, focus: raw.stats.focus ?? 3 };
   s.statPoints = raw.statPoints ?? 0;
@@ -305,7 +312,7 @@ export function startNextSeason(state) {
   return startSeason(state, next);
 }
 
-/** 대진표 표시용 뷰모델 (팀 이름 해석) */
+/** 대진표 표시용 뷰모델 (선수 이름 해석) */
 export function bracketView(state) {
   const br = state.bracket;
   if (!br) return null;
@@ -325,4 +332,33 @@ export function nextMatch(state) {
     return opp ? { stage: 'tournament', opp } : null;
   }
   return null;
+}
+
+/**
+ * 시즌 시작 연출용 목표 요약 (순수 데이터). 규칙은 이 파일의 상수·함수와 같은 출처를 쓴다.
+ * 반환: { title, subtitle, goals:[{icon,label,text}], rival }
+ */
+export function seasonGoals(state) {
+  const idx = LEAGUES.indexOf(state.league);
+  const last = idx === LEAGUES.length - 1;
+  const next = last ? null : LEAGUE_NAMES[LEAGUES[idx + 1]];
+  const rival = RIVALS[state.league];
+  const unlock = UNLOCKS[state.league];
+  const names = [...unlock.grips.map((g) => GRIPS[g].name), ...unlock.rackets.map((r) => RACKETS[r].name)];
+  const goals = [
+    { icon: '🏓', label: '정규 시즌', text: '9경기 풀리그에서 상위 4위 안에 들기' },
+    { icon: '🏆', label: '연말 토너먼트', text: last ? '세계대회 우승으로 정상에 서기' : `우승하면 ${next} 승격` },
+    { icon: '🎁', label: '우승 보상', text: `보너스 포인트 +${CHAMPION_BONUS}${names.length ? ` · 해금: ${names.join(', ')}` : ''}` },
+  ];
+  return {
+    title: LEAGUE_NAMES[state.league], subtitle: `${state.season}시즌 시작`, goals,
+    rival: rival ? { name: rival.name, line: rival.line } : null,
+  };
+}
+
+/** 예전 저장의 팀 이름(번개 클럽 …)을 개인전 선수 이름으로 바꾼다 (id 순서 그대로, 라이벌·나는 유지) */
+function renameLegacyTeams(state) {
+  const names = PLAYER_NAMES[state.league];
+  if (!names || !Array.isArray(state.teams)) return;
+  for (const t of state.teams) if (!t.me && !t.rival && LEGACY_TEAM_NAMES.includes(t.name) && names[t.id - 1]) t.name = names[t.id - 1];
 }

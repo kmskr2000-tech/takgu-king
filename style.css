@@ -154,3 +154,21 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .coach-main { flex: 1; min-width: 0; }
 .coach-diagram { display: none; width: 38%; max-width: 150px; height: auto; aspect-ratio: 96/64; image-rendering: pixelated; border-radius: 6px; background: #0d1b2a; flex: none; }
 .coach-diagram.on { display: block; }
+
+/* 시즌 시작 연출: 제목 → 목표 3줄 → 라이벌 → 시작 버튼이 차례로 나타난다. 탭하면 .skip 으로 즉시 표시 */
+.season-intro { text-align: center; }
+.season-intro .si-title small { display: block; color: #ffd24a; font-weight: 700; letter-spacing: 2px; opacity: 0; animation: siFade .5s ease-out .1s forwards; }
+.season-intro .si-title h2 { font-size: 2rem; margin: 4px 0 12px; opacity: 0; transform: scale(.7); animation: siPop .6s cubic-bezier(.2,1.4,.4,1) .35s forwards; }
+.season-intro .si-head { color: #c8d3e0; font-weight: 700; margin-bottom: 8px; opacity: 0; animation: siFade .4s ease-out 1s forwards; }
+.season-intro .goals { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+.season-intro .goal { display: flex; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.18); opacity: 0; transform: translateX(-24px); animation: siSlide .5s ease-out forwards; animation-delay: calc(1.3s + var(--i) * .55s); }
+.season-intro .goal-icon { font-size: 1.6rem; }
+.season-intro .goal b { display: block; color: #ffd24a; font-size: .85rem; }
+.season-intro .goal span { font-weight: 700; }
+.season-intro .goal-rival { color: #ff9d90; font-weight: 700; margin: 6px 0 12px; opacity: 0; animation: siFade .5s ease-out forwards; animation-delay: calc(1.3s + var(--i) * .55s); }
+.season-intro .goal-start { opacity: 0; animation: siFade .5s ease-out forwards; animation-delay: calc(1.3s + var(--i) * .55s); }
+.season-intro.skip *, .season-intro.skip .goal { animation: none !important; opacity: 1 !important; transform: none !important; }
+@keyframes siFade { to { opacity: 1; } }
+@keyframes siPop { to { opacity: 1; transform: scale(1); } }
+@keyframes siSlide { to { opacity: 1; transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .season-intro *, .season-intro .goal { animation: none !important; opacity: 1 !important; transform: none !important; } }

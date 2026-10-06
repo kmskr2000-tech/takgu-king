@@ -1,29 +1,29 @@
-import { h } from './dom.js?v=1791287394';
+import { h } from './dom.js?v=1791288146';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
-  equipScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen,
-} from './screens.js?v=1791287394';
+  equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen,
+} from './screens.js?v=1791288146';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791287394';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791287394';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791287394';
-import { SHOT_TYPES, DEFAULT_SHOT_TYPE, shotKeyOfSpin } from '../game/controls.js?v=1791287394';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791287394';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791287394';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791287394';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791287394';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791287394';
-import { createAudio } from './audio.js?v=1791287394';
-import { createHaptics, react } from './feedback.js?v=1791287394';
-import { createRenderer } from './render.js?v=1791287394';
-import { createMatchController } from '../game/matchController.js?v=1791287394';
+} from './intro.js?v=1791288146';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791288146';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791288146';
+import { SHOT_TYPES, DEFAULT_SHOT_TYPE, shotKeyOfSpin } from '../game/controls.js?v=1791288146';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791288146';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791288146';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791288146';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791288146';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791288146';
+import { createAudio } from './audio.js?v=1791288146';
+import { createHaptics, react } from './feedback.js?v=1791288146';
+import { createRenderer } from './render.js?v=1791288146';
+import { createMatchController } from '../game/matchController.js?v=1791288146';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
-  applyRegularResult, applyTournamentResult,
-} from '../game/season.js?v=1791287394';
-import { createStore } from '../game/store.js?v=1791287394';
-import { createRng } from '../core/index.js?v=1791287394';
+  applyRegularResult, applyTournamentResult, seasonGoals,
+} from '../game/season.js?v=1791288146';
+import { createStore } from '../game/store.js?v=1791288146';
+import { createRng } from '../core/index.js?v=1791288146';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -98,7 +98,7 @@ export function createApp(root, deps = {}) {
         onContinue: () => api.showHome(),
         onNew: () => {
           if (state && !confirmFn('저장된 시즌이 사라집니다. 새로 시작할까요?')) return;
-          state = newGame(); persist(); api.showHome();
+          state = newGame(); persist(); api.showSeasonIntro();
         },
         onTutorial: () => api.startMatch({ tutorial: true, from: 'title' }),
         onSettings: () => api.showSettings(),
@@ -125,14 +125,17 @@ export function createApp(root, deps = {}) {
         onBack: () => api.showTitle(),
       }));
     },
+    /** 새 시즌 시작 연출(목표 안내). 새로 시작·다음 시즌에서만 보이고, 이어하기는 바로 홈 */
+    showSeasonIntro() {
+      loop = null;
+      mount(seasonIntroScreen({ intro: seasonGoals(state), onStart: () => api.showHome() }).el);
+    },
     showHome() {
       loop = null;
       mount(leagueHomeScreen({
         state,
         onPlay: () => api.showEquip(),
         onStats: () => api.showStats(),
-        tutorialDone: tutorialStore.done,
-        onTutorial: () => api.startMatch({ tutorial: true, from: 'home' }),
         onBracket: () => api.showBracket(),
         onTitle: () => ads.runBreak('titleReturn', () => api.showTitle()), // 광고 훅: 홈 → 타이틀
         onSeasonEnd: () => api.showSeasonResult(),
@@ -185,7 +188,7 @@ export function createApp(root, deps = {}) {
     showTutorialDone(opts = {}) {
       loop = null;
       mount(tutorialDoneScreen({
-        onPlay: () => { if (state) api.showHome(); else { state = newGame(); persist(); api.showHome(); } },
+        onPlay: () => { if (state) api.showHome(); else { state = newGame(); persist(); api.showSeasonIntro(); } },
         hasSave: !!state,
         onAgain: () => api.startMatch({ tutorial: true, from: opts.from }),
         onTitle: () => api.showTitle(),
@@ -200,8 +203,8 @@ export function createApp(root, deps = {}) {
         onNext: () => ads.runBreak('seasonEnd', () => {
           if (summary.ending && state.endingPending) {
             state.endingPending = false; persist();
-            mount(endingScreen({ onNext: () => { startNextSeason(state); persist(); api.showHome(); } }));
-          } else { startNextSeason(state); persist(); api.showHome(); }
+            mount(endingScreen({ onNext: () => { startNextSeason(state); persist(); api.showSeasonIntro(); } }));
+          } else { startNextSeason(state); persist(); api.showSeasonIntro(); }
         }),
       }));
     },
@@ -225,7 +228,7 @@ export function createApp(root, deps = {}) {
         quitLabel: tut ? '나가기' : '포기',
         onShot: (k) => { shotType = k; view.setShot(k); audio.unlock(); audio.play('click'); },
         onQuit: () => {
-          if (tut) { loop = null; if (opts.from === 'home' && state) api.showHome(); else api.showTitle(); return; } // 튜토리얼은 언제든 페널티 없이 나감
+          if (tut) { loop = null; api.showTitle(); return; } // 튜토리얼은 언제든 페널티 없이 나감
           const ctl2 = api.controller;
           const elapsed = nowFn() - startedAt;
           if (!ctl2 || ctl2.phase === 'over' || elapsed < FORFEIT_AFTER) { loop = null; api.showHome(); return; } // 2분 이내: 기록 없이 취소
