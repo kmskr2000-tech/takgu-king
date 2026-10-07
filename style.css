@@ -69,7 +69,7 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .screen.match:has(.coach.on) { --below: 268px; /* 튜토리얼 코치 패널(약 120~150px)이 추가로 붙는 동안 */ }
 .match-stage { position: relative; width: 100%; height: calc(100dvh - var(--below) - max(0px, env(safe-area-inset-bottom) - 16px)); min-height: 360px; margin: 0 auto; overflow: hidden; display: flex; flex-direction: column; background: #0b1220;
   /* 위: 상단 띠(.hud, 흐름 배치 — 코트를 가리지 않는다) · 아래: 코트 캔버스. 코트 높이 = 남는 높이 − 띠. 폭은 위아래가 12% 넘게 잘리지 않도록 상한(/ 1.76) */ }
-.match-stage canvas.court { display: block; flex: none; width: min(100%, calc((100dvh - var(--below) - max(0px, env(safe-area-inset-bottom) - 16px) - var(--strip)) / 1.32)); height: calc(100dvh - var(--below) - max(0px, env(safe-area-inset-bottom) - 16px) - var(--strip)); margin: 0 auto; aspect-ratio: auto; object-fit: cover; object-position: center bottom; /* 화면 폭 가득(양옆 여백 없음). 남는 높이만큼 위쪽 조명(하늘) 영역만 잘라낸다 — 관중석(그림 높이의 35% 아래)은 안 잘린다. 폭은 잘림이 34% 를 넘지 않게만 상한 */ background: #05070d; }
+.match-stage canvas.court { display: block; flex: none; width: min(100%, calc((100dvh - var(--below) - max(0px, env(safe-area-inset-bottom) - 16px) - var(--strip)) / 1.35)); height: calc(100dvh - var(--below) - max(0px, env(safe-area-inset-bottom) - 16px) - var(--strip)); margin: 0 auto; aspect-ratio: auto; object-fit: fill; /* 그림 전체(조명·관중·탁구대·선수)가 다 보이면서 화면 폭을 가득 채운다: 남는 높이에 맞춰 세로를 눌러 담는다(탁구대·캐릭터가 조금 낮아짐, 최대 33%). 폭은 눌림이 33% 를 넘지 않게만 상한 */ background: #05070d; }
 #app:has(.screen.match) { padding-left: 0; padding-right: 0; padding-top: 0; padding-bottom: max(16px, env(safe-area-inset-bottom)); } /* 경기 화면은 풀블리드: 양옆·위(노치 뒤)까지 코트 그래픽이 차고, 글자·버튼(HUD)만 안전영역 안쪽에 둔다 */
 
 .screen.match > :not(.match-stage) { margin-left: 8px; margin-right: 8px; }
