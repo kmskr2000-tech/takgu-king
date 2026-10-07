@@ -259,3 +259,9 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 /* 상단 UI(이름·배지·포기)는 불투명한 바탕을 줘서 배경 위에서 또렷하게 */
 .hud .opp-name { background: rgba(8,12,22,.78); padding: 1px 8px; border-radius: 8px; }
 .btn.quit { background: rgb(10,16,28); border-color: rgba(255,255,255,.7); }
+
+/* 경기 화면 상단 UI 흐림 대응 (iOS Safari 실기기: 이름·배지·포기만 흐릿, 같은 HUD 의 점수판·캔버스는 선명) —
+   ① 경기 중엔 문서 스크롤을 없애 상단 가장자리 효과 대상에서 빼고 ② 상단 줄을 자기 합성 레이어(이동 변환만, 확대 없음)로 올려 캔버스·점수판처럼 따로 그린다 */
+html:has(.screen.match), body:has(.screen.match) { overflow: hidden; overscroll-behavior: none; }
+#app:has(.screen.match) { height: 100dvh; overflow: hidden; }
+.hud-top { transform: translate3d(0, 0, 0); -webkit-transform: translate3d(0, 0, 0); backface-visibility: hidden; -webkit-font-smoothing: antialiased; }

@@ -1,8 +1,8 @@
 // 새 게임 시작 전 도민구 소개 컷신: 도트 컷 5장 + 자막(나레이션·독백·오순자의 대사). 컷은 (컷 번호, 컷 안 시간 u)만 받는 순수 함수라 결정적이고 테스트 가능하다.
 // 흐름: 새벽 탁구장 벽치기 → 10년 후보 인생 → 물류센터 야간 알바 → 오순자의 대회 권유 → "…다시." (출처: files/스토리라인.md §1)
 // 탭 = 다음 줄(타이핑 중이면 먼저 끝까지 표시), 건너뛰기 = 전부 넘김. 핵심 그림은 안전영역(SAFE) 안, 자막은 화면 아래쪽에 겹쳐 뜨므로 그림은 y 150 위쪽에 둔다.
-import { SPRITES, PALETTES, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791360768';
-import { INTRO_W, INTRO_H, drawDigits } from './intro.js?v=1791360768';
+import { SPRITES, PALETTES, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791361346';
+import { INTRO_W, INTRO_H, drawDigits } from './intro.js?v=1791361346';
 
 export { INTRO_W, INTRO_H };
 export const CPS = 16; // 자막 타이핑 속도(글자/초)
