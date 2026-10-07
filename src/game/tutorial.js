@@ -14,7 +14,7 @@ const STEP_SERVE = {
   done: '서브는 탭 한 번이면 돼요.',
 };
 const SIMPLE_SERVE = {
-  ...STEP_SERVE, text: '아래 "일반" 버튼을 누르면 서브해요. 버튼을 누르는 순간이 스윙이에요!', hint: { button: 'normal' },
+  ...STEP_SERVE, text: '화면 맨 아래 [일반] 버튼을 누르면 서브해요. 버튼을 누르는 순간이 스윙이에요!', hint: { button: 'normal' },
   done: '샷 버튼을 누르는 순간 바로 쳐요.',
 };
 const STEP_PERFECT = {
@@ -36,6 +36,10 @@ const STEP_FREE = {
   done: '',
 };
 
+const SIMPLE_PERFECT = {
+  ...STEP_PERFECT, text: '띠 한가운데의 밝은 줄에 맞추면 PERFECT! 더 강하고 정확한 샷이 나가요. (일반=노랑 줄, 탑스핀=빨강 줄, 커트=파랑 줄)',
+};
+
 const SIMPLE_STEPS = [
   SIMPLE_SERVE,
   {
@@ -43,7 +47,7 @@ const SIMPLE_STEPS = [
     goals: [{ key: 'return', need: 2, label: '받아치기', accept: inCourt }], hint: { button: 'normal' },
     done: '공이 띠 안에 있을 때 버튼을 누르면 받아쳐요. 일러도 늦어도 안 돼요.',
   },
-  STEP_PERFECT,
+  SIMPLE_PERFECT,
   stepCourse('코트의 왼쪽을 탭하면 노란 코스 구역이 왼쪽으로 옮겨져요. 그 상태로 공이 오면 버튼을 눌러요. 먼저 왼쪽, 다음엔 오른쪽!'),
   {
     id: 'topspin', title: '탑스핀', text: '공이 띠에 들어오면 "탑스핀" 버튼을 누르세요! 빠르고 낮게 날아가요.',
@@ -96,7 +100,7 @@ export function feedbackFor(e, step) {
     if (e.kind === 'out') return '너무 세서 아웃! 파워를 줄이거나 위로 쓸어 탑스핀을 걸어보세요.';
     if (e.grade === 'PERFECT') return 'PERFECT!';
     if (e.grade === 'BAD') return '아슬아슬! 띠 가장자리예요 — 가운데를 노려요.';
-    if (e.grade === 'GOOD') return step?.id === 'perfect' ? '좋아요! 붉은 띠 한가운데를 노려보세요.' : '좋아요!';
+    if (e.grade === 'GOOD') return step?.id === 'perfect' ? '좋아요! 띠 한가운데의 밝은 줄을 노려보세요.' : '좋아요!';
   }
   return '';
 }

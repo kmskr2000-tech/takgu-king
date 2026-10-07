@@ -191,3 +191,20 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 
 .title .btn.level { display:flex; justify-content:space-between; align-items:center; gap:8px; background:#1b2a3a; }
 .title .btn.level .sstate { color: var(--accent, #ffd24a); }
+
+/* 판정 문구: PERFECT 는 크게 튀어 오르며 금빛으로 빛난다 (두 애니메이션을 번갈아 써서 연속 PERFECT 도 다시 재생) */
+.hud .judge.perfect { color: #ffd24a; font-size: 1.35rem; text-shadow: 0 0 6px rgba(255,210,74,.9), 0 2px 0 #7a4b00; }
+.hud .judge.perfect.j0 { animation: perfect-pop0 .45s ease-out; }
+.hud .judge.perfect.j1 { animation: perfect-pop1 .45s ease-out; }
+.hud .judge.good { color: #fff; } .hud .judge.bad { color: #9aa4ae; } .hud .judge.miss { color: #ff7a6a; }
+@keyframes perfect-pop0 { 0% { transform: scale(.6); opacity: 0; } 35% { transform: scale(1.7); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes perfect-pop1 { 0% { transform: scale(.6); opacity: 0; } 35% { transform: scale(1.7); opacity: 1; } 100% { transform: scale(1); } }
+
+/* 첫 경기 안내 오버레이: 화면 전체를 덮어 코트·샷 버튼으로 터치가 새지 않는다 (경기는 멈춰 있다) */
+.guide { display: none; }
+.guide.on { display: flex; position: fixed; inset: 0; z-index: 50; align-items: flex-start; justify-content: center; padding: calc(10px + env(safe-area-inset-top)) 12px 12px; /* 위쪽(관중석·점수판)에 띄워 아래 띠·코스 화살표·샷 버튼을 가리지 않는다 */ background: rgba(5,10,22,.35); touch-action: none; }
+.guide-card { width: min(100%, 420px); display: grid; gap: 8px; background: rgba(14,28,52,.97); border: 2px solid var(--accent); border-radius: 10px; padding: 14px; color: #fff; }
+.guide-card .g-step { color: #ffd24a; font-weight: 700; }
+.guide-card .g-title { font-size: 1.15rem; }
+.guide-card .g-text { margin: 0; line-height: 1.5; white-space: pre-line; font-size: .95rem; }
+.guide-card .g-skip { opacity: .8; font-size: .78rem; min-height: 32px; padding: 4px; background: transparent; border-color: transparent; text-decoration: underline; }

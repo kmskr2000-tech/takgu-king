@@ -2,7 +2,8 @@
 export const SFX = Object.freeze({
   hit: [{ f: 520, d: 0.04, type: 'square', v: 0.07 }],
   good: [{ f: 600, d: 0.06, type: 'square', v: 0.1 }],
-  perfect: [{ f: 660, d: 0.05, type: 'square', v: 0.12 }, { f: 990, d: 0.1, at: 0.05, type: 'square', v: 0.12 }],
+  // PERFECT: 낮은 '퍽' 울림 + 상승 3음 + 반짝 (GOOD 과 확실히 구분되게 길고 크다)
+  perfect: [{ f: 140, d: 0.1, type: 'triangle', v: 0.22, slide: -70 }, { f: 660, d: 0.05, type: 'square', v: 0.14 }, { f: 990, d: 0.07, at: 0.05, type: 'square', v: 0.14 }, { f: 1320, d: 0.16, at: 0.11, type: 'square', v: 0.13 }, { f: 1980, d: 0.1, at: 0.17, type: 'triangle', v: 0.08 }],
   bad: [{ f: 330, d: 0.07, type: 'square', v: 0.07 }], // 아슬아슬: 작고 낮게
   miss: [{ f: 220, d: 0.16, type: 'sawtooth', v: 0.1, slide: -110 }],
   pointMe: [{ f: 523, d: 0.08, type: 'square', v: 0.12 }, { f: 659, d: 0.08, at: 0.08, type: 'square', v: 0.12 }, { f: 784, d: 0.16, at: 0.16, type: 'square', v: 0.12 }],

@@ -1,11 +1,11 @@
-import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791327984';
-import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791327984';
-import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791327984';
-import { DISGUISE_S } from './controls.js?v=1791327984';
+import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791332571';
+import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791332571';
+import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791332571';
+import { DISGUISE_S } from './controls.js?v=1791332571';
 import {
   SIDES, STATES, GRADES, createMatch, createShot, flightOf, buildTiming, judgeTap, judgeNoTap,
   classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide,
-} from '../core/index.js?v=1791327984';
+} from '../core/index.js?v=1791332571';
 
 /** 난수 배율 래퍼: createShot 의 실수 난수(signed)만 k 배. k=1 이면 기존과 비트 동일 */
 export const scaledRng = (rng, k) => (k === 1 ? rng : { next: rng.next, signed: () => rng.signed() * k });
@@ -68,6 +68,8 @@ export function createMatchController({
     if (shooter !== SIDES.ME) c.lastMatchup = 'even';
     // res: serve/respond 결과. 득점이면 pause, 아니면 받는 쪽 대기 설정
     if (res.flight) launch(res.flight, now);
+    // 방향 전환 효과: 상대는 자기가 마지막으로 친 자리에 서 있다 (내 서브 직후엔 중앙). aiRespond 가 내 공과의 거리로 탭 오차를 키운다
+    if (shooter === SIDES.OPP && res.flight) c.oppX = res.flight.pos(0).x; else if (m.rally?.shots === 1) c.oppX = 50; // 내 서브: 상대는 중앙에서 받는다
     if (res.point) {
       c.phase = m.isOver() ? 'over' : 'pause';
       c.resumeAt = now + (res.flight ? res.flight.tLand : 0) + POINT_PAUSE;
@@ -87,7 +89,7 @@ export function createMatchController({
       // AI 리턴을 지금 계산해 두고, 실제 탭 시각(미스면 창이 끝나는 시각)에 반영 → 공이 튀지 않는다
       const foeX = 100 - (res.flight.land?.x ?? 50);
       const key = useMatchup && simple ? `${c.lastMatchup}:${c.lastGradeMe ?? GRADES.GOOD}` : 'even';
-      const plan = aiRespond(oppParams, rng, SIDES.OPP, res.flight, foeX, key, { streak: c.streak });
+      const plan = aiRespond(oppParams, rng, SIDES.OPP, res.flight, foeX, key, { streak: c.streak, oppX: c.oppX });
       c.aiPlan = plan;
       c.aiAt = now + (plan.judgement.grade === GRADES.MISS ? plan.timing.end : plan.t);
     }

@@ -1,7 +1,7 @@
-import { GRADES, COURSE_X } from './constants.js?v=1791327984';
-import { buildTiming, judgeTap } from './timing.js?v=1791327984';
-import { MIN_REACTION_S } from './constants.js?v=1791327984';
-import { createShot, flightOf, powerCap } from './shot.js?v=1791327984';
+import { GRADES, COURSE_X } from './constants.js?v=1791332571';
+import { buildTiming, judgeTap } from './timing.js?v=1791332571';
+import { MIN_REACTION_S } from './constants.js?v=1791332571';
+import { createShot, flightOf, powerCap } from './shot.js?v=1791332571';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -146,6 +146,12 @@ export const LEAGUE_VARIETY = { amateur: 0.35, third: 0.35, second: 0.4, first: 
 const COUNTER_SPIN = { topspin: 0, cut: 1, normal: -1 }; // 내 샷 종류 → AI 가 고를 스핀 (내 탑스핀 ← 일반, 내 일반 ← 커트, 내 커트 ← 탑스핀)
 export const AI_TEMPO = { cutPowerCap: 0.4, cutNoSpin: true, cutSigmaMult: 0.9, counterBonus: 0.45, counterSpinBoost: 0.6, spinThreshold: 0.5 };
 
+// 방향 전환 효과: AI 는 자기가 마지막으로 친 자리(oppX)에 서 있다. 내 공이 그 자리에서 멀리 떨어질수록(코스 반대쪽) 닿기 어려워 탭 오차가 커지고,
+// 바로 앞(같은 쪽)이면 받기 쉽다. 코스 거리 dist(0..1, 코트 폭 비율)에 대한 탭 오차 배율 = base + slope × dist.
+// 코스 3칸 균등이면 평균 ≈ 1 이 되게 잡았다(전체 난이도는 그대로, 코스 선택만 보상/벌). 코치(counter === false)·oppX 미지정(AI 끼리·구 코드)은 적용 안 함.
+export const DIRECTION_FX = { base: 0.9, slope: 0.7 };
+export const reachMult = (landX, oppX) => (oppX == null ? 1 : DIRECTION_FX.base + DIRECTION_FX.slope * Math.min(1, Math.abs(landX - oppX) / 100));
+
 export const tapSigma = (p, speed) =>
   (SIGMA_FLOOR + SIGMA_RANGE * (1 - p.returnRate)) * clamp(speed / 220, 0.8, 1.8);
 
@@ -160,7 +166,7 @@ function gauss(rng) {
  * 탭 시각 = 중심 + N(0, σ), 실제 judgeTap 으로 PERFECT/GOOD/MISS 판정.
  * 반환: { judgement: {grade, offset}, shot|null, t(탭 시각, 공 발사 기준 초), timing }
  */
-export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { read = true, streak = null, capPower = streak != null } = {}) {
+export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { read = true, streak = null, capPower = streak != null, oppX = null } = {}) {
   const timing = buildTiming(flight, aiStats(p).focus * 0.5, { bad: true }); // AI 는 판정 폭 보정을 절반만 받는다 (AI 도 같은 4단계 등급)
   const inSpin = flight.spin ?? 0;
   const cutIn = inSpin < -AI_TEMPO.spinThreshold; const topIn = inSpin > AI_TEMPO.spinThreshold;
@@ -168,7 +174,7 @@ export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { r
   const reads = read && p.counter !== false && rng.next() < Math.min(0.95, (AI_READ[p.league] ?? 0) * (TIER_MULT[p.tier] ?? 1) * (p.readProbMult ?? 1) * (p.tier === 'low' ? LOW_TIER_READ.prob : 1)) * slow;
   // 같은 종류를 되풀이하면(연속 N회 이상) 읽은 AI 는 그 공을 예상하고 있다 → 탭 오차가 줄어 더 잘 받아낸다 (스팸 억제)
   const anticipate = reads && streak != null && streak >= (AI_ANTICIPATE_FROM[p.league] ?? 3) ? AI_READ_ANTICIPATE : 1;
-  const t = timing.center + gauss(rng) * tapSigma(p, Math.abs(flight.vyPost)) * (cutIn ? AI_TEMPO.cutSigmaMult : 1) * (AI_MATCHUP_SIGMA[matchup] ?? 1) * anticipate * (p.reactMult ?? 1);
+  const t = timing.center + gauss(rng) * tapSigma(p, Math.abs(flight.vyPost)) * (cutIn ? AI_TEMPO.cutSigmaMult : 1) * (AI_MATCHUP_SIGMA[matchup] ?? 1) * anticipate * (p.reactMult ?? 1) * (p.counter === false ? 1 : reachMult(flight.land?.x ?? oppX, oppX));
   const judgement = judgeTap(t, timing);
   if (judgement.grade === GRADES.MISS) return { judgement, shot: null, t, timing };
   const pos = flight.postPos(t);

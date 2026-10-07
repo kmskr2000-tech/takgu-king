@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791327984';
-import { createEffects } from './effects.js?v=1791327984';
-import { createRng } from '../core/rng.js?v=1791327984';
+} from './sprites.js?v=1791332571';
+import { createEffects } from './effects.js?v=1791332571';
+import { createRng } from '../core/rng.js?v=1791332571';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -158,7 +158,18 @@ export function createRenderer(canvas, { rng, options } = {}) {
   }
 
   // 구질별 리듬 밴드 색 (버튼 색과 같다): 탑스핀 빨강 / 일반 노랑 / 커트 파랑
-  const BAND_COLORS = { cut: ['rgba(74,163,255,0.26)', 'rgba(150,205,255,0.85)'], normal: [null, null], topspin: ['rgba(255,90,74,0.26)', 'rgba(255,150,130,0.85)'] };
+  // 구질별 리듬 밴드 색 (버튼 색과 같다): [채움, 테두리, PERFECT 심지]. 탑스핀 빨강 / 일반 노랑 / 커트 파랑
+  // 세 밴드가 겹쳐도 읽히도록: 넓은 것(커트)부터 깔고, 각자 굵은 테두리 선과 밝고 불투명한 PERFECT 심지를 따로 그린다
+  const BAND_COLORS = {
+    cut: ['rgba(74,163,255,0.24)', '#4aa3ff', 'rgba(190,225,255,0.8)'],
+    normal: ['rgba(255,220,80,0.24)', '#ffd24a', 'rgba(255,248,190,0.8)'],
+    topspin: ['rgba(255,90,74,0.24)', '#ff5a4a', 'rgba(255,170,150,0.8)'],
+  };
+  const BAND_ORDER = ['cut', 'normal', 'topspin']; // 넓은 순(커트 > 일반 > 탑스핀)으로 그려야 좁은 밴드가 위에 보인다
+  function edgeLines(r0, r1, color, w = 2) {
+    ctx.fillStyle = color;
+    for (const row of [r0, r1]) { const hw = halfWidthAtRow(row); ctx.fillRect(Math.round(CAM.CX - hw), row, Math.round(hw * 2), w); }
+  }
   function drawZone(ctl, now) {
     const timing = ctl.timing; const t0 = ctl.t0;
     if (!timing?.zone) return;
@@ -167,15 +178,17 @@ export function createRenderer(canvas, { rng, options } = {}) {
     const z = timing.zone;
     // 실제로 탭을 받아주는 범위(난이도 완화 포함)를 그린다. 구버전 데이터는 ±half 로 대체
     const yA = z.yStart ?? z.y - z.half; const yB = z.yEnd ?? z.y + z.half;
-    if (ctl.bands) { // 간단 조작: 구질별 리듬 밴드 3색을 겹쳐 그린다 (자기 구질의 타이밍을 버튼 색으로 읽는다)
-      for (const k of ['cut', 'topspin']) { const b = ctl.bands[k]; band(b.zone.yStart, b.zone.yEnd, BAND_COLORS[k][0]); }
+    if (ctl.bands) { // 간단 조작: 구질별 리듬 밴드 3색 (자기 구질의 타이밍을 버튼 색으로 읽는다)
+      for (const k of BAND_ORDER) { const b = ctl.bands[k]; band(b.zone.yStart, b.zone.yEnd, BAND_COLORS[k][0], 1); }
+      for (const k of BAND_ORDER) { const b = ctl.bands[k]; const [r0, r1] = [Math.round(groundY(Math.min(b.zone.yStart, b.zone.yEnd))), Math.round(groundY(Math.min(CAM.Y_NEAR, Math.max(b.zone.yStart, b.zone.yEnd))))]; edgeLines(r0, r1, BAND_COLORS[k][1]); }
+      for (const k of BAND_ORDER) { const b = ctl.bands[k]; band(b.zone.yPerfectStart, b.zone.yPerfectEnd, BAND_COLORS[k][2], 1); }
+    } else {
+      const [r0, r1] = band(yA, yB, C.zone);
+      ctx.fillStyle = C.zoneEdge;
+      for (const row of [r0, r1]) { const hw = halfWidthAtRow(row); ctx.fillRect(Math.round(CAM.CX - hw), row, Math.round(hw * 2), 1); }
+      if (z.yPerfectStart != null) band(z.yPerfectStart, z.yPerfectEnd, C.perfect, 1);
+      else { const ph = (timing.perfectHalf / timing.halfTime) * z.half; band(z.y - ph, z.y + ph, C.perfect, 1); }
     }
-    const [r0, r1] = band(yA, yB, C.zone);
-    ctx.fillStyle = C.zoneEdge;
-    for (const row of [r0, r1]) { const hw = halfWidthAtRow(row); ctx.fillRect(Math.round(CAM.CX - hw), row, Math.round(hw * 2), 1); }
-    if (z.yPerfectStart != null) band(z.yPerfectStart, z.yPerfectEnd, C.perfect, 1);
-    else { const ph = (timing.perfectHalf / timing.halfTime) * z.half; band(z.y - ph, z.y + ph, C.perfect, 1); }
-    if (ctl.bands) for (const k of ['cut', 'topspin']) { const b = ctl.bands[k]; band(b.zone.yPerfectStart, b.zone.yPerfectEnd, BAND_COLORS[k][1], 1); }
     const cy = Math.round(groundY(Math.min(z.y, CAM.Y_NEAR)));
     ctx.fillStyle = C.chevron; // 중앙 화살표 (>>)
     for (let i = 0; i < 3; i++) {
@@ -322,7 +335,9 @@ export function createRenderer(canvas, { rng, options } = {}) {
   function follow(ctl, dt, now) {
     const land = ctl.flight?.land?.x;
     const k = Math.min(1, dt * 8);
-    st.oppX += (((land != null && ctl.timing == null) ? clamp(land, 8, 92) : 50) - st.oppX) * k;
+    // 공이 내게 오는 동안(timing 있음) 상대는 자기가 친 자리에 서 있다 — 방향 전환 효과(AI 가 그 자리에서 먼 공을 더 못 받는다)가 눈에 보이게
+    const holdX = ctl.timing != null && ctl.flight?.pos ? ctl.flight.pos(0).x : null;
+    st.oppX += (((land != null && ctl.timing == null) ? clamp(land, 8, 92) : holdX != null ? clamp(holdX, 8, 92) : 50) - st.oppX) * k;
     if (st.lastAct != null && !ctl.pendingDown && now - st.lastAct > 0.35) { st.meTarget = 50; st.meK = 4; st.lean = 0; } // 복귀
     st.meX += (clamp(st.meTarget + st.lean, 4, 96) - st.meX) * Math.min(1, dt * st.meK);
   }
@@ -353,7 +368,11 @@ export function createRenderer(canvas, { rng, options } = {}) {
         } else st.swing[e.side] = now;
         const c0 = e.flight?.pos ? e.flight.pos(0) : { x: 50, y: e.side === 'me' ? 200 : 0, z: 12 };
         const p = project(c0.x, c0.y, c0.z ?? 0);
-        if (p && opt().effects) fx.hit(p.x, p.y, e.side === 'me' ? (st.lastMatchup === 'win' ? 'PERFECT' : st.lastGrade) : 'GOOD', { scale: spriteScale(p.k, 1) * (e.side === 'me' && st.lastMatchup === 'win' ? 1.4 : 1) }); // 상성 유리(카운터)는 스파크가 크고 금색
+        if (p && opt().effects) {
+          const sc = spriteScale(p.k, 1); // 깊이에 맞춰 스파크 크기
+          fx.hit(p.x, p.y, e.side === 'me' ? st.lastGrade : 'GOOD', { scale: sc }); // 실제 판정 등급 그대로 (PERFECT 연출은 PERFECT 에서만)
+          if (e.side === 'me' && st.lastMatchup === 'win') fx.counter(p.x, p.y, sc * 1.4); // 카운터는 작은 금빛 악센트만 (번쩍임 없음)
+        }
         if (e.side === 'me' && st.lastMatchup === 'lose' && opt().effects && opt().shake) st.shake = 0.12; // 상성 불리: 둔탁하게 밀리는 느낌 // 깊이에 맞춰 스파크 크기
       }
       if (e.type === 'point') {
@@ -383,6 +402,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
       drawLane(now);
       drawBall(ctl.ballAt(now), ctl.spinHidden?.(now) ? 0 : (ctl.flight?.spin ?? 0)); // 구질 위장 중엔 중립색 // 공은 선수 뒤에 가려지지 않게 선수 다음에 그린다
       fx.draw(ctx);
+      if (fx.flashAlpha > 0 && opt().effects) { ctx.fillStyle = `rgba(255,240,170,${(0.28 * fx.flashAlpha).toFixed(3)})`; ctx.fillRect(0, 0, VIEW_W, VIEW_H); } // PERFECT 번쩍임
       ctx.restore?.();
     },
   };

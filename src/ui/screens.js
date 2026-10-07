@@ -1,12 +1,12 @@
-import { h } from './dom.js?v=1791327984';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791327984';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791327984';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791327984';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791327984';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791327984';
+import { h } from './dom.js?v=1791332571';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791332571';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791332571';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791332571';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791332571';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791332571';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791327984';
+} from '../game/season.js?v=1791332571';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -269,9 +269,15 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
         h('b', {}, t.label), h('em', {}, t.tag), h('small', {}, t.desc));
       return shotBtns[k];
     }));
+  // 첫 경기 안내 오버레이: 화면 전체를 덮어 아래(코트·샷 버튼)로 터치가 새지 않는다. '다음'(click)으로만 넘어간다
+  const gTitle = h('b', { class: 'g-title' }, ''); const gStep = h('small', { class: 'g-step' }, ''); const gText = h('p', { class: 'g-text' }, '');
+  let guideNext = null; let guideSkip = null;
+  const gNext = h('button', { class: 'btn primary g-next', type: 'button', onclick: () => guideNext?.() }, '다음');
+  const gSkip = h('button', { class: 'btn g-skip', type: 'button', onclick: () => guideSkip?.() }, '안내 건너뛰기');
+  const guide = h('div', { class: 'guide', role: 'dialog', 'aria-live': 'assertive' }, h('div', { class: 'guide-card' }, gStep, gTitle, gText, gNext, gSkip));
   const badge = h('div', { class: 'serve-badge' }, '');
   const banner = h('div', { class: 'serve-banner', 'aria-live': 'polite' }, '');
-  let flashes = 0; let pops = 0; let banners = 0; let presses = 0;
+  let flashes = 0; let pops = 0; let banners = 0; let presses = 0; let judgeN = 0;
   return {
     // 캔버스를 화면 폭 가득 쓰고, 점수·상대 정보·판정·포기는 캔버스 위 오버레이, 힌트는 캔버스 아래
     el: h('section', { class: 'screen match' },
@@ -291,7 +297,14 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
         banner, pointBanner, rps,
         // 힌트는 캔버스 아래 칸이 아니라 캔버스 위에 겹쳐 표시 (비어 있어도 자리를 차지하던 빈 줄 제거)
         tip),
-      bar, coach),
+      bar, coach, guide),
+    /** 첫 경기 안내 한 페이지: { step: '1/3', title, text, last, onNext, onSkip }. 멈춘 동안 화면을 덮는다 */
+    showGuide({ step, title, text, last = false, onNext, onSkip }) {
+      gStep.textContent = step; gTitle.textContent = title; gText.textContent = text; gNext.textContent = last ? '시작!' : '다음';
+      guideNext = onNext; guideSkip = onSkip; guide.className = 'guide on';
+    },
+    hideGuide() { guide.className = 'guide'; guideNext = null; guideSkip = null; },
+    get guideOpen() { return guide.className.includes('on'); },
     setTip(text) { tip.textContent = text; tip.className = text ? 'tip on' : 'tip'; },
     /** 샷 선택 바: 간단 조작에서만 보인다 */
     setShotBar(visible) { bar.className = visible ? 'shotbar on' : 'shotbar'; },
@@ -320,7 +333,7 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
     /** 서브 차례가 시작될 때 크게 알림 (두 애니메이션을 번갈아 써서 연속으로도 다시 재생된다) */
     flashServe(side, mode = 'simple') {
       flashes += 1;
-      banner.textContent = side === 'me' ? (mode === 'simple' ? '내 서브!  아래 버튼으로 서브' : '내 서브!  화면을 탭하세요') : '상대 서브';
+      banner.textContent = side === 'me' ? (mode === 'simple' ? '내 서브!  샷 버튼을 눌러요' : '내 서브!  화면을 탭하세요') : '상대 서브';
       banner.className = `serve-banner show ${side} f${flashes % 2}`;
     },
     setScore(me, opp, server) {
@@ -346,7 +359,8 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
     /** 상성 안내 표시 여부 (간단 조작·본 경기에서만) */
     setRps(visible) { rps.className = visible ? 'rps on' : 'rps'; },
     setIncoming(text, key = null) { incoming.textContent = text; incoming.className = text ? `incoming on ${key ?? ''}`.trim() : 'incoming'; },
-    setJudge(text) { judge.textContent = text; },
+    /** 판정 문구. kind(perfect/good/bad/miss)별 색, perfect 는 크게 튀어 오른다 (두 클래스를 번갈아 써서 연속으로도 재생) */
+    setJudge(text, kind = '') { judgeN += 1; judge.textContent = text; judge.className = text && kind ? `judge ${kind} j${judgeN % 2}` : 'judge'; },
   };
 }
 
@@ -356,7 +370,7 @@ export function tutorialDoneScreen({ onPlay, onAgain, onTitle, hasSave, mode }) 
     h('h2', {}, '튜토리얼 완료!'),
     h('p', { class: 'quote' }, simple ? '타이밍 · 코스 · 샷 고르기 · 상성까지 모두 익혔어요.' : '탭 타이밍 · 코스 · 탑스핀/커트 · 파워까지 모두 익혔어요.'),
     h('ul', {}, ...(simple ? [
-      '노란 띠 안에서 샷 버튼, 붉은 띠 한가운데는 PERFECT',
+      '띠 안에서 샷 버튼, 띠 한가운데의 밝은 줄은 PERFECT',
       '코트 탭 = 코스 (왼쪽 · 가운데 · 오른쪽), 샷 버튼을 누르는 순간 = 스윙',
       '상대 공을 보고 고르기: 탑스핀 > 커트 > 일반 > 탑스핀',
     ] : [

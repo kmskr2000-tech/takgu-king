@@ -1,32 +1,33 @@
-import { h } from './dom.js?v=1791327984';
+import { h } from './dom.js?v=1791332571';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen,
-} from './screens.js?v=1791327984';
+} from './screens.js?v=1791332571';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791327984';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791327984';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791327984';
-import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791327984';
-import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791327984';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791327984';
-import { oppProfile } from '../game/oppProfile.js?v=1791327984';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791327984';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791327984';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791327984';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791327984';
-import { createAudio } from './audio.js?v=1791327984';
-import { createBgm } from './bgm.js?v=1791327984';
-import { createHaptics, react } from './feedback.js?v=1791327984';
-import { createRenderer } from './render.js?v=1791327984';
-import { createMatchController } from '../game/matchController.js?v=1791327984';
+} from './intro.js?v=1791332571';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791332571';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791332571';
+import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791332571';
+import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791332571';
+import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791332571';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791332571';
+import { oppProfile } from '../game/oppProfile.js?v=1791332571';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791332571';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791332571';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791332571';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791332571';
+import { createAudio } from './audio.js?v=1791332571';
+import { createBgm } from './bgm.js?v=1791332571';
+import { createHaptics, react } from './feedback.js?v=1791332571';
+import { createRenderer } from './render.js?v=1791332571';
+import { createMatchController } from '../game/matchController.js?v=1791332571';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult, seasonGoals,
-} from '../game/season.js?v=1791327984';
-import { createStore } from '../game/store.js?v=1791327984';
-import { createRng } from '../core/index.js?v=1791327984';
+} from '../game/season.js?v=1791332571';
+import { createStore } from '../game/store.js?v=1791332571';
+import { createRng } from '../core/index.js?v=1791332571';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -52,6 +53,7 @@ export function createApp(root, deps = {}) {
   });
   const tutorialStore = deps.tutorialStore ?? createTutorialStore(store.storage ?? globalThis.localStorage);
   const tipsStore = deps.tipsStore ?? createTipsStore(store.storage ?? globalThis.localStorage);
+  const guideStore = deps.guideStore ?? createGuideStore(store.storage ?? globalThis.localStorage);
   const reducedMotion = deps.reducedMotion ?? (() => !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
   let state = migrate(store.load());
   let loop = null; // 경기 루프 중단 플래그
@@ -229,6 +231,8 @@ export function createApp(root, deps = {}) {
       api.gameClock = clock;
       const mode = settings.get().controls; // 조작 방식은 경기 시작 시점 값으로 고정
       let lastMiss = null;
+      // 첫 경기 안내(튜토리얼 제외, 평생 한 번): 중요한 순간마다 경기를 멈추고 설명한다. 안내가 남은 경기에선 일반 힌트(tips)를 대신한다
+      const guide = createFirstGuide({ store: guideStore, mode: settings.get().controls, enabled: !tut && deps.firstGuide !== false && settings.get().tips });
       const canvas = h('canvas', { class: 'court' });
       const view = matchScreen({
         oppName: opp.name,
@@ -236,11 +240,11 @@ export function createApp(root, deps = {}) {
         canvas,
         quitLabel: tut ? '나가기' : '포기',
         // 간단 조작: 샷 버튼을 누르는 순간 = 스윙 (샷 종류는 상대 공을 보고 매번 새로 정한다)
-        onSwing: (k) => { audio.unlock(); tipper.acted(); if (ctl.swing(clock(), k)) view.flashShot(k); },
+        onSwing: (k) => { if (view.guideOpen) return; audio.unlock(); tipper.acted(); if (ctl.swing(clock(), k)) view.flashShot(k); },
         onQuit: () => {
           if (tut) { loop = null; api.showTitle(); return; } // 튜토리얼은 언제든 페널티 없이 나감
           const ctl2 = api.controller;
-          const elapsed = nowFn() - startedAt;
+          const elapsed = nowFn() - startedAt - clock.pausedFor(); // 안내로 멈춰 있던 시간은 빼고 센다
           if (!ctl2 || ctl2.phase === 'over' || elapsed < FORFEIT_AFTER) { loop = null; api.showHome(); return; } // 2분 이내: 기록 없이 취소
           if (!confirmFn('지금 포기하면 기권패로 기록됩니다. 포기할까요?')) return;
           loop = null;
@@ -272,10 +276,11 @@ export function createApp(root, deps = {}) {
         onEvent: (e) => {
           renderer.notify(e, clock());
           react(e, { audio, haptics });
+          if (e.type === 'grade' || e.type === 'point') clock.slow(1); // 첫 공 안내 뒤 슬로모션은 내가 치는 순간 끝
           if (e.type === 'lane') { view.setLane(e.lane); renderer.setLane(e.lane); }
           if (e.type === 'grade') {
             const mu = e.matchup === 'win' ? ' · 카운터!' : e.matchup === 'lose' ? ' · 역회전에 밀렸다…' : '';
-            view.setJudge((e.grade === 'MISS' ? '미스!' : e.grade === 'PERFECT' ? '퍼펙트!' : e.grade === 'BAD' ? '아슬아슬…' : '굿') + (e.grade === 'MISS' ? '' : mu));
+            view.setJudge((e.grade === 'MISS' ? '미스!' : e.grade === 'PERFECT' ? '퍼펙트!' : e.grade === 'BAD' ? '아슬아슬…' : '굿') + (e.grade === 'MISS' ? '' : mu), e.grade.toLowerCase());
           }
           if (e.type === 'missed') lastMiss = e; // 직전 타이밍 실수(일찍/늦게/무탭): 실점 원인 표시에 쓴다
           if (e.type === 'point') {
@@ -308,7 +313,7 @@ export function createApp(root, deps = {}) {
           }
         },
       });
-      const tipper = createTipper({ store: tipsStore, enabled: () => !tut && settings.get().tips, tips: tipsFor(mode) });
+      const tipper = createTipper({ store: tipsStore, enabled: () => !tut && !guide.active && settings.get().tips, tips: tipsFor(mode) });
       if (tut) { view.setCoach(tut.view); view.setShotHint(tut.view.hint.button ?? null); view.setCoachDiagram(DIAGRAM_FOR_STEP[tut.view.id] ?? null); } // 첫 단계 안내
       const token = {};
       loop = token;
@@ -319,6 +324,7 @@ export function createApp(root, deps = {}) {
       let activeId = null; // 첫 포인터만 인정 (멀티터치/다른 손가락 up 무시)
       canvas.addEventListener('pointerdown', (ev) => {
         ev.preventDefault?.();
+        if (view.guideOpen) return; // 안내 중엔 코트 터치 무시
         audio.unlock();
         tipper.acted(); // 힌트가 알려준 행동을 했으니 본 것으로 확정
         if (activeId !== null) return;
@@ -341,6 +347,23 @@ export function createApp(root, deps = {}) {
         activeId = null;
         ctl.pointerCancel(clock());
       });
+      // 공 종류 칩은 화면 위쪽(안내 카드 아래)에 가려지므로 '지금 오는 공'과 이기는 버튼을 글로 직접 알려준다 (구질 위장 중엔 생략)
+      const livePick = (page) => {
+        if (page.id !== 'pick' || mode !== 'simple' || !ctl.flight || ctl.spinHidden(clock())) return '';
+        const k = shotKeyOfSpin(ctl.flight.spin);
+        return `\n▶ 지금 오는 공: ${SHOT_TYPES[k].label} → [${SHOT_TYPES[counterOf(k)].label}] 버튼이 유리!`;
+      };
+      function openGuide(trigger, pages) {
+        clock.pause();
+        let i = 0;
+        const close = (slow) => { view.hideGuide(); clock.resume(); if (slow) clock.slow(0.5); }; // 첫 공은 안내 뒤 절반 속도로 시작해 따라 해볼 시간을 준다
+        const show = () => view.showGuide({
+          step: `${i + 1}/${pages.length}`, title: pages[i].title, text: pages[i].text + livePick(pages[i]), last: i === pages.length - 1,
+          onNext: () => { if (++i < pages.length) show(); else { guide.finish(trigger); for (const id of GUIDE_COVERS[mode]?.[trigger] ?? []) tipsStore.add(id); close(trigger === 'incoming'); } },
+          onSkip: () => { guide.skipAll(); for (const t of Object.values(GUIDE_COVERS[mode] ?? {})) for (const id of t) tipsStore.add(id); close(false); },
+        });
+        show();
+      }
       ctl.start(clock());
       let wasServing = false; let shownServer = null; let shownHint = null;
       const tick = () => {
@@ -365,6 +388,12 @@ export function createApp(root, deps = {}) {
         if (!tut && mode === 'simple') {
           const want = inKey && !hidden && ads.lifetimeMatches < HINT_MATCHES ? counterOf(inKey) : null;
           if (want !== shownHint) { shownHint = want; view.setShotHint(want); }
+        }
+        // 첫 경기 안내: 서브 차례 / 첫 공이 튕겨 띠가 나타난 직후에 경기를 멈추고 페이지를 넘기며 설명 (시계가 멈춰 랠리가 그대로 정지)
+        if (guide.active && !view.guideOpen) {
+          const trigger = ctl.phase === 'awaitServe' ? 'serve' : (situation === 'incoming' && ctl.flight?.tLand != null && now - ctl.t0 >= ctl.flight.tLand ? 'incoming' : null);
+          const pages = trigger && guide.take(trigger);
+          if (pages) openGuide(trigger, pages);
         }
         view.setTip(tipper.update(situation, now, ctl.t0)?.text ?? '');
         raf(tick);
