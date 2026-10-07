@@ -16,6 +16,7 @@
       }
     } catch { /* 오프라인/실패: 현재 버전으로 계속 */ }
   }
+  try { const { applySbDiag } = await import(`./ui/sbDiag.js${q}`); applySbDiag({ search: location.search, storage: globalThis.localStorage }); } catch { /* 진단 실패는 무시 */ } // ?sb=default 진단(상태바 불투명)
   const hash = (typeof location !== 'undefined' && location.hash) || '';
   // QA 직접 링크(#qa-…): 메모리 저장소로만 동작하는 정지 화면 (실제 저장 데이터 불변). 일반 사용자는 이 모듈을 불러오지 않는다
   if (hash.startsWith('#qa-')) {
