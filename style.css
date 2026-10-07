@@ -64,11 +64,12 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 
 /* 경기 화면: 원근 뷰를 화면 폭 가득, HUD 는 캔버스 위 오버레이 */
 .screen.match { gap: 8px; }
-.screen.match { --below: 124px; /* 아래쪽이 쓰는 높이: 바닥 여백 16 + 간격 8 + 샷 버튼 바 최대 약 92 + 여유 8 */ --head: calc(max(env(safe-area-inset-top), 10px) + 48px); /* 상단 띠(상대 이름·점수판·포기): 노치(안전영역) 아래 + 48px */ }
+.screen.match { --below: 124px; /* 아래쪽이 쓰는 높이: 바닥 여백 16 + 간격 8 + 샷 버튼 바 최대 약 92 + 여유 8 */ --head: calc(max(env(safe-area-inset-top), 10px) + var(--gap, 0px) + 64px); /* 상단 띠: 노치(안전영역) 아래 + iOS 흐림 띠 회피 칸(--gap) + 윗줄 44px(이름·점수판·포기) + 아랫줄 20px(판정·공 종류·코스) */ }
+:root { --gap: 0px; } :root.ios-top-gap { --gap: 24px; } /* iOS WebKit(사파리·홈 화면 앱): 상태바 아래 ~20px 시스템 흐림 띠를 불투명 빈칸으로 비운다 (src/ui/iosTopGap.js) */
 .screen.match:has(.coach.on) { --below: 268px; /* 튜토리얼 코치 패널(약 120~150px)이 추가로 붙는 동안 */ }
 .match-stage { position: relative; width: 100%; height: calc(100dvh - var(--below) - max(0px, env(safe-area-inset-bottom) - 16px)); min-height: 360px; margin: 0 auto; overflow: hidden; display: flex; flex-direction: column; background: #0b1220;
   /* 위: 상단 띠(.hud, 흐름 배치 — 코트를 가리지 않는다) · 아래: 코트 캔버스. 코트 높이 = 남는 높이 − 띠. 폭은 위아래가 12% 넘게 잘리지 않도록 상한(/ 1.76) */ }
-.match-stage canvas.court { flex: none; width: min(100%, calc((100dvh - var(--below) - max(0px, env(safe-area-inset-bottom) - 16px) - var(--head)) / 1.76)); height: calc(100dvh - var(--below) - max(0px, env(safe-area-inset-bottom) - 16px) - var(--head)); margin: 0 auto; aspect-ratio: auto; object-fit: cover; object-position: center 80%; /* 남는 높이는 위 80%·아래 20% 로 잘라 관중석 윗줄을 지킨다 */ background: #05070d; }
+.match-stage canvas.court { flex: none; width: min(100%, calc((100dvh - var(--below) - max(0px, env(safe-area-inset-bottom) - 16px) - var(--head)) / 2)); height: min(calc((100dvh - var(--below) - max(0px, env(safe-area-inset-bottom) - 16px) - var(--head))), calc(min(100vw, 480px) * 2)); margin: 0 auto; aspect-ratio: auto; object-fit: contain; object-position: center; /* 잘림 0: 박스를 코트(160x320)와 같은 1:2 로 — 관중석·상대 선수가 잘리지 않는다 */ background: #0b1220; }
 #app:has(.screen.match) { padding-left: 0; padding-right: 0; padding-top: 0; padding-bottom: max(16px, env(safe-area-inset-bottom)); } /* 경기 화면은 풀블리드: 양옆·위(노치 뒤)까지 코트 그래픽이 차고, 글자·버튼(HUD)만 안전영역 안쪽에 둔다 */
 
 .screen.match > :not(.match-stage) { margin-left: 8px; margin-right: 8px; }
@@ -270,15 +271,18 @@ html:has(.screen.match), body:has(.screen.match) { overflow: hidden; overscroll-
 
 /* ===== 경기 화면 상단 띠 (2026-10-07 재설계) =====
    점수판·이름·포기를 코트 위에 겹치던 HUD 를 코트 '위' 흐름 띠로 옮겼다 → 상대 선수·관중이 가려지거나 잘리지 않고, 웹/홈 화면 앱이 같은 구조다.
-   띠는 불투명 바탕이라 상태바 아래 페이드·흐림이 코트에 닿지 않고, 판정·공 종류·코스 안내(.hud-sub)만 코트 위쪽에 겹친다 */
-.screen.match .hud { position: static; flex: none; order: -1; height: var(--head); display: flex; align-items: center; gap: 6px; padding: max(env(safe-area-inset-top), 10px) 8px 0; background: #0b1220; text-align: left; }
+   띠는 불투명 바탕이고, iOS 에선 상태바 아래 흐림 띠 자리(--gap)를 빈칸으로 비운다. 판정·공 종류·코스 안내(.hud-sub)는 띠 맨 아래 줄 — 코트 위에 겹치는 것이 없다 */
+.screen.match .hud { position: relative; top: auto; flex: none; order: -1; height: var(--head); box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: calc(max(env(safe-area-inset-top), 10px) + var(--gap, 0px)) 8px 20px; background: #0b1220; text-align: left; }
 .screen.match .hud-top { display: contents; }
 .screen.match .hud .opp-info { order: 1; flex: 1; min-width: 0; max-height: 44px; overflow: hidden; display: flex; flex-wrap: wrap; justify-content: flex-start; align-items: center; gap: 2px 4px; padding: 0; background: none; }
 .screen.match .hud .opp-name { background: none; padding: 0; font-size: 1rem; flex: 0 0 100%; overflow: hidden; text-overflow: ellipsis; }
 .screen.match .hud .opp-tag { font-size: .58rem; padding: 0 5px; }
-.screen.match .hud .scoreboard { order: 2; flex: none; font-size: 1.15rem; gap: 4px; }
+.screen.match .hud .scoreboard { order: 2; flex: none; font-size: 1rem; gap: 4px; }
 .screen.match .hud .scoreboard .vs { font-size: .9rem; }
-.screen.match .hud .scoreboard .panel { min-width: 40px; padding: 0 6px 2px; border-radius: 7px; border-width: 2px; }
-.screen.match .hud .scoreboard .who { font-size: .5rem; letter-spacing: 0; }
+.screen.match .hud .scoreboard .panel { min-width: 34px; padding: 0 5px 2px; border-radius: 7px; border-width: 2px; }
+.screen.match .hud .scoreboard .who { font-size: .46rem; letter-spacing: 0; }
 .screen.match .hud .btn.quit { order: 3; width: 52px; min-height: 40px; background: rgb(10,16,28); }
-.screen.match .hud .hud-sub { position: absolute; left: 0; right: 0; top: calc(var(--head) + 4px); z-index: 20; text-align: center; }
+.screen.match .hud .hud-sub { position: absolute; left: 0; right: 0; bottom: 2px; height: 18px; z-index: 20; display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 8px; overflow: hidden; white-space: nowrap; line-height: 18px; text-align: center; } /* 띠 안 맨 아래 20px 줄 — 코트 위에는 아무것도 겹치지 않는다 */
+.screen.match .hud .hud-sub > * { flex: none; line-height: 18px; margin: 0; }
+.screen.match .hud .hud-sub .judge, .screen.match .hud .hud-sub .judge.perfect, .screen.match .hud .hud-sub .judge.good, .screen.match .hud .hud-sub .judge.bad, .screen.match .hud .hud-sub .judge.miss { font-size: .95rem; }
+.screen.match .hud .hud-sub .incoming, .screen.match .hud .hud-sub .lane-chip { font-size: .72rem; }
