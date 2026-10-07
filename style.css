@@ -265,3 +265,14 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 html:has(.screen.match), body:has(.screen.match) { overflow: hidden; overscroll-behavior: none; }
 #app:has(.screen.match) { height: 100dvh; overflow: hidden; }
 .hud-top { transform: translate3d(0, 0, 0); -webkit-transform: translate3d(0, 0, 0); backface-visibility: hidden; -webkit-font-smoothing: antialiased; }
+
+/* 진짜 원인(가장 유력): iOS(27 홈 화면 앱에서 실기기 보고)는 상태바 바로 아래 약 20px 띠에 시스템 흐림을 덧그리고,
+   그 띠에 걸친 DOM 요소는 상자 전체가 뿌옇게 된다 — 페이지 CSS 로는 못 끈다. 상단 줄이 safe+6px 에서 시작해 띠에 걸려 있었다.
+   iOS WebKit 이면 <html class="ios-top-gap"> (src/ui/iosTopGap.js) → HUD 전체를 띠 아래로 내린다.
+   폭(22px)은 외부 보고의 띠 높이(~20px)+여유. 실기기에서 조정할 땐 이 값만 바꾼다. 상단 안전영역이 0 이면(가로 화면 등) 0 으로 잘린다 */
+:root { --ios-top-gap: 0px; }
+:root.ios-top-gap { --ios-top-gap: min(22px, calc(env(safe-area-inset-top, 0px) * 1000)); }
+:root.ios-top-gap .hud { top: calc(max(env(safe-area-inset-top), 10px) + 6px + var(--ios-top-gap)); }
+/* 같은 띠에 걸리는 다른 상단 고정 UI: 첫 경기 안내 카드·인트로 건너뛰기 버튼 */
+:root.ios-top-gap .guide.on { padding-top: calc(10px + env(safe-area-inset-top) + var(--ios-top-gap)); }
+:root.ios-top-gap .intro-skip { top: calc(max(12px, env(safe-area-inset-top)) + var(--ios-top-gap)); }
