@@ -1,13 +1,13 @@
-import { h } from './dom.js?v=1791334492';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791334492';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791334492';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791334492';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791334492';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791334492';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791334492';
+import { h } from './dom.js?v=1791335595';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791335595';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791335595';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791335595';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791335595';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791335595';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791335595';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791334492';
+} from '../game/season.js?v=1791335595';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -43,6 +43,24 @@ export function introScreen({ canvas, onSkip }) {
     h('div', { class: 'intro-stage' }, canvas), caption, skip,
     h('div', { class: 'intro-hint' }, '화면을 탭하면 건너뜁니다'));
   return { el, setCaption(text) { caption.textContent = text; } };
+}
+
+/** 도민구 소개 컷신 화면: 탭 = 다음 줄, 건너뛰기 = 전부 넘김. who: 말하는 사람 표시(오순자 등), kind: n 나레이션 / m 독백 / s 대사 */
+export function storyIntroScreen({ canvas, onAdvance, onSkip }) {
+  const who = h('div', { class: 'intro-who' }, '');
+  const caption = h('div', { class: 'intro-caption', 'aria-live': 'polite' }, '');
+  const skip = h('button', { class: 'intro-skip', type: 'button', onpointerdown: (ev) => ev?.stopPropagation?.(), onclick: (ev) => { ev?.stopPropagation?.(); onSkip(); } }, '건너뛰기 ▶'); // 건너뛰기 누를 때 '다음 줄' 탭으로 번지지 않게
+  const el = h('section', { class: 'screen intro story-intro', onpointerdown: onAdvance },
+    h('div', { class: 'intro-stage' }, canvas), who, caption, skip,
+    h('div', { class: 'intro-hint' }, '화면을 탭하면 다음 장면'));
+  return {
+    el,
+    setCaption(c) {
+      caption.textContent = c ? (c.kind === 'm' || c.kind === 's' ? `“${c.text}”` : c.text) : '';
+      caption.className = `intro-caption ${c?.kind ?? ''}`.trim();
+      who.textContent = c ? (c.kind === 'm' ? '도민구' : c.who ?? '') : '';
+    },
+  };
 }
 
 export function titleScreen({ hasSave, onContinue, onNew, onTutorial = null, onSettings, onRules, level = null, onLevel = null }) {

@@ -1,34 +1,35 @@
-import { h } from './dom.js?v=1791334492';
+import { h } from './dom.js?v=1791335595';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
-  equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen, rivalCardScreen, storyBeatScreen,
-} from './screens.js?v=1791334492';
+  equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen, rivalCardScreen, storyBeatScreen, storyIntroScreen,
+} from './screens.js?v=1791335595';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791334492';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791334492';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791334492';
-import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791334492';
-import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791334492';
-import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791334492';
-import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791334492';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791334492';
-import { oppProfile } from '../game/oppProfile.js?v=1791334492';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791334492';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791334492';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791334492';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791334492';
-import { createAudio } from './audio.js?v=1791334492';
-import { createBgm } from './bgm.js?v=1791334492';
-import { createHaptics, react } from './feedback.js?v=1791334492';
-import { createRenderer } from './render.js?v=1791334492';
-import { createMatchController } from '../game/matchController.js?v=1791334492';
+} from './intro.js?v=1791335595';
+import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791335595';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791335595';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791335595';
+import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791335595';
+import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791335595';
+import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791335595';
+import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791335595';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791335595';
+import { oppProfile } from '../game/oppProfile.js?v=1791335595';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791335595';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791335595';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791335595';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791335595';
+import { createAudio } from './audio.js?v=1791335595';
+import { createBgm } from './bgm.js?v=1791335595';
+import { createHaptics, react } from './feedback.js?v=1791335595';
+import { createRenderer } from './render.js?v=1791335595';
+import { createMatchController } from '../game/matchController.js?v=1791335595';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult, seasonGoals,
-} from '../game/season.js?v=1791334492';
-import { createStore } from '../game/store.js?v=1791334492';
-import { createRng } from '../core/index.js?v=1791334492';
+} from '../game/season.js?v=1791335595';
+import { createStore } from '../game/store.js?v=1791335595';
+import { createRng } from '../core/index.js?v=1791335595';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -103,6 +104,27 @@ export function createApp(root, deps = {}) {
       };
       tick();
     },
+    /** 새 게임 시작 전 도민구 소개 컷신(스토리·인트로 연출 설정이 켜져 있고 '동작 줄이기'가 아닐 때만). 탭=다음 줄, 건너뛰기=전부. 끝나면 onDone */
+    showStoryIntro(onDone) {
+      if (!storyOn() || !settings.get().intro || reducedMotion()) { onDone(); return; }
+      const canvas = h('canvas', { class: 'intro-canvas', width: SI_W, height: SI_H });
+      canvas.width = SI_W; canvas.height = SI_H;
+      const ctx = canvas.getContext?.('2d');
+      if (ctx) ctx.imageSmoothingEnabled = false;
+      const token = {}; loop = token;
+      const sctl = createStoryIntro({ onDone: () => { if (loop === token) { loop = null; onDone(); } } });
+      const view = storyIntroScreen({ canvas, onAdvance: () => { audio.unlock(); sctl.advance(); }, onSkip: () => sctl.skip() });
+      mount(view.el); bgm.play('title');
+      let last = nowFn();
+      const tick = () => {
+        if (loop !== token || sctl.done) return;
+        const n = nowFn(); if (sctl.tick(n - last)) return; last = n;
+        if (ctx) drawStoryIntro(ctx, sctl.t);
+        view.setCaption(storyCaptionAt(sctl.t));
+        raf(tick);
+      };
+      tick();
+    },
     showTitle() {
       loop = null; bgm.play('title');
       mount(titleScreen({
@@ -110,7 +132,7 @@ export function createApp(root, deps = {}) {
         onContinue: () => api.showHome(),
         onNew: () => {
           if (state && !confirmFn('저장된 시즌이 사라집니다. 새로 시작할까요?')) return;
-          state = newGame(); persist(); api.showSeasonIntro();
+          state = newGame(); persist(); api.showStoryIntro(() => api.showSeasonIntro());
         },
         onTutorial: () => api.startMatch({ tutorial: true, from: 'title' }),
         onSettings: () => api.showSettings(),

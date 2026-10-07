@@ -1,8 +1,8 @@
 // 설정: 시즌 저장과 분리된 별도 키 (새로 시작/데이터 삭제로 지워지지 않음)
-import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791334492';
-import { BALL_SPEED, BALL_SPEED_ORDER, DEFAULT_BALL_SPEED } from './ballspeed.js?v=1791334492';
-import { GAME_LEVELS, GAME_LEVEL_ORDER, DEFAULT_GAME_LEVEL } from './gamelevel.js?v=1791334492';
-import { CONTROL_MODES, CONTROL_ORDER, DEFAULT_CONTROL_MODE } from './controls.js?v=1791334492';
+import { DIFFICULTY, DIFFICULTY_ORDER, DEFAULT_DIFFICULTY } from './difficulty.js?v=1791335595';
+import { BALL_SPEED, BALL_SPEED_ORDER, DEFAULT_BALL_SPEED } from './ballspeed.js?v=1791335595';
+import { GAME_LEVELS, GAME_LEVEL_ORDER, DEFAULT_GAME_LEVEL } from './gamelevel.js?v=1791335595';
+import { CONTROL_MODES, CONTROL_ORDER, DEFAULT_CONTROL_MODE } from './controls.js?v=1791335595';
 
 export const SETTINGS_KEY = 'tabgu-king-settings-v1';
 
@@ -35,7 +35,7 @@ export const SETTING_DEFS = Object.freeze([
   bool('effects', '이펙트', '타격 스파크, 득점 폭죽, 환호'),
   bool('shake', '화면 흔들림', '실점했을 때 화면이 살짝 흔들림'),
   bool('guide', '타이밍 가이드', '타이밍 존 표시 (끄면 훨씬 어려워짐)'),
-  bool('intro', '인트로 연출', '게임을 켤 때 짧은 오프닝 재생 (탭하면 건너뛰기)'),
+  bool('intro', '인트로 연출', '게임을 켤 때 짧은 오프닝, 새로 시작할 때 도민구 소개 컷신 (탭하면 넘김·건너뛰기)'),
 ]);
 
 export const DEFAULT_SETTINGS = Object.freeze(Object.fromEntries(SETTING_DEFS.map((d) => [d.key, d.type === 'enum' ? d.default : true])));

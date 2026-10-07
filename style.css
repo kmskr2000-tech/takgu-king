@@ -228,3 +228,11 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .season-intro .si-story small { display: block; color: #ffd24a; font-weight: 800; }
 .season-intro .si-story p { margin: 4px 0 0; font-weight: 600; line-height: 1.5; }
 @media (prefers-reduced-motion: reduce) { .bubble { animation: none; } }
+
+/* 도민구 소개 컷신: 화자 표시 + 독백/대사 색 */
+.intro-who { position: absolute; left: 0; right: 0; bottom: calc(max(14vh, 96px) + 3.4em); text-align: center; color: #ffd24a; font-weight: 800; letter-spacing: 2px; font-size: 1rem; min-height: 1.2em; pointer-events: none; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000; }
+.story-intro .intro-caption { font-size: 1.25rem; line-height: 1.45; }
+.story-intro .intro-caption.m { color: #ffe9a8; font-style: italic; }
+.story-intro .intro-caption.s { color: #ffffff; }
+.story-intro .intro-caption.n { color: #dfe6ec; }
+@media (max-height: 640px) { .intro-who { bottom: calc(48px + 3.4em); } }
