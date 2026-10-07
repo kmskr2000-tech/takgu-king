@@ -1,12 +1,12 @@
-import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791354624';
-import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791354624';
-import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791354624';
-import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791354624';
-import { packShot, mirrorShot } from '../net/protocol.js?v=1791354624';
+import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791358894';
+import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791358894';
+import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791358894';
+import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791358894';
+import { packShot, mirrorShot } from '../net/protocol.js?v=1791358894';
 import {
   SIDES, STATES, GRADES, MIN_REACTION_S, createMatch, createShot, createSpecialShot, flightOf, buildTiming, judgeTap, judgeNoTap,
   classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide,
-} from '../core/index.js?v=1791354624';
+} from '../core/index.js?v=1791358894';
 
 /** 난수 배율 래퍼: createShot 의 실수 난수(signed)만 k 배. k=1 이면 기존과 비트 동일 */
 export const scaledRng = (rng, k) => (k === 1 ? rng : { next: rng.next, signed: () => rng.signed() * k });
@@ -46,7 +46,7 @@ export function createMatchController({
   const m = createMatch({ firstServer });
   const c = {
     match: m, phase: null, flight: null, t0: 0, timing: null,
-    pendingDown: null, awaitRemote: false, inbox: [], aiAt: null, aiPlan: null, resumeAt: 0, lastGrade: null, lastGradeMe: null, streak: 0, streakKey: null, bands: null, perfectStreak: 0, special: false,
+    pendingDown: null, pendingPoint: null, shownScore: { me: 0, opp: 0 }, awaitRemote: false, inbox: [], aiAt: null, aiPlan: null, resumeAt: 0, lastGrade: null, lastGradeMe: null, streak: 0, streakKey: null, bands: null, perfectStreak: 0, special: false,
   };
   c.matchup = (type) => matchupFor(type); // 누른 종류 기준 상성 (테스트·UI)
   c.lane = 'center'; // 간단 조작: 코스 마커 (코트 탭으로 정함, 버튼 스윙이 이 코스로 나간다)
@@ -83,11 +83,20 @@ export function createMatchController({
     // 방향 전환 효과: 상대는 자기가 마지막으로 친 자리에 서 있다 (내 서브 직후엔 중앙). aiRespond 가 내 공과의 거리로 탭 오차를 키운다
     if (shooter === SIDES.OPP && res.flight) c.oppX = res.flight.pos(0).x; else if (m.rally?.shots === 1) c.oppX = 50; // 내 서브: 상대는 중앙에서 받는다
     if (res.point) {
-      c.phase = m.isOver() ? 'over' : 'pause';
       c.resumeAt = now + (res.flight ? res.flight.tLand : 0) + POINT_PAUSE;
+      // 득점 "알림"(점수판·배너·효과·종료)은 결과가 눈에 보이는 순간에 낸다: 네트에 걸리는 공은 네트에 닿을 때, 아웃은 코트 밖에 떨어질 때.
+      // (예전엔 샷이 만들어지는 순간 바로 알려서 상대가 치기도 전에·공이 가기도 전에 득점 결과가 먼저 나왔다.) 상태기계(m)는 즉시 처리해 두므로 로직은 그대로
+      const f = res.flight;
+      const delay = f && f.kind !== 'in' ? (f.kind === 'net' ? f.tNet ?? f.tLand : f.tLand) : 0;
       // winner = 이 점수를 낸 쪽(res.point.winner). 경기 승자는 matchWinner 로 분리 (예전엔 winner 를 경기 승자(경기 중 null)로 덮어써서 득점이 전부 '실점'으로 처리됐다)
-      emit({ type: 'point', ...res.point, myShotType: c.lastMyShot ?? null, score: { ...m.score }, over: m.isOver(), matchWinner: m.winner });
-      if (m.isOver()) emit({ type: 'end', winner: m.winner, score: { ...m.score } });
+      const announce = () => {
+        c.phase = m.isOver() ? 'over' : 'pause';
+        c.shownScore = { ...m.score };
+        emit({ type: 'point', ...res.point, myShotType: c.lastMyShot ?? null, score: { ...m.score }, over: m.isOver(), matchWinner: m.winner });
+        if (m.isOver()) emit({ type: 'end', winner: m.winner, score: { ...m.score } });
+      };
+      if (delay > 0) { c.phase = 'flight'; c.pendingPoint = { at: now + delay, announce }; } // 공이 날아가는 동안은 비행 중(입력 없음: timing 이 null)
+      else announce();
       return;
     }
     c.phase = 'flight';
@@ -299,6 +308,7 @@ export function createMatchController({
   c.remoteAt = (hostT) => (remote ? remote.clock.hostToGame(hostT) : 0); // 상대가 정한 발사 시각(호스트 실시간) → 내 게임 시계
 
   c.update = (now) => {
+    if (c.pendingPoint && now >= c.pendingPoint.at) { const p = c.pendingPoint; c.pendingPoint = null; p.announce(); } // 공이 네트/코트 밖에 닿았다 → 득점 알림
     if (remote) applyInbox(now);
     // 고급 조작: 탭 후 COMMIT_WINDOW 안에 샷을 확정한다(손을 안 떼도) → 뗄 때까지 공이 멈춰 보이지 않는다. up 이 유실돼도 막히지 않는다
     const pd = c.pendingDown;

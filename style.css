@@ -64,8 +64,8 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 
 /* 경기 화면: 원근 뷰를 화면 폭 가득, HUD 는 캔버스 위 오버레이 */
 .screen.match { gap: 8px; }
-.screen.match { --below: 126px; /* 캔버스 아래·주변이 쓰는 높이: 앱 여백 32 + 간격 8 + 샷 버튼 바 78 + 여유 8 */ }
-.screen.match:has(.coach.on) { --below: 270px; /* 튜토리얼 코치 패널(약 120~150px)이 추가로 붙는 동안 */ }
+.screen.match { --below: 148px; /* 캔버스 아래·주변이 쓰는 높이: 앱 여백 32 + 간격 8 + 샷 버튼 바 최대 100(좁은 폰에서 설명이 3줄로 접힐 때 약 91) + 여유 8. 78 로 잡았을 땐 화면보다 길어져 스크롤이 생기고 윗부분이 잘렸다 */ }
+.screen.match:has(.coach.on) { --below: 292px; /* 튜토리얼 코치 패널(약 120~150px)이 추가로 붙는 동안 */ }
 .match-stage { position: relative; width: min(100%, calc((100dvh - var(--below) - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 0.5)); margin: 0 auto; }
 .hud { position: absolute; top: 6px; left: 0; right: 0; z-index: 20; text-align: center; pointer-events: none; color: #fff; /* 득점/실점·서브 배너(z-index 5) 위에 항상 선명하게 */
   text-shadow: 1px 0 #000, -1px 0 #000, 0 1px #000, 0 -1px #000, 2px 2px 0 #000; }
