@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791339106';
-import { createEffects } from './effects.js?v=1791339106';
-import { createRng } from '../core/rng.js?v=1791339106';
+} from './sprites.js?v=1791351416';
+import { createEffects } from './effects.js?v=1791351416';
+import { createRng } from '../core/rng.js?v=1791351416';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -33,6 +33,7 @@ export function project(x, y, z = 0) {
 const groundY = (y) => CAM.HOR + CAM.KY / depth(y);
 const halfWidthAtRow = (row) => (50 * CAM.KX) / (CAM.KY / (row - CAM.HOR)); // 화면 행 → 탁구대 폭의 절반
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const REACH_FAR = 0.45; // 상대 위치와 낙구 지점이 코트 폭의 이만큼 이상 벌어지면 '방향 전환' 연출 (ai.js DIRECTION_FX 의 체감 구간)
 
 const C = {
   tableA: '#1f7a4d', tableB: '#1b7048', tableSide: '#0d4f33', tableDark: '#14573a', line: '#e8f1e8',
@@ -69,7 +70,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
   const trail = [];
   const fx = createEffects(rng);
   const st = {
-    controlMode: 'advanced', meTarget: 50, meK: 3, lean: 0, lastAct: null, hint: null, swing: { me: null, opp: null }, meX: 50, oppX: 50, lastNow: null, lastGrade: 'GOOD', look: 'opp', shake: 0, lane: 'center',
+    reachFar: false, specialNow: false, controlMode: 'advanced', meTarget: 50, meK: 3, lean: 0, lastAct: null, hint: null, swing: { me: null, opp: null }, meX: 50, oppX: 50, lastNow: null, lastGrade: 'GOOD', look: 'opp', shake: 0, lane: 'center',
   };
 
   const R = (g, x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
@@ -255,6 +256,24 @@ export function createRenderer(canvas, { rng, options } = {}) {
     drawSprite(ctx, SPRITES.me[meFrame], PALETTES.me, Math.round(pm.x - (SPRITE_W * sm) / 2), Math.round(pm.y - SPRITE_H * sm), { scale: sm });
   }
 
+  // 필살기 게이지: 연속 PERFECT 3칸(내 선수 왼쪽). 다 차면(필살기 준비) 금빛 오라가 펄스로 선수를 감싼다
+  function drawSpecialGauge(ctl, now) {
+    const n = ctl.special ? 3 : Math.min(2, ctl.perfectStreak ?? 0);
+    if (!n && !ctl.special) return;
+    const pm = project(st.meX, 250); const sm = spriteScale(pm.k);
+    const x0 = Math.round(pm.x - (SPRITE_W * sm) / 2 - 12); const y0 = Math.round(pm.y - 4);
+    const pulse = 0.5 + 0.5 * Math.sin(now * 10);
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = i < n ? (ctl.special ? `rgba(255,${Math.round(190 + 60 * pulse)},74,1)` : '#ffd24a') : 'rgba(255,255,255,0.25)';
+      ctx.fillRect(x0, y0 - i * 5, 4, 4);
+    }
+    if (ctl.special) {
+      const rx = Math.round(SPRITE_W * sm * 0.8 + pulse * 3); const ry = Math.max(2, Math.round(rx * 0.27));
+      ctx.fillStyle = `rgba(255,210,74,${(0.5 + 0.4 * pulse).toFixed(2)})`;
+      for (let i = 0; i < 28; i++) { const a = (i / 28) * Math.PI * 2; ctx.fillRect(Math.round(pm.x + Math.cos(a) * rx), Math.round(pm.y + Math.sin(a) * ry), 2, 2); }
+    }
+  }
+
   // 서브 차례 표시: 서버 발밑에 펄스 링 + 머리 위 ▼ + 공을 든 준비 자세 (서브 대기 구간에만)
   const isServePhase = (ctl) => ctl.phase === 'awaitServe' || ctl.phase === 'oppServeWait';
   function drawServeCue(ctl, now) {
@@ -373,20 +392,38 @@ export function createRenderer(canvas, { rng, options } = {}) {
         st.swing.me = now; st.lastAct = now; st.meK = 16;
         if (Number.isFinite(e.x)) st.meTarget = clamp(e.x, 8, 92);
       }
+      if (e.type === 'special') st.specialNow = true; // 이어지는 hit(내 필살기 발사)에서 연출
       if (e.type === 'hit') {
         trail.length = 0; // 새 공: 이전 궤적과 이어지지 않게
         if (e.side === 'me') { // 서브/리턴 발사: 고른 코스 쪽으로 기울기 (리턴 스윙은 탭 시점에 이미 시작됨)
           if (st.swing.me == null || now - st.swing.me > 0.3) st.swing.me = now;
           st.lastAct = now; const lx = e.flight?.land?.x; st.lean = lx != null ? clamp((lx - 50) * 0.14, -7, 7) : 0;
         } else st.swing[e.side] = now;
+        // 방향 전환 효과 시각화: 내 공이 상대가 서 있는 자리에서 멀리 떨어지면(코트 폭 45%+) 그 간격을 금빛 흐름으로 보여준다. 가까우면 표시 없음
+        st.reachFar = false;
+        if (e.side === 'me') {
+          const lx = e.flight?.land?.x; const gap = lx != null ? Math.abs(lx - st.oppX) / 100 : 0;
+          if (gap >= REACH_FAR) {
+            st.reachFar = true;
+            const p1 = project(st.oppX, -12); const p2 = project(clamp(lx, 8, 92), -12);
+            if (p1 && p2 && opt().effects) fx.reach(p1.x, p2.x, p1.y - 6, spriteScale(p1.k, 1));
+          }
+        }
         const c0 = e.flight?.pos ? e.flight.pos(0) : { x: 50, y: e.side === 'me' ? 200 : 0, z: 12 };
         const p = project(c0.x, c0.y, c0.z ?? 0);
         if (p && opt().effects) {
           const sc = spriteScale(p.k, 1); // 깊이에 맞춰 스파크 크기
+          if (e.side === 'me' && st.specialNow) fx.special(p.x, p.y, sc);
           fx.hit(p.x, p.y, e.side === 'me' ? st.lastGrade : 'GOOD', { scale: sc }); // 실제 판정 등급 그대로 (PERFECT 연출은 PERFECT 에서만)
           if (e.side === 'me' && st.lastMatchup === 'win') fx.counter(p.x, p.y, sc * 1.4); // 카운터는 작은 금빛 악센트만 (번쩍임 없음)
         }
+        if (e.side === 'me' && st.specialNow) { if (opt().effects && opt().shake) st.shake = 0.3; st.specialNow = false; }
         if (e.side === 'me' && st.lastMatchup === 'lose' && opt().effects && opt().shake) st.shake = 0.12; // 상성 불리: 둔탁하게 밀리는 느낌 // 깊이에 맞춰 스파크 크기
+      }
+      if (e.type === 'aiReturn' && e.kind === 'miss' && st.reachFar) { // 먼 공을 못 받았다: 뻗는 스윙 + 먼지
+        st.swing.opp = now;
+        const p = project(st.oppX, -12);
+        if (p && opt().effects) fx.dust(p.x, p.y, spriteScale(p.k, 1));
       }
       if (e.type === 'point') {
         st.meTarget = 50; st.meK = 4; st.lean = 0;
@@ -411,6 +448,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
       drawPlayers(ctl, now);
       if (opt().guide) drawLaneArrows(ctl.timing); // 선수 앞(위)에
       drawServeCue(ctl, now);
+      if (opt().effects) drawSpecialGauge(ctl, now);
       drawCoachHint(now);
       drawLane(now);
       drawBall(ctl.ballAt(now), ctl.spinHidden?.(now) ? 0 : (ctl.flight?.spin ?? 0)); // 구질 위장 중엔 중립색 // 공은 선수 뒤에 가려지지 않게 선수 다음에 그린다

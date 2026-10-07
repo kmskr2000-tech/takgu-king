@@ -11,6 +11,9 @@ export const SFX = Object.freeze({
   win: [{ f: 523, d: 0.12, type: 'square', v: 0.12 }, { f: 659, d: 0.12, at: 0.12, type: 'square', v: 0.12 }, { f: 784, d: 0.12, at: 0.24, type: 'square', v: 0.12 }, { f: 1047, d: 0.4, at: 0.36, type: 'square', v: 0.12 }],
   lose: [{ f: 392, d: 0.18, type: 'triangle', v: 0.14 }, { f: 330, d: 0.18, at: 0.18, type: 'triangle', v: 0.14 }, { f: 262, d: 0.4, at: 0.36, type: 'triangle', v: 0.14 }],
   counter: [{ f: 880, d: 0.05, at: 0.02, type: 'square', v: 0.1 }, { f: 1320, d: 0.09, at: 0.07, type: 'square', v: 0.1 }], // 상성 유리: 경쾌하게
+  // 필살기: 낮은 폭발음 + 치솟는 스윕 + 반짝 (PERFECT 보다 길고 묵직하다) / 준비: 4음 상승 차임
+  special: [{ f: 90, d: 0.28, type: 'sawtooth', v: 0.24, slide: -50 }, { f: 300, d: 0.3, type: 'square', v: 0.14, slide: 900 }, { f: 1320, d: 0.08, at: 0.12, type: 'square', v: 0.13 }, { f: 1760, d: 0.1, at: 0.18, type: 'square', v: 0.13 }, { f: 2640, d: 0.22, at: 0.25, type: 'triangle', v: 0.1 }],
+  specialReady: [{ f: 784, d: 0.07, type: 'square', v: 0.11 }, { f: 988, d: 0.07, at: 0.07, type: 'square', v: 0.11 }, { f: 1175, d: 0.07, at: 0.14, type: 'square', v: 0.11 }, { f: 1568, d: 0.22, at: 0.21, type: 'square', v: 0.12 }],
   blocked: [{ f: 180, d: 0.1, type: 'triangle', v: 0.14 }], // 상성 불리: 둔탁하게
   click: [{ f: 440, d: 0.03, type: 'square', v: 0.06 }],
 });

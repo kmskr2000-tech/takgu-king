@@ -1,11 +1,11 @@
-import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791339106';
-import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791339106';
-import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791339106';
-import { DISGUISE_S } from './controls.js?v=1791339106';
+import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791351416';
+import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791351416';
+import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791351416';
+import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791351416';
 import {
-  SIDES, STATES, GRADES, createMatch, createShot, flightOf, buildTiming, judgeTap, judgeNoTap,
+  SIDES, STATES, GRADES, createMatch, createShot, createSpecialShot, flightOf, buildTiming, judgeTap, judgeNoTap,
   classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide,
-} from '../core/index.js?v=1791339106';
+} from '../core/index.js?v=1791351416';
 
 /** 난수 배율 래퍼: createShot 의 실수 난수(signed)만 k 배. k=1 이면 기존과 비트 동일 */
 export const scaledRng = (rng, k) => (k === 1 ? rng : { next: rng.next, signed: () => rng.signed() * k });
@@ -44,7 +44,7 @@ export function createMatchController({
   const m = createMatch({ firstServer });
   const c = {
     match: m, phase: null, flight: null, t0: 0, timing: null,
-    pendingDown: null, aiAt: null, aiPlan: null, resumeAt: 0, lastGrade: null, lastGradeMe: null, streak: 0, streakKey: null, bands: null,
+    pendingDown: null, aiAt: null, aiPlan: null, resumeAt: 0, lastGrade: null, lastGradeMe: null, streak: 0, streakKey: null, bands: null, perfectStreak: 0, special: false,
   };
   c.matchup = (type) => matchupFor(type); // 누른 종류 기준 상성 (테스트·UI)
   c.lane = 'center'; // 간단 조작: 코스 마커 (코트 탭으로 정함, 버튼 스윙이 이 코스로 나간다)
@@ -89,7 +89,7 @@ export function createMatchController({
       // AI 리턴을 지금 계산해 두고, 실제 탭 시각(미스면 창이 끝나는 시각)에 반영 → 공이 튀지 않는다
       const foeX = 100 - (res.flight.land?.x ?? 50);
       const key = useMatchup && simple ? `${c.lastMatchup}:${c.lastGradeMe ?? GRADES.GOOD}` : 'even';
-      const plan = aiRespond(oppParams, rng, SIDES.OPP, res.flight, foeX, key, { streak: c.streak, oppX: c.oppX });
+      const plan = aiRespond(oppParams, rng, SIDES.OPP, res.flight, foeX, key, { streak: c.streak, oppX: c.oppX, special: !!res.flight.special });
       c.aiPlan = plan;
       c.aiAt = now + (plan.judgement.grade === GRADES.MISS ? plan.timing.end : plan.t);
     }
@@ -146,7 +146,7 @@ export function createMatchController({
     const aim = simpleAim(COURSE_X[c.lane], key);
     if (diff.assistCourse) aim.targetX = assistTargetX(c.flight.pos(0).x, aim.targetX);
     c.pendingDown = { now, x: 0, y: 0, judge, last: { x: 0, y: 0 } };
-    const shot = createShot({
+    const shot = makeShot({
       from: { x: pos.x, side: SIDES.ME }, aim, stats, rng: scaledRng(rng, noiseFor(mu, judge.grade)), grade: judge.grade, offset: judge.offset * shotTypeOf(key).error, hitY: pos.y, // 공격은 오차↑, 수비는 오차↓ / 상성은 실수 난수 배율(불리 ↑, 유리 ↓)
     });
     respondMe(now, shot, { course: c.lane, spin: aim.spin, power: aim.power, shotType: key, matchup: mu });
@@ -174,6 +174,16 @@ export function createMatchController({
     if (c.pendingDown) c.pendingDown.last = { x, y };
   };
 
+  // 필살기: 3연속 PERFECT → 다음 리턴이 필살기(코트에 들어가는 가장 빠른 공, 실수 없음). 판정이 PERFECT 가 아니거나 못 치면 연속은 리셋.
+  const makeShot = (args) => (c.special && args.grade !== GRADES.MISS ? createSpecialShot({ from: args.from, aim: args.aim, stats, grade: args.grade, offset: args.offset, hitY: args.hitY }) : createShot(args));
+  function noteSpecial(shot, grade) {
+    if (shot?.special) { c.special = false; c.perfectStreak = 0; emit({ type: 'special' }); return; }
+    if (shot && grade === GRADES.PERFECT) {
+      c.perfectStreak++;
+      if (c.perfectStreak >= SPECIAL_AT && !c.special) { c.special = true; emit({ type: 'specialReady' }); } else emit({ type: 'perfectStreak', n: c.perfectStreak });
+    } else { c.perfectStreak = 0; c.special = false; }
+  }
+
   function respondMe(now, shot, gesture = null) {
     const noTap = !c.pendingDown;
     const judge = c.pendingDown?.judge ?? judgeNoTap(c.timing);
@@ -182,11 +192,13 @@ export function createMatchController({
     if (shot && gesture?.shotType) { // 패턴 읽기: 같은 종류를 연속으로 쓴 횟수 (AI 가 편중을 읽는다)
       c.streak = gesture.shotType === c.streakKey ? c.streak + 1 : 1; c.streakKey = gesture.shotType;
     }
+    noteSpecial(shot, judge.grade);
     c.pendingDown = null;
     c.timing = null;
     c.lastMyShot = shot ? gesture?.shotType ?? null : c.lastMyShot ?? null;
     if (noTap) emit({ type: 'missed', reason: 'late', noTap: true }); // 노탭: 존이 끝날 때까지 안 눌렀다
     const res = m.respond(judge, shot);
+    if (shot?.special && res.flight) res.flight.special = true; // AI 응답·연출이 필살기 공임을 안다
     afterShot(res, now, SIDES.ME);
     // 내 리턴 결과(튜토리얼·통계용): 판정 + 입력한 코스/스핀/파워 + 공이 코트에 들어갔는지('in') 네트/아웃인지
     if (gesture && shot) emit({ type: 'return', grade: judge.grade, course: gesture.course, spin: gesture.spin, power: gesture.power, shotType: gesture.shotType, matchup: gesture.matchup, kind: res.flight?.kind ?? 'in' });
@@ -210,7 +222,7 @@ export function createMatchController({
     }
     if (c.phase === 'flight' && c.timing && d.judge.grade !== GRADES.MISS) {
       const pos = c.flight.postPos(d.now - c.t0);
-      const shot = createShot({
+      const shot = makeShot({
         from: { x: pos.x, side: SIDES.ME }, aim, stats, rng,
         grade: d.judge.grade, offset: d.judge.offset, hitY: pos.y,
       });

@@ -1,19 +1,23 @@
-import { h } from './dom.js?v=1791339106';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791339106';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791339106';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791339106';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791339106';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791339106';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791339106';
+import { h } from './dom.js?v=1791351416';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791351416';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791351416';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791351416';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791351416';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791351416';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791351416';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791339106';
+} from '../game/season.js?v=1791351416';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791351416';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
   spin: { label: '스핀', desc: '회전량↑, 스핀 샷 효과↑' },
   focus: { label: '집중', desc: '타이밍 판정 구간↑, 실수율↓' },
 };
+
+/** 적용 스탯(곡선 적용 후)은 소수가 될 수 있다: 정수면 그대로, 아니면 소수 한 자리 */
+const fmt = (v) => String(Math.round(v * 10) / 10);
 
 const btn = (text, onclick, cls = '') => h('button', { class: `btn ${cls}`.trim(), onclick, type: 'button' }, text);
 
@@ -143,7 +147,7 @@ export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, o
     h('div', { class: 'next' }, nextLine),
     h('div', { class: 'mystats' },
       Object.entries(STAT_INFO).map(([k, v]) => h('span', { class: 'chip' },
-        `${v.label} ${state.stats[k]}${eff[k] !== state.stats[k] ? ` (${eff[k]})` : ''}`)),
+        `${v.label} ${state.stats[k]}${fmt(eff[k]) !== String(state.stats[k]) ? ` (${fmt(eff[k])})` : ''}`)),
       h('span', { class: 'chip pts' }, `포인트 ${state.statPoints}`)),
     state.phase === 'seasonEnd' && btn('시즌 결과 보기', onSeasonEnd, 'primary'),
     nm && btn(state.phase === 'tournament' ? '토너먼트 경기 시작' : '경기 시작', onPlay, 'primary'),
@@ -186,7 +190,7 @@ export function equipScreen({ state, onChange, onStart, onBack }) {
     h('h2', {}, '경기 전 장비 선택'),
     row('그립', GRIPS, state.unlocked.grips, state.grip, 'grip'),
     row('라켓', RACKETS, state.unlocked.rackets, state.racket, 'racket'),
-    h('p', { class: 'mystats' }, `적용 스탯 — 파워 ${eff.power} / 스핀 ${eff.spin} / 집중 ${eff.focus}`),
+    h('p', { class: 'mystats' }, `적용 스탯 — 파워 ${fmt(eff.power)} / 스핀 ${fmt(eff.spin)} / 집중 ${fmt(eff.focus)}`),
     btn('경기 시작', onStart, 'primary'),
     btn('돌아가기', onBack));
 }
@@ -223,7 +227,8 @@ export function statsScreen({ state, onInvest, onBack }) {
     h('h2', {}, '스탯 투자'),
     h('p', { class: 'pts' }, `보유 포인트: ${state.statPoints}`),
     Object.entries(STAT_INFO).map(([k, v]) => h('div', { class: 'stat-row' },
-      h('div', {}, h('strong', {}, `${v.label} ${state.stats[k]}`), h('small', {}, v.desc)),
+      h('div', {}, h('strong', {}, `${v.label} ${state.stats[k]}`), h('small', {}, v.desc),
+        h('small', { class: 'eff' }, `적용 ${fmt(statCurve(state.stats[k]))} · +1 효율 ${Math.round(statEfficiency(state.stats[k]) * 100)}%`)),
       h('button', { class: 'btn', type: 'button', disabled: state.statPoints < 1 ? true : null, onclick: () => onInvest(k) }, '+1'))),
     btn('돌아가기', onBack, 'primary'));
 }

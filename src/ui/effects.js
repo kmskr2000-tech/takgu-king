@@ -1,10 +1,12 @@
 // 파티클 이펙트: 타격 스파크, 득점 폭죽, 환호 별. 시간/난수 주입 가능(테스트).
 const GRAVITY = 60;
 const FLASH_S = 0.14;
+const SPECIAL_FLASH_S = 0.35;
 
 export function createEffects(rng = { next: Math.random, signed: () => Math.random() * 2 - 1 }) {
   const parts = [];
   let flash = 0; // PERFECT 화면 번쩍임(남은 시간)
+  let flashMax = FLASH_S;
   const add = (p) => parts.push({ size: 2, ...p, age: 0 });
 
   const api = {
@@ -14,7 +16,7 @@ export function createEffects(rng = { next: Math.random, signed: () => Math.rand
       const perfect = grade === 'PERFECT';
       const bad = grade === 'BAD';
       if (perfect) { // PERFECT: 빠른 금빛 고리 + 느리게 흩어지는 흰 별 + 번쩍임 (GOOD 보다 확실히 크고 화려하게)
-        flash = FLASH_S;
+        flash = FLASH_S; flashMax = FLASH_S;
         for (let i = 0; i < 14; i++) {
           const a = (i / 14) * Math.PI * 2 + rng.signed() * 0.12; const sp = 55 + rng.next() * 20;
           add({ x, y, vx: Math.cos(a) * sp * scale, vy: Math.sin(a) * sp * scale, life: 0.4, color: '#ffd24a', g: 0, size: 2 + scale });
@@ -39,6 +41,30 @@ export function createEffects(rng = { next: Math.random, signed: () => Math.rand
         add({ x, y, vx: Math.cos(a) * sp * scale, vy: Math.sin(a) * sp * scale, life: 0.35, color: '#ffd24a', g: 0, size: 1 + scale });
       }
     },
+    /** 방향 전환 표시: 상대가 서 있는 자리(x1)에서 공이 떨어질 자리(x2)까지 금빛 점이 흘러간다 — "빈 곳을 찔렀다" (거리 = 효과 크기) */
+    reach(x1, x2, y, scale = 1) {
+      const dir = Math.sign(x2 - x1) || 1; const n = Math.max(4, Math.min(14, Math.round(Math.abs(x2 - x1) / 6)));
+      for (let i = 0; i < n; i++) {
+        add({ x: x1 + (x2 - x1) * (i / n), y: y + rng.signed() * 2, vx: dir * (70 + rng.next() * 30) * scale, vy: 0, life: 0.3 + 0.03 * i, color: i % 2 ? '#ffd24a' : '#fff2a8', g: 0, size: 1 + scale });
+      }
+    },
+    /** 뻗었지만 못 닿음: 발밑에서 먼지가 퍼진다 */
+    dust(x, y, scale = 1) {
+      for (let i = 0; i < 8; i++) {
+        add({ x: x + rng.signed() * 6 * scale, y, vx: rng.signed() * 30 * scale, vy: -6 - rng.next() * 10, life: 0.4, color: i % 2 ? '#c9b99a' : '#e8dcc2', g: 12, size: 1 + scale });
+      }
+    },
+    /** 필살기 발사: 금·흰 고리 3겹 + 긴 번쩍임 (PERFECT 보다 훨씬 크다) */
+    special(x, y, scale = 1) {
+      flash = SPECIAL_FLASH_S; flashMax = SPECIAL_FLASH_S;
+      for (let ring = 0; ring < 3; ring++) {
+        const n = 16; const sp = 50 + ring * 28;
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * Math.PI * 2 + ring * 0.2;
+          add({ x, y, vx: Math.cos(a) * sp * scale, vy: Math.sin(a) * sp * scale, life: 0.45 + ring * 0.12, color: ring === 1 ? '#ffffff' : '#ffd24a', g: 0, size: 2 + scale });
+        }
+      }
+    },
     /** 득점: 내가 득점하면 색종이, 실점이면 회색 연기 */
     score(x, y, mine) {
       const colors = ['#ff5a4a', '#ffd24a', '#4aa3ff', '#7be07b'];
@@ -57,7 +83,7 @@ export function createEffects(rng = { next: Math.random, signed: () => Math.rand
       }
     },
     /** PERFECT 번쩍임 세기 0..1 (렌더러가 화면 위에 흰금색 막을 얹는다) */
-    get flashAlpha() { return flash > 0 ? flash / FLASH_S : 0; },
+    get flashAlpha() { return flash > 0 ? flash / flashMax : 0; },
     update(dt) {
       flash = Math.max(0, flash - dt);
       for (const p of parts) {
