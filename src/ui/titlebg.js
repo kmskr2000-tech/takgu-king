@@ -1,5 +1,5 @@
 // 타이틀 배경: 도트 경기장 야경. 저해상도(TB_W x TB_H) 캔버스에 그려 CSS 로 확대한다.
-import { createRng } from '../core/rng.js?v=1791363573';
+import { createRng } from '../core/rng.js?v=1791364276';
 
 export const TB_W = 120;
 export const TB_H = 214;

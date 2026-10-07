@@ -56,7 +56,7 @@ export const MATCHUP_FX = Object.freeze({
 //   네트/아웃율  PERFECT 0% 전부 / GOOD 유리 0 · 중립 7 · 불리 33 / BAD 유리 11 · 중립 20 · 불리 50 (%)
 /** 구질별 리듬 밴드: 탑스핀=이른 타점(shift<0)·좁음, 일반=기준, 커트=늦은 타점(shift>0)·넓음. shift 는 존 반폭 단위 (폭은 SHOT_TYPES.leniency) */
 export const RHYTHM_SHIFT = Object.freeze({ topspin: -0.5, normal: 0, cut: 0.5 });
-export { MIN_REACTION_S } from '../core/constants.js?v=1791363573'; // 공정성 하한(설계안 §6.4)
+export { MIN_REACTION_S } from '../core/constants.js?v=1791364276'; // 공정성 하한(설계안 §6.4)
 /** 구질 위장: 상위 리그는 타구 직후 이 시간(초) 동안 공 색/종류 표시가 중립(읽기 단서 지연). 읽기 시간(타구→바운드 ≥ 0.4s) 안에 끝난다 */
 export const DISGUISE_S = Object.freeze({ amateur: 0, third: 0, second: 0, first: 0.15, world: 0.2 });
 /** 힌트(유리한 버튼 반짝임)를 보여주는 경기 수: 튜토리얼 + 처음 이 경기 수까지 */
