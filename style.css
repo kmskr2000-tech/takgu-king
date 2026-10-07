@@ -64,9 +64,12 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 
 /* 경기 화면: 원근 뷰를 화면 폭 가득, HUD 는 캔버스 위 오버레이 */
 .screen.match { gap: 8px; }
-.screen.match { --below: 148px; /* 캔버스 아래·주변이 쓰는 높이: 앱 여백 32 + 간격 8 + 샷 버튼 바 최대 100(좁은 폰에서 설명이 3줄로 접힐 때 약 91) + 여유 8. 78 로 잡았을 땐 화면보다 길어져 스크롤이 생기고 윗부분이 잘렸다 */ }
-.screen.match:has(.coach.on) { --below: 292px; /* 튜토리얼 코치 패널(약 120~150px)이 추가로 붙는 동안 */ }
-.match-stage { position: relative; width: min(100%, calc((100dvh - var(--below) - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 0.5)); margin: 0 auto; }
+.screen.match { --below: 140px; /* 앱 위아래 여백 32 + 간격 8 + 샷 버튼 바 최대 약 92 + 여유 8. 실기기(iPhone 393x852)에서 148 은 너무 커서 아래가 비고 폭이 줄었다 */ }
+.screen.match:has(.coach.on) { --below: 284px; /* 튜토리얼 코치 패널(약 120~150px)이 추가로 붙는 동안 */ }
+.match-stage { position: relative; width: 100%; height: calc(100dvh - var(--below) - max(0px, env(safe-area-inset-top) - 16px) - max(0px, env(safe-area-inset-bottom) - 16px)); min-height: 280px; margin: 0 auto; overflow: hidden; /* 가로를 꽉 채우고 세로는 남는 높이에 맞춘다 — 캔버스는 비율을 유지한 채 위쪽(관중석)을 잘라 맞춘다(아래 canvas 규칙) */ }
+.match-stage canvas.court { width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; object-position: center bottom; }
+#app:has(.screen.match) { padding-left: 0; padding-right: 0; } /* 경기 화면은 양옆 여백 없이 */
+.screen.match > :not(.match-stage) { margin-left: 8px; margin-right: 8px; }
 .hud { position: absolute; top: 6px; left: 0; right: 0; z-index: 20; text-align: center; pointer-events: none; color: #fff; /* 득점/실점·서브 배너(z-index 5) 위에 항상 선명하게 */
   text-shadow: 1px 0 #000, -1px 0 #000, 0 1px #000, 0 -1px #000, 2px 2px 0 #000; }
 .hud .scoreboard { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 1.45rem; line-height: 1; letter-spacing: 0; }
@@ -94,7 +97,7 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 @keyframes bannerin2 { 0% { transform: scale(.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .hud .scoreboard .panel.scored, .hud .scoreboard .plus, .point-banner.show { animation: none; } }
 .hud .opp-info { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; padding: 0 6px; line-height: 1.2; }
-.hud .opp-name { font-size: 1.05rem; font-weight: 900; white-space: nowrap; }
+.hud .opp-name { font-size: 1.05rem; font-weight: 900; white-space: nowrap; color: #fff; text-shadow: 0 1px 0 #000, 1px 0 0 #000, -1px 0 0 #000, 0 -1px 0 #000; }
 .hud .opp-tag { font-size: .62rem; font-weight: 800; padding: 1px 6px; border-radius: 9px; border: 1px solid #000; text-shadow: none; color: #111; background: #c8d3e0; }
 .hud .opp-tag.rival { background: #ffd24a; } .hud .opp-tag.cut { background: #7cc0ff; } .hud .opp-tag.all { background: #c8d3e0; } .hud .opp-tag.coach { background: #8be0a0; }
 .hud .opp-tag.tier-low { background: #9ad8a0; } .hud .opp-tag.tier-mid { background: #ffd89a; } .hud .opp-tag.tier-high { background: #ff9d90; } .hud .judge { font-size: 1.05rem; min-height: 0; }
