@@ -66,11 +66,12 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .screen.match { gap: 8px; }
 .screen.match { --below: 140px; /* 앱 위아래 여백 32 + 간격 8 + 샷 버튼 바 최대 약 92 + 여유 8. 실기기(iPhone 393x852)에서 148 은 너무 커서 아래가 비고 폭이 줄었다 */ }
 .screen.match:has(.coach.on) { --below: 284px; /* 튜토리얼 코치 패널(약 120~150px)이 추가로 붙는 동안 */ }
-.match-stage { position: relative; width: 100%; height: calc(100dvh - var(--below) - max(0px, env(safe-area-inset-top) - 16px) - max(0px, env(safe-area-inset-bottom) - 16px)); min-height: 280px; margin: 0 auto; overflow: hidden; /* 가로를 꽉 채우고 세로는 남는 높이에 맞춘다 — 캔버스는 비율을 유지한 채 위쪽(관중석)을 잘라 맞춘다(아래 canvas 규칙) */ }
+.match-stage { position: relative; width: 100%; height: calc(100dvh - var(--below) + 16px - max(0px, env(safe-area-inset-bottom) - 16px)); /* 위쪽 앱 여백 16px 은 없앴다(풀블리드) */ min-height: 280px; margin: 0 auto; overflow: hidden; /* 가로를 꽉 채우고 세로는 남는 높이에 맞춘다 — 캔버스는 비율을 유지한 채 위쪽(관중석)을 잘라 맞춘다(아래 canvas 규칙) */ }
 .match-stage canvas.court { width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; object-position: center bottom; }
-#app:has(.screen.match) { padding-left: 0; padding-right: 0; } /* 경기 화면은 양옆 여백 없이 */
+#app:has(.screen.match) { padding-left: 0; padding-right: 0; padding-top: 0; } /* 경기 화면은 풀블리드: 양옆·위(노치 뒤)까지 코트 그래픽이 차고, 글자·버튼(HUD)만 안전영역 안쪽에 둔다 */
+
 .screen.match > :not(.match-stage) { margin-left: 8px; margin-right: 8px; }
-.hud { position: absolute; top: 6px; left: 0; right: 0; z-index: 20; text-align: center; pointer-events: none; color: #fff; /* 득점/실점·서브 배너(z-index 5) 위에 항상 선명하게 */
+.hud { position: absolute; top: calc(max(env(safe-area-inset-top), 10px) + 6px); left: 0; right: 0; z-index: 20; text-align: center; pointer-events: none; color: #fff; /* 득점/실점·서브 배너(z-index 5) 위에 항상 선명하게 */
   text-shadow: 1px 0 #000, -1px 0 #000, 0 1px #000, 0 -1px #000, 2px 2px 0 #000; }
 .hud .scoreboard { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 1.45rem; line-height: 1; letter-spacing: 0; }
 .hud .scoreboard .vs { opacity: .6; font-size: 1.05rem; }
@@ -254,3 +255,7 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .code-input { flex: 1 1 auto; min-width: 0; font: 700 1.3rem ui-monospace, monospace; letter-spacing: .25em; text-align: center; text-transform: uppercase; padding: 10px; border-radius: 10px; border: 2px solid #2c4057; background: #101b28; color: #fff; }
 .room-code { font: 800 2.6rem ui-monospace, monospace; letter-spacing: .3em; text-align: center; color: #ffd24a; text-shadow: 0 2px 0 #7a4b00; padding: 14px 0; background: #101b28; border-radius: 12px; user-select: all; }
 .net-status { text-align: center; min-height: 1.4em; color: #b8c7d9; } .net-status.err { color: #ff7a6a; }
+
+/* 상단 UI(이름·배지·포기)는 불투명한 바탕을 줘서 배경 위에서 또렷하게 */
+.hud .opp-name { background: rgba(8,12,22,.78); padding: 1px 8px; border-radius: 8px; }
+.btn.quit { background: rgb(10,16,28); border-color: rgba(255,255,255,.7); }

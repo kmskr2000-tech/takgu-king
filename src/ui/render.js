@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791360324';
-import { createEffects } from './effects.js?v=1791360324';
-import { createRng } from '../core/rng.js?v=1791360324';
+} from './sprites.js?v=1791360768';
+import { createEffects } from './effects.js?v=1791360768';
+import { createRng } from '../core/rng.js?v=1791360768';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;

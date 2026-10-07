@@ -1,6 +1,6 @@
 // 멀티플레이 세션: 방(FirebaseRoom 같은 전송 계층)을 감싸 로비 → 시계 동기화 → 경기 시작 → 경기 메시지 중계 → 종료/재대결을 다룬다.
 // room 인터페이스(FirebaseRoom 과 메모리 방이 같다): hostCreate()→code · guestJoin(code) · send(문자열) · onmessage(idx,객체) · onjoin(idx) · onleave(idx) · close()
-import { MSG, makeMsg, createClockSync, launchDelay } from './protocol.js?v=1791360324';
+import { MSG, makeMsg, createClockSync, launchDelay } from './protocol.js?v=1791360768';
 
 export const SYNC_ROUNDS = 8;
 export const SYNC_GAP_MS = 60;
