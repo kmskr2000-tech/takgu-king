@@ -1,13 +1,13 @@
-import { h } from './dom.js?v=1791335595';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791335595';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791335595';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791335595';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791335595';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791335595';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791335595';
+import { h } from './dom.js?v=1791339106';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791339106';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791339106';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791339106';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791339106';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791339106';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791339106';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791335595';
+} from '../game/season.js?v=1791339106';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },

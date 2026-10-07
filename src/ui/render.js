@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791335595';
-import { createEffects } from './effects.js?v=1791335595';
-import { createRng } from '../core/rng.js?v=1791335595';
+} from './sprites.js?v=1791339106';
+import { createEffects } from './effects.js?v=1791339106';
+import { createRng } from '../core/rng.js?v=1791339106';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -160,11 +160,24 @@ export function createRenderer(canvas, { rng, options } = {}) {
   // 구질별 리듬 밴드 색 (버튼 색과 같다): 탑스핀 빨강 / 일반 노랑 / 커트 파랑
   // 구질별 리듬 밴드 색 (버튼 색과 같다): [채움, 테두리, PERFECT 심지]. 탑스핀 빨강 / 일반 노랑 / 커트 파랑
   // 세 밴드가 겹쳐도 읽히도록: 넓은 것(커트)부터 깔고, 각자 굵은 테두리 선과 밝고 불투명한 PERFECT 심지를 따로 그린다
+  // [채움, 테두리, PERFECT 심지(진하고 불투명), PERFECT 발광(심지 둘레 후광)]
   const BAND_COLORS = {
-    cut: ['rgba(74,163,255,0.24)', '#4aa3ff', 'rgba(190,225,255,0.8)'],
-    normal: ['rgba(255,220,80,0.24)', '#ffd24a', 'rgba(255,248,190,0.8)'],
-    topspin: ['rgba(255,90,74,0.24)', '#ff5a4a', 'rgba(255,170,150,0.8)'],
+    cut: ['rgba(74,163,255,0.24)', '#4aa3ff', '#2a8bff', 'rgba(74,163,255,0.38)'],
+    normal: ['rgba(255,220,80,0.24)', '#ffd24a', '#ffe033', 'rgba(255,224,51,0.40)'],
+    topspin: ['rgba(255,90,74,0.24)', '#ff5a4a', '#ff2a1a', 'rgba(255,60,40,0.38)'],
   };
+  const CORE_DARK = '#14110f'; const CORE_LINE = '#ffffff';
+  /** PERFECT 줄: 후광(±3행) → 어두운 윤곽선 → 진한 불투명 심지 → 흰 중심선. 원근으로 멀리 있을 땐 얇아지므로 최소 4행은 확보 */
+  function coreBand(yA, yB, k) {
+    let r0 = Math.round(groundY(Math.min(yA, yB))); let r1 = Math.round(groundY(Math.min(CAM.Y_NEAR, Math.max(yA, yB))));
+    if (r1 - r0 < 3) { const c = Math.round((r0 + r1) / 2); r0 = c - 2; r1 = c + 2; }
+    const row = (y, color) => { if (y < 0 || y >= VIEW_H) return; const hw = halfWidthAtRow(y); ctx.fillStyle = color; ctx.fillRect(Math.round(CAM.CX - hw), y, Math.round(hw * 2), 1); };
+    const [, , solid, glow] = BAND_COLORS[k];
+    for (let y = r0 - 3; y <= r1 + 3; y++) row(y, glow);
+    row(r0 - 1, CORE_DARK); row(r1 + 1, CORE_DARK);
+    for (let y = r0; y <= r1; y++) row(y, solid);
+    row(Math.round((r0 + r1) / 2), CORE_LINE);
+  }
   const BAND_ORDER = ['cut', 'normal', 'topspin']; // 넓은 순(커트 > 일반 > 탑스핀)으로 그려야 좁은 밴드가 위에 보인다
   function edgeLines(r0, r1, color, w = 2) {
     ctx.fillStyle = color;
@@ -181,7 +194,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
     if (ctl.bands) { // 간단 조작: 구질별 리듬 밴드 3색 (자기 구질의 타이밍을 버튼 색으로 읽는다)
       for (const k of BAND_ORDER) { const b = ctl.bands[k]; band(b.zone.yStart, b.zone.yEnd, BAND_COLORS[k][0], 1); }
       for (const k of BAND_ORDER) { const b = ctl.bands[k]; const [r0, r1] = [Math.round(groundY(Math.min(b.zone.yStart, b.zone.yEnd))), Math.round(groundY(Math.min(CAM.Y_NEAR, Math.max(b.zone.yStart, b.zone.yEnd))))]; edgeLines(r0, r1, BAND_COLORS[k][1]); }
-      for (const k of BAND_ORDER) { const b = ctl.bands[k]; band(b.zone.yPerfectStart, b.zone.yPerfectEnd, BAND_COLORS[k][2], 1); }
+      for (const k of BAND_ORDER) { const b = ctl.bands[k]; coreBand(b.zone.yPerfectStart, b.zone.yPerfectEnd, k); }
     } else {
       const [r0, r1] = band(yA, yB, C.zone);
       ctx.fillStyle = C.zoneEdge;
