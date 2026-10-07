@@ -1,14 +1,14 @@
-import { h } from './dom.js?v=1791366989';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791366989';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791366989';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791366989';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791366989';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791366989';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791366989';
+import { h } from './dom.js?v=1791368200';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791368200';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791368200';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791368200';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791368200';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791368200';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791368200';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791366989';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791366989';
+} from '../game/season.js?v=1791368200';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791368200';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -319,7 +319,7 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
             h('span', { class: 'hud-side', 'aria-hidden': 'true' }),
             h('div', { class: 'opp-info' }, h('b', { class: 'opp-name' }, oppName),
               // 특징 칩: 라이벌 / 플레이 스타일(커트 위주·올라운더) / 실력대. (oppTags 없으면 예전처럼 한 줄 설명)
-              ...(oppTags ?? (oppStyle ? [{ label: oppStyle, kind: 'all' }] : [])).map((t) => h('span', { class: `opp-tag ${t.kind}` }, t.label))),
+              h('div', { class: 'opp-tags' }, ...(oppTags ?? (oppStyle ? [{ label: oppStyle, kind: 'all' }] : [])).map((t) => h('span', { class: `opp-tag ${t.kind}` }, t.label)))),
             h('button', { class: 'btn quit', type: 'button', onclick: onQuit }, quitLabel)),
           h('div', { class: 'scoreboard' }, oppPanel, h('span', { class: 'vs' }, ':'), mePanel),
           // 판정·공 종류·코스 라벨은 고정 px 가 아니라 점수판 아래로 흐른다 (이름·칩이 두 줄이 돼도 안 겹침)
@@ -385,7 +385,7 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
     },
     /** 날아오는 상대 공 종류 칩 (간단 조작). text 가 비면 숨김. key: 색 */
     /** 코스 마커 라벨 (간단 조작): lane 이 null 이면 숨김. 코트를 탭하면 바뀌고, 버튼 스윙이 이 코스로 나간다 */
-    setLane(lane) { laneChip.textContent = lane ? `코스: ${{ left: '왼쪽', center: '가운데', right: '오른쪽' }[lane]} (코트를 탭해 바꿔요)` : ''; laneChip.className = lane ? `lane-chip on ${lane}` : 'lane-chip'; },
+    setLane(lane) { laneChip.textContent = ''; laneChip.className = lane ? `lane-chip ${lane}` : 'lane-chip'; }, // '코스: …' 문구는 튜토리얼로 배우므로 표시하지 않는다
     /** 상성 안내 표시 여부 (간단 조작·본 경기에서만) */
     setRps(visible) { rps.className = visible ? 'rps on' : 'rps'; },
     setIncoming(text, key = null) { incoming.textContent = text; incoming.className = text ? `incoming on ${key ?? ''}`.trim() : 'incoming'; },

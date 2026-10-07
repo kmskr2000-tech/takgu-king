@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791366989';
-import { createEffects } from './effects.js?v=1791366989';
-import { createRng } from '../core/rng.js?v=1791366989';
+} from './sprites.js?v=1791368200';
+import { createEffects } from './effects.js?v=1791368200';
+import { createRng } from '../core/rng.js?v=1791368200';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -311,6 +311,10 @@ export function createRenderer(canvas, { rng, options } = {}) {
       const a = (i / 28) * Math.PI * 2;
       ctx.fillRect(Math.round(pos.x + Math.cos(a) * rx), Math.round(pos.y + Math.sin(a) * ry), 2, 2);
     }
+    // 캐릭터 몸 전체를 감싸는 큰 동그라미 (펄스) — 글자 배지 대신 '지금 서브 차례'를 알린다
+    const bcx = pos.x; const bcy = pos.y - (SPRITE_H * sc) / 2; const brx = SPRITE_W * sc * 0.85 + pulse * 3; const bry = SPRITE_H * sc * 0.62 + pulse * 3;
+    ctx.fillStyle = `rgba(255,210,74,${(0.6 + 0.35 * pulse).toFixed(2)})`;
+    for (let i = 0; i < 48; i++) { const a = (i / 48) * Math.PI * 2; ctx.fillRect(Math.round(bcx + Math.cos(a) * brx), Math.round(bcy + Math.sin(a) * bry), 3, 3); }
     const bob = Math.round(Math.sin(now * 5) * 2); // 머리 위 ▼ (까딱까딱)
     const ay = Math.round(pos.y - SPRITE_H * sc - 12 + bob);
     for (let j = 0; j < 4; j++) { // 테두리 + 노랑 삼각형
