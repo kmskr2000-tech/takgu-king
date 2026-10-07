@@ -1,14 +1,14 @@
-import { h } from './dom.js?v=1791351416';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791351416';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791351416';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791351416';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791351416';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791351416';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791351416';
+import { h } from './dom.js?v=1791353507';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791353507';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791353507';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791353507';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791353507';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791353507';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791353507';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791351416';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791351416';
+} from '../game/season.js?v=1791353507';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791353507';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },

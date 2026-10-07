@@ -2,6 +2,8 @@
 // 이벤트: {type:'serve', side} / {type:'return', grade, course, spin, power, kind} / {type:'missed', reason} / {type:'point', winner}
 export const TUTORIAL_KEY = 'tabgu-king-tutorial-v1';
 
+/** PERFECT 단계: 이 횟수만큼 받아쳐도 PERFECT 가 안 나오면 다음 단계로 넘어간다 */
+export const PERFECT_SKIP_AFTER = 5;
 const inCourt = (e) => e.type === 'return' && e.kind === 'in' && e.grade !== 'MISS';
 
 /**
@@ -20,6 +22,7 @@ const SIMPLE_SERVE = {
 const STEP_PERFECT = {
   id: 'perfect', title: 'PERFECT 노리기', text: '붉은 띠 한가운데에 맞추면 PERFECT! 더 강하고 정확한 샷이 나가요.',
   goals: [{ key: 'perfect', need: 1, label: 'PERFECT', accept: (e) => e.type === 'return' && e.grade === 'PERFECT' && e.kind === 'in' }], hint: {},
+  skipAfter: PERFECT_SKIP_AFTER, // PERFECT 가 좁아져 초보는 못 칠 수 있다 → 막히지 않게 여러 번 시도하면 넘어간다
   done: '띠 가운데일수록 실수가 줄고 샷이 강해져요.',
 };
 const stepCourse = (how) => ({
@@ -37,7 +40,7 @@ const STEP_FREE = {
 };
 
 const SIMPLE_PERFECT = {
-  ...STEP_PERFECT, text: '띠 한가운데의 밝은 줄에 맞추면 PERFECT! 더 강하고 정확한 샷이 나가요. (일반=노랑 줄, 탑스핀=빨강 줄, 커트=파랑 줄)',
+  ...STEP_PERFECT, hint: { button: 'normal' }, text: '띠 한가운데의 밝은 줄에 맞추면 PERFECT! 더 강하고 정확한 샷이 나가요. (일반=노랑 줄, 탑스핀=빨강 줄, 커트=파랑 줄)',
 };
 
 const SIMPLE_STEPS = [
@@ -99,8 +102,8 @@ export function feedbackFor(e, step) {
     if (e.kind === 'net') return step?.id === 'power' ? '약하게 걸렸어요 — 그래도 길게 쓸어 강타는 성공!' : '공이 네트에 걸렸어요. 조금 더 길게 쓸어 파워를 올려보세요.';
     if (e.kind === 'out') return '너무 세서 아웃! 파워를 줄이거나 위로 쓸어 탑스핀을 걸어보세요.';
     if (e.grade === 'PERFECT') return 'PERFECT!';
-    if (e.grade === 'BAD') return '아슬아슬! 띠 가장자리예요 — 가운데를 노려요.';
-    if (e.grade === 'GOOD') return step?.id === 'perfect' ? '좋아요! 띠 한가운데의 밝은 줄을 노려보세요.' : '좋아요!';
+    if (e.grade === 'BAD') return 'BAD! 띠 가장자리예요 — 가운데를 노려요.';
+    if (e.grade === 'GOOD') return step?.id === 'perfect' ? 'GOOD! 띠 한가운데의 밝은 줄을 노려보세요.' : 'GOOD!';
   }
   return '';
 }
@@ -111,6 +114,7 @@ export function createTutorial({ mode = 'simple' } = {}) {
   let counts = {};
   let feedback = '';
   let completed = false;
+  let tries = 0; // 현재 단계에서 코트에 넣은 시도 수(PERFECT 단계 건너뛰기용)
   const step = () => STEPS[index] ?? null;
   const activeGoal = () => step()?.goals.find((g) => (counts[g.key] ?? 0) < g.need) ?? null;
   const view = () => {
@@ -135,16 +139,22 @@ export function createTutorial({ mode = 'simple' } = {}) {
         if ((counts[g.key] ?? 0) < g.need && g.accept(e)) { counts[g.key] = (counts[g.key] ?? 0) + 1; progressed = true; break; } // 한 이벤트는 목표 하나만 채운다(순서대로)
       }
       const fb = feedbackFor(e, s);
-      feedback = progressed ? (e.type === 'return' ? (fb || '좋아요!') : '') : fb;
+      let skipped = false; let hold = '';
+      if (s.skipAfter && !progressed && inCourt(e)) { // PERFECT 단계: 못 맞혀도 코트에 넣으면 시도로 센다
+        tries += 1;
+        if (tries >= s.skipAfter) { for (const g of s.goals) counts[g.key] = g.need; skipped = true; }
+        else if (tries >= 2) hold = `${s.skipAfter - tries}번 더 치면 다음 단계로 넘어가요. 띠 한가운데의 밝은 줄을 노려요!`;
+      }
+      feedback = hold || (progressed ? (e.type === 'return' ? (fb || '좋아요!') : '') : fb);
       let advanced = false;
       if (s.goals.every((g) => (counts[g.key] ?? 0) >= g.need)) {
-        index += 1; counts = {}; advanced = true;
+        index += 1; counts = {}; tries = 0; advanced = true;
         if (index >= STEPS.length) completed = true;
-        else feedback = `단계 완료! ${s.done || ''}`.trim(); // 왜 그런지 설명을 함께
+        else feedback = skipped ? '괜찮아요! PERFECT 는 연습하면 나와요. 다음 단계로 가요!' : `단계 완료! ${s.done || ''}`.trim(); // 왜 그런지 설명을 함께
       }
       return { advanced, completed, view: view() };
     },
-    reset() { index = 0; counts = {}; feedback = ''; completed = false; },
+    reset() { index = 0; counts = {}; feedback = ''; completed = false; tries = 0; },
   };
 }
 

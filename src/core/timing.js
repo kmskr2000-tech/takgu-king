@@ -1,6 +1,6 @@
 import {
   ZONE_OFFSET, ZONE_HALF, PERFECT_RATIO, BAD_FRACTION, FOCUS_WIDEN, MIN_HALF_TIME, BOUNCE_GRACE, GRADES,
-} from './constants.js?v=1791351416';
+} from './constants.js?v=1791353507';
 
 /**
  * 받는 쪽 타이밍 창 계산. flight 는 simulateFlight 결과(kind 'in').
@@ -11,7 +11,7 @@ import {
  *   탭을 받아주는 범위(start~end)만 center ± leniency*halfTime 으로 넓힌다. 시작은 바운드 직후(+유예) 아래로 내려가지 않는다.
  *   → 슛의 타격 위치(hitY)와 오차 매핑은 변하지 않아 밸런스·손맛이 유지된다. AI 는 항상 1.
  */
-export function buildTiming(flight, focus = 0, { leniency = 1, shift = 0, bad = false } = {}) {
+export function buildTiming(flight, focus = 0, { leniency = 1, shift = 0, bad = false, perfectRatio = PERFECT_RATIO, badFraction = BAD_FRACTION } = {}) {
   if (flight.kind !== 'in') throw new Error('타이밍 창은 코트에 들어온 공에만 만들 수 있다');
   const speed = Math.abs(flight.vyPost);
   const half = ZONE_HALF * (1 + FOCUS_WIDEN * Math.max(0, focus));
@@ -20,12 +20,13 @@ export function buildTiming(flight, focus = 0, { leniency = 1, shift = 0, bad = 
   const center = flight.tLand + BOUNCE_GRACE + halfTime + ZONE_OFFSET / speed + shift * halfTime;
   const lo = Math.max(center - halfTime * leniency, flight.tLand + BOUNCE_GRACE);
   const hi = center + halfTime * leniency;
-  const perfectHalf = halfTime * PERFECT_RATIO;
+  const perfectHalf = halfTime * perfectRatio;
   const at = (t) => flight.postPos(t);
   return {
     center,
     halfTime,
     leniency,
+    perfectRatio, badFraction,
     bad, // true 면 judgeTap 이 바깥쪽 BAD_FRACTION 이후를 BAD 로 판정한다 (4단계 등급)
     start: lo,
     end: hi,
@@ -48,8 +49,8 @@ export function judgeTap(tTap, timing) {
   const abs = Math.abs(offset);
   const lenient = timing.leniency ?? 1;
   if (abs > lenient || tTap < timing.start) return { grade: GRADES.MISS, offset };
-  if (abs <= PERFECT_RATIO) return { grade: GRADES.PERFECT, offset };
-  if (timing.bad && abs > lenient * BAD_FRACTION) return { grade: GRADES.BAD, offset };
+  if (abs <= (timing.perfectRatio ?? PERFECT_RATIO)) return { grade: GRADES.PERFECT, offset };
+  if (timing.bad && abs > lenient * (timing.badFraction ?? BAD_FRACTION)) return { grade: GRADES.BAD, offset };
   return { grade: GRADES.GOOD, offset };
 }
 

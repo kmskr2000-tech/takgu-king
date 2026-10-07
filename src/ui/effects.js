@@ -7,6 +7,7 @@ export function createEffects(rng = { next: Math.random, signed: () => Math.rand
   const parts = [];
   let flash = 0; // PERFECT 화면 번쩍임(남은 시간)
   let flashMax = FLASH_S;
+  let flashKind = 'perfect';
   const add = (p) => parts.push({ size: 2, ...p, age: 0 });
 
   const api = {
@@ -16,7 +17,7 @@ export function createEffects(rng = { next: Math.random, signed: () => Math.rand
       const perfect = grade === 'PERFECT';
       const bad = grade === 'BAD';
       if (perfect) { // PERFECT: 빠른 금빛 고리 + 느리게 흩어지는 흰 별 + 번쩍임 (GOOD 보다 확실히 크고 화려하게)
-        flash = FLASH_S; flashMax = FLASH_S;
+        flash = FLASH_S; flashMax = FLASH_S; flashKind = 'perfect';
         for (let i = 0; i < 14; i++) {
           const a = (i / 14) * Math.PI * 2 + rng.signed() * 0.12; const sp = 55 + rng.next() * 20;
           add({ x, y, vx: Math.cos(a) * sp * scale, vy: Math.sin(a) * sp * scale, life: 0.4, color: '#ffd24a', g: 0, size: 2 + scale });
@@ -56,14 +57,23 @@ export function createEffects(rng = { next: Math.random, signed: () => Math.rand
     },
     /** 필살기 발사: 금·흰 고리 3겹 + 긴 번쩍임 (PERFECT 보다 훨씬 크다) */
     special(x, y, scale = 1) {
-      flash = SPECIAL_FLASH_S; flashMax = SPECIAL_FLASH_S;
+      flash = SPECIAL_FLASH_S; flashMax = SPECIAL_FLASH_S; flashKind = 'special';
       for (let ring = 0; ring < 3; ring++) {
         const n = 16; const sp = 50 + ring * 28;
         for (let i = 0; i < n; i++) {
           const a = (i / n) * Math.PI * 2 + ring * 0.2;
-          add({ x, y, vx: Math.cos(a) * sp * scale, vy: Math.sin(a) * sp * scale, life: 0.45 + ring * 0.12, color: ring === 1 ? '#ffffff' : '#ffd24a', g: 0, size: 2 + scale });
+          add({ x, y, vx: Math.cos(a) * sp * scale, vy: Math.sin(a) * sp * scale, life: 0.45 + ring * 0.12, color: ring === 1 ? '#ffffff' : ring === 0 ? '#c46bff' : '#ff5ad8', g: 0, size: 2 + scale });
         }
       }
+      for (let i = 0; i < 10; i++) { // 방사형 가로·세로 번개 줄기
+        const a = (i / 10) * Math.PI * 2; const sp = 110 + rng.next() * 40;
+        add({ x, y, vx: Math.cos(a) * sp * scale, vy: Math.sin(a) * sp * scale, life: 0.3, color: '#ffffff', g: 0, size: 1 + scale });
+      }
+    },
+    /** 필살기 비행 중 공에서 튀는 불꽃 (보라·분홍·흰색) */
+    ember(x, y, scale = 1) {
+      const cols = ['#c46bff', '#ff5ad8', '#ffffff'];
+      add({ x: x + rng.signed() * 2, y: y + rng.signed() * 2, vx: rng.signed() * 18 * scale, vy: rng.signed() * 18 * scale - 6, life: 0.35, color: cols[Math.floor(rng.next() * 3)], g: 14, size: 1 + (rng.next() < 0.4 ? 1 : 0) });
     },
     /** 득점: 내가 득점하면 색종이, 실점이면 회색 연기 */
     score(x, y, mine) {
@@ -83,6 +93,8 @@ export function createEffects(rng = { next: Math.random, signed: () => Math.rand
       }
     },
     /** PERFECT 번쩍임 세기 0..1 (렌더러가 화면 위에 흰금색 막을 얹는다) */
+    /** 번쩍임 색: 'perfect' 는 금빛, 'special' 은 보라빛 */
+    get flashKind() { return flashKind; },
     get flashAlpha() { return flash > 0 ? flash / flashMax : 0; },
     update(dt) {
       flash = Math.max(0, flash - dt);

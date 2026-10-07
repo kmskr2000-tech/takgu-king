@@ -1,11 +1,11 @@
-import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791351416';
-import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791351416';
-import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791351416';
-import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791351416';
+import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791353507';
+import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791353507';
+import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791353507';
+import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791353507';
 import {
   SIDES, STATES, GRADES, createMatch, createShot, createSpecialShot, flightOf, buildTiming, judgeTap, judgeNoTap,
   classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide,
-} from '../core/index.js?v=1791351416';
+} from '../core/index.js?v=1791353507';
 
 /** 난수 배율 래퍼: createShot 의 실수 난수(signed)만 k 배. k=1 이면 기존과 비트 동일 */
 export const scaledRng = (rng, k) => (k === 1 ? rng : { next: rng.next, signed: () => rng.signed() * k });
@@ -174,14 +174,14 @@ export function createMatchController({
     if (c.pendingDown) c.pendingDown.last = { x, y };
   };
 
-  // 필살기: 3연속 PERFECT → 다음 리턴이 필살기(코트에 들어가는 가장 빠른 공, 실수 없음). 판정이 PERFECT 가 아니거나 못 치면 연속은 리셋.
-  const makeShot = (args) => (c.special && args.grade !== GRADES.MISS ? createSpecialShot({ from: args.from, aim: args.aim, stats, grade: args.grade, offset: args.offset, hitY: args.hitY }) : createShot(args));
-  function noteSpecial(shot, grade) {
+  // 필살기: "상성 유리 + PERFECT" 를 동시에 만족한 타격이 SPECIAL_AT 회 쌓이면 다음 리턴이 필살기(코트에 들어가는 가장 빠른 공, 실수 없음).
+  // 쌓은 횟수는 경기 안에서 끊기지 않고 유지된다(연속 아님) — 필살기를 쓰면 0 으로. 상성은 간단 조작에만 있어 고급 조작에선 쌓이지 않는다.
+  const makeShot = (args) => (c.special && args.grade !== GRADES.MISS ? createSpecialShot({ from: args.from, aim: args.aim, stats, grade: args.grade, offset: args.offset, hitY: args.hitY }) : createShot({ ...args, human: true }));
+  function noteSpecial(shot, grade, matchup) {
     if (shot?.special) { c.special = false; c.perfectStreak = 0; emit({ type: 'special' }); return; }
-    if (shot && grade === GRADES.PERFECT) {
-      c.perfectStreak++;
-      if (c.perfectStreak >= SPECIAL_AT && !c.special) { c.special = true; emit({ type: 'specialReady' }); } else emit({ type: 'perfectStreak', n: c.perfectStreak });
-    } else { c.perfectStreak = 0; c.special = false; }
+    if (c.special || !shot || grade !== GRADES.PERFECT || matchup !== 'win') return;
+    c.perfectStreak++;
+    if (c.perfectStreak >= SPECIAL_AT) { c.special = true; emit({ type: 'specialReady' }); } else emit({ type: 'perfectStreak', n: c.perfectStreak });
   }
 
   function respondMe(now, shot, gesture = null) {
@@ -192,7 +192,7 @@ export function createMatchController({
     if (shot && gesture?.shotType) { // 패턴 읽기: 같은 종류를 연속으로 쓴 횟수 (AI 가 편중을 읽는다)
       c.streak = gesture.shotType === c.streakKey ? c.streak + 1 : 1; c.streakKey = gesture.shotType;
     }
-    noteSpecial(shot, judge.grade);
+    noteSpecial(shot, judge.grade, gesture?.matchup);
     c.pendingDown = null;
     c.timing = null;
     c.lastMyShot = shot ? gesture?.shotType ?? null : c.lastMyShot ?? null;

@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791351416';
-import { createEffects } from './effects.js?v=1791351416';
-import { createRng } from '../core/rng.js?v=1791351416';
+} from './sprites.js?v=1791353507';
+import { createEffects } from './effects.js?v=1791353507';
+import { createRng } from '../core/rng.js?v=1791353507';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -33,6 +33,12 @@ export function project(x, y, z = 0) {
 const groundY = (y) => CAM.HOR + CAM.KY / depth(y);
 const halfWidthAtRow = (row) => (50 * CAM.KX) / (CAM.KY / (row - CAM.HOR)); // 화면 행 → 탁구대 폭의 절반
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const POP = { // 판정 글자 연출 (색·크기·머무는 시간)
+  PERFECT: { color: '#ffd24a', edge: '#7a4b00', size: 15, life: 0.7, rise: 22 },
+  GOOD: { color: '#7dff8a', edge: '#0d5a1a', size: 13, life: 0.55, rise: 18 },
+  BAD: { color: '#ffa03a', edge: '#6a2e00', size: 13, life: 0.55, rise: 12 },
+  MISS: { color: '#ff5a4a', edge: '#5a0a00', size: 13, life: 0.6, rise: 8 },
+};
 const REACH_FAR = 0.45; // 상대 위치와 낙구 지점이 코트 폭의 이만큼 이상 벌어지면 '방향 전환' 연출 (ai.js DIRECTION_FX 의 체감 구간)
 
 const C = {
@@ -70,7 +76,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
   const trail = [];
   const fx = createEffects(rng);
   const st = {
-    reachFar: false, specialNow: false, controlMode: 'advanced', meTarget: 50, meK: 3, lean: 0, lastAct: null, hint: null, swing: { me: null, opp: null }, meX: 50, oppX: 50, lastNow: null, lastGrade: 'GOOD', look: 'opp', shake: 0, lane: 'center',
+    reachFar: false, specialNow: false, pops: [], controlMode: 'advanced', meTarget: 50, meK: 3, lean: 0, lastAct: null, hint: null, swing: { me: null, opp: null }, meX: 50, oppX: 50, lastNow: null, lastGrade: 'GOOD', look: 'opp', shake: 0, lane: 'center',
   };
 
   const R = (g, x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
@@ -256,6 +262,23 @@ export function createRenderer(canvas, { rng, options } = {}) {
     drawSprite(ctx, SPRITES.me[meFrame], PALETTES.me, Math.round(pm.x - (SPRITE_W * sm) / 2), Math.round(pm.y - SPRITE_H * sm), { scale: sm });
   }
 
+  // 판정 글자: 떠오르며 사라진다. 처음 0.12초는 크게 튀어 오른다 (외곽선으로 어떤 배경에서도 읽힌다)
+  function drawPops(now) {
+    st.pops = st.pops.filter((q) => now - q.t0 < q.life);
+    if (typeof ctx.fillText !== 'function') return; // 글자를 못 그리는 환경(테스트 스텁)
+    for (const q of st.pops) {
+      const age = now - q.t0; const k = age / q.life;
+      const pop = age < 0.12 ? 1 + 0.5 * (1 - age / 0.12) : 1;
+      ctx.save?.();
+      ctx.globalAlpha = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
+      ctx.font = `bold ${Math.round(q.size * pop)}px monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const y = q.y - q.rise * k;
+      ctx.lineWidth = 3; ctx.strokeStyle = q.edge; ctx.strokeText(q.text, q.x, y);
+      ctx.fillStyle = q.color; ctx.fillText(q.text, q.x, y);
+      ctx.restore?.();
+    }
+  }
+
   // 필살기 게이지: 연속 PERFECT 3칸(내 선수 왼쪽). 다 차면(필살기 준비) 금빛 오라가 펄스로 선수를 감싼다
   function drawSpecialGauge(ctl, now) {
     const n = ctl.special ? 3 : Math.min(2, ctl.perfectStreak ?? 0);
@@ -264,13 +287,13 @@ export function createRenderer(canvas, { rng, options } = {}) {
     const x0 = Math.round(pm.x - (SPRITE_W * sm) / 2 - 12); const y0 = Math.round(pm.y - 4);
     const pulse = 0.5 + 0.5 * Math.sin(now * 10);
     for (let i = 0; i < 3; i++) {
-      ctx.fillStyle = i < n ? (ctl.special ? `rgba(255,${Math.round(190 + 60 * pulse)},74,1)` : '#ffd24a') : 'rgba(255,255,255,0.25)';
+      ctx.fillStyle = i < n ? (ctl.special ? `rgba(${Math.round(180 + 60 * pulse)},${Math.round(90 + 40 * pulse)},255,1)` : '#d9a0ff') : 'rgba(255,255,255,0.25)';
       ctx.fillRect(x0, y0 - i * 5, 4, 4);
     }
     if (ctl.special) {
       const rx = Math.round(SPRITE_W * sm * 0.8 + pulse * 3); const ry = Math.max(2, Math.round(rx * 0.27));
-      ctx.fillStyle = `rgba(255,210,74,${(0.5 + 0.4 * pulse).toFixed(2)})`;
-      for (let i = 0; i < 28; i++) { const a = (i / 28) * Math.PI * 2; ctx.fillRect(Math.round(pm.x + Math.cos(a) * rx), Math.round(pm.y + Math.sin(a) * ry), 2, 2); }
+      ctx.fillStyle = `rgba(196,107,255,${(0.55 + 0.4 * pulse).toFixed(2)})`;
+      for (let i = 0; i < 28; i++) { const a = (i / 28) * Math.PI * 2 + now * 2; ctx.fillRect(Math.round(pm.x + Math.cos(a) * rx), Math.round(pm.y + Math.sin(a) * ry), 2, 2); }
     }
   }
 
@@ -303,20 +326,26 @@ export function createRenderer(canvas, { rng, options } = {}) {
   // 공 색 = 스핀 종류 (상대 공을 보는 그 자리에서 읽는다): 탑스핀 빨강 / 커트 파랑 / 일반 흰색
   const BALL_PAL = { top: { k: '#7a1a10', w: '#ff5a4a', l: '#ffc2ba' }, cut: { k: '#10407a', w: '#4aa3ff', l: '#c4e0ff' } };
   const ballPalette = (spin) => (spin > 0.5 ? BALL_PAL.top : spin < -0.5 ? BALL_PAL.cut : BALL_PALETTE);
-  function drawBall(ball, spin = 0) {
+  function drawBall(ball, spin = 0, special = false, now0 = 0) {
     const p = ball?.visible ? project(ball.x, ball.y, ball.z ?? 0) : null;
     if (!p) { trail.length = 0; return; } // 화면 밖(컬링)이면 그리지 않음
     const g0 = project(ball.x, ball.y, 0);
     const sc = spriteScale(p.k, 0.95);
     const bx = Math.round(p.x); const by = Math.round(p.y);
     trail.push({ x: bx, y: by, s: sc });
-    if (trail.length > 7) trail.shift();
-    if (spin !== 0) {
+    if (trail.length > (special ? 14 : 7)) trail.shift();
+    if (special) { // 필살기 공: 보라·분홍으로 번쩍이는 긴 꼬리 + 흰 핵 + 후광, 불꽃이 튄다
+      const cols = ['#c46bff', '#ff5ad8', '#ffffff'];
+      trail.forEach((q, i) => { ctx.fillStyle = cols[(i + Math.floor(now0 * 20)) % 3]; ctx.fillRect(q.x - 1, q.y - 1, q.s + 2, q.s + 2); });
+      ctx.fillStyle = 'rgba(233,179,255,0.35)'; ctx.fillRect(bx - 5 * sc, by - 5 * sc, 10 * sc, 10 * sc);
+      if (opt().effects) fx.ember(bx, by, sc);
+    } else if (spin !== 0) {
       ctx.fillStyle = spin > 0 ? C.top : C.back;
       trail.forEach((q, i) => { if (i < trail.length - 1) { const w = i > 3 ? q.s + 1 : q.s; ctx.fillRect(q.x, q.y, w, w); } });
     }
     R(ctx, bx - 2 * sc, Math.round(g0.y), 5 * sc, Math.max(1, sc), C.shadow); // 지면 그림자
-    drawSprite(ctx, BALL, ballPalette(spin), bx - Math.floor((5 * sc) / 2), by - Math.floor((5 * sc) / 2), { scale: sc });
+    drawSprite(ctx, BALL, special ? ballPalette(0) : ballPalette(spin), bx - Math.floor((5 * sc) / 2), by - Math.floor((5 * sc) / 2), { scale: sc });
+    if (special) { ctx.fillStyle = '#ffffff'; ctx.fillRect(bx - 1, by - 1, 3 * sc, 3 * sc); }
   }
 
   // 간단 조작: 코스 마커 — 상대 쪽 코트에서 내 샷이 갈 3분의 1 구역을 은은하게 표시
@@ -386,6 +415,13 @@ export function createRenderer(canvas, { rng, options } = {}) {
     setOpponentLook(look) { st.look = look === 'rival' ? 'rival' : 'opp'; },
     /** 컨트롤러 이벤트 수신: 스윙 애니메이션 + 이펙트 */
     notify(e, now) {
+      if (e.type === 'grade' || (e.type === 'missed' && e.noTap)) { // 판정 글자(영어)를 내 선수 머리 위에 띄운다 — 샷마다 확실히 보이게
+        const g = e.type === 'grade' ? e.grade : 'MISS';
+        const pm = project(clamp(Number.isFinite(e.x) ? e.x : st.meX, 8, 92), 235);
+        if (pm && opt().effects !== false) st.pops.push({ text: g, x: pm.x, y: pm.y - 34, t0: now, ...POP[g] });
+      }
+      if (e.type === 'special') st.pops.push({ text: '필살기!', x: VIEW_W / 2, y: 120, t0: now, color: '#e9b3ff', edge: '#4a0f7a', size: 22, life: 1.1, rise: 10, big: true });
+      if (e.type === 'specialReady') st.pops.push({ text: '필살기 준비!', x: VIEW_W / 2, y: 130, t0: now, color: '#e9b3ff', edge: '#4a0f7a', size: 14, life: 1.0, rise: 14 });
       if (e.type === 'grade') {
         st.lastGrade = e.grade; st.lastMatchup = e.matchup ?? 'even';
         // 탭 순간: 스윙 시작 + 공이 있는 곳으로 스텝 (입력이 먼저, 움직임은 그 결과)
@@ -451,9 +487,12 @@ export function createRenderer(canvas, { rng, options } = {}) {
       if (opt().effects) drawSpecialGauge(ctl, now);
       drawCoachHint(now);
       drawLane(now);
-      drawBall(ctl.ballAt(now), ctl.spinHidden?.(now) ? 0 : (ctl.flight?.spin ?? 0)); // 구질 위장 중엔 중립색 // 공은 선수 뒤에 가려지지 않게 선수 다음에 그린다
+      const sp = !!ctl.flight?.special && ctl.flight.dir < 0 && opt().effects;
+      if (sp) { ctx.fillStyle = 'rgba(24,0,48,0.38)'; ctx.fillRect(0, 0, VIEW_W, VIEW_H); } // 필살기 비행 중엔 화면이 어두워지고 공만 빛난다
+      drawBall(ctl.ballAt(now), ctl.spinHidden?.(now) ? 0 : (ctl.flight?.spin ?? 0), sp, now); // 구질 위장 중엔 중립색 // 공은 선수 뒤에 가려지지 않게 선수 다음에 그린다
       fx.draw(ctx);
-      if (fx.flashAlpha > 0 && opt().effects) { ctx.fillStyle = `rgba(255,240,170,${(0.28 * fx.flashAlpha).toFixed(3)})`; ctx.fillRect(0, 0, VIEW_W, VIEW_H); } // PERFECT 번쩍임
+      drawPops(now);
+      if (fx.flashAlpha > 0 && opt().effects) { ctx.fillStyle = fx.flashKind === 'special' ? `rgba(214,150,255,${(0.5 * fx.flashAlpha).toFixed(3)})` : `rgba(255,240,170,${(0.28 * fx.flashAlpha).toFixed(3)})`; ctx.fillRect(0, 0, VIEW_W, VIEW_H); } // PERFECT 번쩍임
       ctx.restore?.();
     },
   };

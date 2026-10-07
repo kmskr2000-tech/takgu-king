@@ -196,7 +196,13 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .hud .judge.perfect { color: #ffd24a; font-size: 1.35rem; text-shadow: 0 0 6px rgba(255,210,74,.9), 0 2px 0 #7a4b00; }
 .hud .judge.perfect.j0 { animation: perfect-pop0 .45s ease-out; }
 .hud .judge.perfect.j1 { animation: perfect-pop1 .45s ease-out; }
-.hud .judge.good { color: #fff; } .hud .judge.bad { color: #9aa4ae; } .hud .judge.miss { color: #ff7a6a; }
+.hud .judge.good { color: #7dff8a; font-size: 1.2rem; text-shadow: 0 0 5px rgba(125,255,138,.8), 0 2px 0 #0d5a1a; }
+.hud .judge.bad { color: #ffa03a; font-size: 1.2rem; text-shadow: 0 0 5px rgba(255,160,58,.8), 0 2px 0 #6a2e00; }
+.hud .judge.miss { color: #ff5a4a; font-size: 1.2rem; text-shadow: 0 0 5px rgba(255,90,74,.8), 0 2px 0 #5a0a00; }
+.hud .judge.good.j0, .hud .judge.bad.j0, .hud .judge.miss.j0 { animation: grade-pop0 .35s ease-out; }
+.hud .judge.good.j1, .hud .judge.bad.j1, .hud .judge.miss.j1 { animation: grade-pop1 .35s ease-out; }
+@keyframes grade-pop0 { 0% { transform: scale(.7); opacity: 0; } 40% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes grade-pop1 { 0% { transform: scale(.7); opacity: 0; } 40% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(1); } }
 @keyframes perfect-pop0 { 0% { transform: scale(.6); opacity: 0; } 35% { transform: scale(1.7); opacity: 1; } 100% { transform: scale(1); } }
 @keyframes perfect-pop1 { 0% { transform: scale(.6); opacity: 0; } 35% { transform: scale(1.7); opacity: 1; } 100% { transform: scale(1); } }
 

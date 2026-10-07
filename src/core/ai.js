@@ -1,7 +1,7 @@
-import { GRADES, COURSE_X } from './constants.js?v=1791351416';
-import { buildTiming, judgeTap } from './timing.js?v=1791351416';
-import { MIN_REACTION_S } from './constants.js?v=1791351416';
-import { createShot, flightOf, powerCap } from './shot.js?v=1791351416';
+import { GRADES, COURSE_X, AI_PERFECT_RATIO, AI_BAD_FRACTION } from './constants.js?v=1791353507';
+import { buildTiming, judgeTap } from './timing.js?v=1791353507';
+import { MIN_REACTION_S } from './constants.js?v=1791353507';
+import { createShot, flightOf, powerCap } from './shot.js?v=1791353507';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -23,9 +23,9 @@ export const LEAGUE_BASE = Object.freeze({
 // 스탯 곡선(game/statcurve.js)이 수확체감이라 플레이어 상한이 정해졌다. 그래서 3부 이상 AI 의 returnRate·accuracy 에 리그별 가산을 더해 상위 리그 긴장감을 유지한다
 // (2026-10-07 유저 피드백 "스탯을 찍으면 너무 쉬워진다", scripts/tune-balance.mjs 로 확정).
 // 가산은 등급 배율을 적용한 뒤에 더한다(등급별 반영 비율 TIER_UPLIFT_SHARE, 기본 전부 1).
-export const LEAGUE_UPLIFT = { amateur: 0, third: 0.15, second: 0.14, first: 0.06, world: 0.015 };
+export const LEAGUE_UPLIFT = { amateur: 0, third: 0.10, second: 0.09, first: 0.02, world: -0.03 };
 export const TIER_UPLIFT_SHARE = { low: 1, mid: 1, high: 1, rival: 1 };
-// 상위 리그는 기본값이 이미 높아 등급 배율(×0.8~×1.4)이 clamp 로 뭉개져 상위·라이벌이 벽이 된다 → 리그별로 배율의 편차를 줄인다 (1 = 기존). 확정값 기준 시즌 후반 승률(사람 전략·skill 0.17): 3부 97/87/65/53 · 2부 93/83/63/37 · 1부 93/77/53/25 · 세계 75/53/45/27 (하위/중위/상위/라이벌 %). 2026-10-07 커트 득점 루트(cutNoise 4.3)·1부 캡 도입 후 재보정(scripts/tune-balance.mjs --n 200 실측, 하위/중위/상위/라이벌): 3부 97/93/76/50 · 2부 99/87/69/37 · 1부 96/82/58/25 · 세계 79/55/48/39. 목표 대비 3부 상위 +11·세계 하위 +4·중위 +2 만큼 아직 쉽다(수렴 못 함). AI 끼리 리그 사다리(상위 리그가 하위 리그를 이김)는 test/strategy.test.js 가 지킨다
+// 상위 리그는 기본값이 이미 높아 등급 배율(×0.8~×1.4)이 clamp 로 뭉개져 상위·라이벌이 벽이 된다 → 리그별로 배율의 편차를 줄인다 (1 = 기존). 확정값 기준 시즌 후반 승률(사람 전략·skill 0.17): 3부 97/87/65/53 · 2부 93/83/63/37 · 1부 93/77/53/25 · 세계 75/53/45/27 (하위/중위/상위/라이벌 %). 2026-10-07 커트 득점 루트(cutNoise 4.3)·1부 캡·PERFECT 구간 축소(0.3→0.15, 플레이어만) 후 재보정(scripts/tune-balance.mjs --n 200 실측, 하위/중위/상위/라이벌): 3부 94/87/71/49 · 2부 94/89/70/32 · 1부 96/85/62/31 · 세계 76/56/36/47. 세계 라이벌만 목표보다 쉽고(+20) 상위는 어렵다(-9). AI 끼리 리그 사다리(상위 리그가 하위 리그를 이김)는 test/strategy.test.js 가 지킨다
 export const TIER_SPREAD = { amateur: 1, third: 0.65, second: 0.5, first: 0.5, world: 0.22 };
 
 /** 선수 난이도 배분 (설계서 5.3): 하위 -20%, 중위 0, 상위 +20%, 라이벌 +40% */
@@ -181,7 +181,7 @@ function gauss(rng) {
  * 반환: { judgement: {grade, offset}, shot|null, t(탭 시각, 공 발사 기준 초), timing }
  */
 export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { read = true, streak = null, capPower = streak != null, oppX = null, special = false } = {}) {
-  const timing = buildTiming(flight, aiStats(p).focus * 0.5, { bad: true }); // AI 는 판정 폭 보정을 절반만 받는다 (AI 도 같은 4단계 등급)
+  const timing = buildTiming(flight, aiStats(p).focus * 0.5, { bad: true, perfectRatio: AI_PERFECT_RATIO, badFraction: AI_BAD_FRACTION }); // AI 는 판정 폭 보정을 절반만 받는다 (AI 도 같은 4단계 등급)
   const inSpin = flight.spin ?? 0;
   const cutIn = inSpin < -AI_TEMPO.spinThreshold; const topIn = inSpin > AI_TEMPO.spinThreshold;
   const slow = streak == null ? 1 : Math.min(1, streak / Math.max(0.5, (AI_READ_NEED[p.league] ?? 1) * (p.readNeedMult ?? 1) * (p.tier === 'low' ? LOW_TIER_READ.need : 1))); // 읽는 속도: 연속으로 쓸수록 확실히 읽는다

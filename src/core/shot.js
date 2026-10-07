@@ -1,7 +1,7 @@
 import {
   NET_Y, HIT_Z, SPEED_MIN, SPEED_MAX, SPIN_SPEED_TOP, SPIN_SPEED_BACK, GRADES,
-} from './constants.js?v=1791351416';
-import { gravityFor, simulateFlight } from './physics.js?v=1791351416';
+} from './constants.js?v=1791353507';
+import { gravityFor, simulateFlight } from './physics.js?v=1791353507';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -22,10 +22,11 @@ const speedFor = (power, spin) =>
   (SPEED_MIN + (SPEED_MAX - SPEED_MIN) * clamp(power, 0, 1)) * spinSpeedMult(spin);
 
 /** 판정 등급에 따른 샷 보정 (PERFECT: 파워/스핀 보너스, 오차 감소) */
-export function gradeModifier(grade, offset = 0) {
+export function gradeModifier(grade, offset = 0, human = false) {
   if (grade === GRADES.PERFECT) return { power: 1.15, spin: 1.2, error: 0.5 };
   if (grade === GRADES.BAD) return { power: 0.85, spin: 0.9, error: 2.0 }; // 아슬아슬: 위력↓ 오차↑
-  return { power: 1, spin: 1, error: 0.8 + 0.8 * Math.min(1, Math.abs(offset)) };
+  // GOOD 오차: 0.8 + k×|offset|. 플레이어(human)는 PERFECT 구간 축소로 GOOD 이 중앙 쪽으로 좁아져 k 를 0.8→1.6 으로 올려 확정 매트릭스를 유지한다. AI 는 그대로(0.8)
+  return { power: 1, spin: 1, error: 0.8 + (human ? 1.6 : 0.8) * Math.min(1, Math.abs(offset)) };
 }
 
 /**
@@ -37,9 +38,9 @@ export function gradeModifier(grade, offset = 0) {
  * grade: 판정 보정 (서브는 생략)
  * 의도한 착지는 (파워 상한 내) 계산되고, 파워 초과분과 난수 오차가 실제 궤적에 반영된다.
  */
-export function createShot({ from, aim, stats, rng = null, grade = null, offset = 0, hitY = null }) {
+export function createShot({ from, aim, stats, rng = null, grade = null, offset = 0, hitY = null, human = false }) {
   const dir = from.side === 'me' ? -1 : 1;
-  const mod = grade ? gradeModifier(grade, offset) : { power: 1, spin: 1, error: 1 };
+  const mod = grade ? gradeModifier(grade, offset, human) : { power: 1, spin: 1, error: 1 };
   const spin = clamp(aim.spin * mod.spin, -1, 1);
   const power = clamp(aim.power * mod.power, 0, 1);
   const y0 = hitY ?? (dir < 0 ? 170 : 30);

@@ -22,7 +22,7 @@ export const REST_X = 0.9;
 // 타이밍 존: 바운드 지점에서 공이 이만큼 더 진행한 곳이 존 중심
 export const ZONE_OFFSET = 20;
 export const ZONE_HALF = 25;
-export const PERFECT_RATIO = 0.3; // 존 중앙 30% 구간
+export const PERFECT_RATIO = 0.15; // 존 중앙 15% 구간 (0.3→0.15: 사람 탭 오차 σ0.06s 에서 PERFECT 65%→38%, scripts/sim-grades.mjs). 구질별 밴드(RHYTHM_SHIFT ±0.5)의 PERFECT 구간은 겹치지 않는다
 export const FOCUS_WIDEN = 0.06; // 집중 1당 판정 폭 증가율
 export const MIN_HALF_TIME = 0.06;
 /** 공정성 하한(설계안 §6.4): 바운드→밴드 중심까지 이 시간(초) 아래로 내려가는 AI 공은 만들지 않는다 (사용자 지시 200ms. 게임 난이도 배율로도 우회 불가) */
@@ -32,7 +32,10 @@ export const BOUNCE_GRACE = 0.05; // 바운드 직후 리턴 불가 유예(초)
 export const SIDES = Object.freeze({ ME: 'me', OPP: 'opp' });
 export const GRADES = Object.freeze({ PERFECT: 'PERFECT', GOOD: 'GOOD', BAD: 'BAD', MISS: 'MISS' });
 // BAD(아슬아슬): 받아주는 범위(leniency) 바깥쪽 이 비율 이상. 리턴은 성공하지만 위력↓ 오차↑ 네트율↑ (타이밍 4단계: PERFECT/GOOD/BAD/MISS)
-export const BAD_FRACTION = 0.75;
+export const BAD_FRACTION = 0.3;
+// AI 의 타이밍 판정은 예전 값 그대로: 사람 쪽 PERFECT/BAD 구간을 줄여도 AI 의 타격 품질(PERFECT 비율)은 변하지 않는다 → 난이도 상향은 플레이어 쪽에만 (2026-10-07)
+export const AI_PERFECT_RATIO = 0.3;
+export const AI_BAD_FRACTION = 0.75;
 export const STATES = Object.freeze({
   SERVE: 'SERVE',
   RALLY: 'RALLY',
