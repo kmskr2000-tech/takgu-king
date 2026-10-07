@@ -1,14 +1,14 @@
-import { h } from './dom.js?v=1791353507';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791353507';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791353507';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791353507';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791353507';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791353507';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791353507';
+import { h } from './dom.js?v=1791354624';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791354624';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791354624';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791354624';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791354624';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791354624';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791354624';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791353507';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791353507';
+} from '../game/season.js?v=1791354624';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791354624';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -67,7 +67,7 @@ export function storyIntroScreen({ canvas, onAdvance, onSkip }) {
   };
 }
 
-export function titleScreen({ hasSave, onContinue, onNew, onTutorial = null, onSettings, onRules, level = null, onLevel = null }) {
+export function titleScreen({ hasSave, onContinue, onNew, onTutorial = null, onMulti = null, onSettings, onRules, level = null, onLevel = null }) {
   const icon = h('canvas', { class: 'icon', width: 16, height: 16 });
   icon.width = 16; icon.height = 16;
   const ictx = icon.getContext?.('2d');
@@ -84,6 +84,7 @@ export function titleScreen({ hasSave, onContinue, onNew, onTutorial = null, onS
       'aria-disabled': hasSave ? null : 'true', onclick: hasSave ? onContinue : null,
     }, '이어하기'),
     onTutorial && btn('튜토리얼', onTutorial),
+    onMulti && btn('멀티플레이', onMulti),
     // 게임 난이도(보통/어려움/매우 어려움): 누를 때마다 다음 단계. 상대 AI 배율(리그 난이도에 곱)
     level && onLevel && h('button', { class: 'btn level', type: 'button', 'aria-label': `게임 난이도 ${level.label}`, onclick: onLevel },
       h('span', { class: 'sname' }, '게임 난이도'), h('span', { class: 'sstate' }, `${level.label} ▸`)),
@@ -438,4 +439,54 @@ export function storyBeatScreen({ beat, onNext }) {
     ...beat.text.split('\n').map((t) => h('p', { class: 'sb-text' }, t)),
     beat.quote && h('p', { class: 'quote' }, `“${beat.quote}” — ${PROTAGONIST.name}`),
     btn('계속', onNext, 'primary'));
+}
+
+/**
+ * 멀티플레이 로비. mode: 'menu'(방 만들기 / 코드로 참가) · 'hosting'(내 방 코드를 보여주고 기다림) · 'joining'(연결 중) · 'syncing'(시계 맞추는 중)
+ * 화면은 한 번 만들고 setMode 로 바꾼다 (입력 중인 코드가 사라지지 않게).
+ */
+export function multiScreen({ onHost, onJoin, onCancel, onBack }) {
+  const codeInput = h('input', { class: 'code-input', type: 'text', maxlength: '6', placeholder: '6자리 코드', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false', 'aria-label': '방 코드' });
+  const status = h('p', { class: 'net-status', 'aria-live': 'polite' }, '');
+  const codeBox = h('div', { class: 'room-code', 'aria-label': '내 방 코드' }, '');
+  const menu = h('div', { class: 'net-menu' },
+    btn('방 만들기', onHost, 'primary'),
+    h('div', { class: 'join-row' }, codeInput, btn('참가하기', () => onJoin(String(codeInput.value ?? '').trim().toUpperCase()), 'primary')));
+  const waiting = h('div', { class: 'net-wait' }, h('p', { class: 'hint' }, '친구에게 이 코드를 알려주세요'), codeBox, btn('취소', onCancel));
+  const busy = h('div', { class: 'net-busy' }, btn('취소', onCancel));
+  const el = h('section', { class: 'screen multi' },
+    h('h2', {}, '멀티플레이'),
+    h('p', { class: 'quote' }, '친구와 실시간 1:1 대전. 한 명이 방을 만들고, 다른 한 명이 6자리 코드를 입력해요. 능력치는 같고, 타이밍·상성 싸움이에요.'),
+    status, menu, waiting, busy, btn('뒤로', onBack));
+  const show = (node, on) => { node.className = `${node.className.replace(/\s*\bhidden\b/g, '')}${on ? '' : ' hidden'}`; };
+  let mode = 'menu';
+  const api = {
+    el, codeInput,
+    get mode() { return mode; },
+    setMode(m, { code = '', message = '' } = {}) {
+      mode = m;
+      show(menu, m === 'menu'); show(waiting, m === 'hosting'); show(busy, m === 'joining' || m === 'syncing');
+      codeBox.textContent = code;
+      status.textContent = message || (m === 'hosting' ? '상대를 기다리는 중…' : m === 'joining' ? '방에 연결하는 중…' : m === 'syncing' ? '시계를 맞추는 중…' : '');
+      status.className = `net-status${message && m === 'menu' ? ' err' : ''}`;
+    },
+  };
+  api.setMode('menu');
+  return api;
+}
+
+/** 멀티플레이 결과. status: ''(대기) | 'wait'(내가 한 번 더 눌렀다) | 'asked'(상대가 한 번 더 하자고 한다) | 'gone'(상대가 나갔다) */
+export function netResultScreen({ won, score, peerName, onAgain, onExit }) {
+  const again = btn('한 번 더', onAgain, 'primary'); const note = h('p', { class: 'net-status', 'aria-live': 'polite' }, '');
+  const el = h('section', { class: 'screen result net-result' },
+    h('h2', {}, won ? '승리!' : '패배…'),
+    h('p', { class: 'score' }, `${score.me} : ${score.opp}`),
+    h('p', {}, `상대: ${peerName || '상대'}`), note, again, btn('나가기', onExit));
+  return {
+    el,
+    setStatus(status) {
+      note.textContent = status === 'wait' ? '상대가 수락하길 기다리는 중…' : status === 'asked' ? '상대가 한 번 더 하자고 해요!' : status === 'gone' ? '상대가 나갔어요.' : '';
+      if (status === 'gone' || status === 'wait') again.setAttribute('disabled', ''); else again.removeAttribute?.('disabled');
+    },
+  };
 }

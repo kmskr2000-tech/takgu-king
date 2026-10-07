@@ -1,39 +1,47 @@
-import { h } from './dom.js?v=1791353507';
+import { h } from './dom.js?v=1791354624';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen, rivalCardScreen, storyBeatScreen, storyIntroScreen,
-} from './screens.js?v=1791353507';
+  multiScreen, netResultScreen,
+} from './screens.js?v=1791354624';
+import { createNetSession } from '../net/session.js?v=1791354624';
+import { createNetClock } from '../net/clock.js?v=1791354624';
+import { FirebaseRoom } from '../net/fireroom.js?v=1791354624';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791353507';
-import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791353507';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791353507';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791353507';
-import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791353507';
-import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791353507';
-import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791353507';
-import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791353507';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791353507';
-import { oppProfile } from '../game/oppProfile.js?v=1791353507';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791353507';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791353507';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791353507';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791353507';
-import { createAudio } from './audio.js?v=1791353507';
-import { createBgm } from './bgm.js?v=1791353507';
-import { createHaptics, react } from './feedback.js?v=1791353507';
-import { createRenderer } from './render.js?v=1791353507';
-import { createMatchController } from '../game/matchController.js?v=1791353507';
+} from './intro.js?v=1791354624';
+import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791354624';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791354624';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791354624';
+import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791354624';
+import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791354624';
+import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791354624';
+import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791354624';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791354624';
+import { oppProfile } from '../game/oppProfile.js?v=1791354624';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791354624';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791354624';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791354624';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791354624';
+import { createAudio } from './audio.js?v=1791354624';
+import { createBgm } from './bgm.js?v=1791354624';
+import { createHaptics, react } from './feedback.js?v=1791354624';
+import { createRenderer } from './render.js?v=1791354624';
+import { createMatchController } from '../game/matchController.js?v=1791354624';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult, seasonGoals,
-} from '../game/season.js?v=1791353507';
-import { createStore } from '../game/store.js?v=1791353507';
-import { createRng } from '../core/index.js?v=1791353507';
+} from '../game/season.js?v=1791354624';
+import { createStore } from '../game/store.js?v=1791354624';
+import { createRng } from '../core/index.js?v=1791354624';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
-export const FORFEIT_AFTER = 120; // 경기 시작 후 이 시간(초) 이상 지나 포기하면 기권패
+export const FORFEIT_AFTER = 120;
+/** 멀티플레이: 두 사람이 같은 조건 — 능력치·판정 범위·공 속도를 고정한다 (기록·포인트·시즌과 무관) */
+export const NET_STATS = Object.freeze({ power: 7, spin: 7, focus: 7 });
+export const NET_DIFFICULTY = 'normal';
+export const NET_BALL_SCALE = 0.8; // 경기 시작 후 이 시간(초) 이상 지나 포기하면 기권패
 
 export function createApp(root, deps = {}) {
   const store = deps.store ?? createStore();
@@ -135,6 +143,7 @@ export function createApp(root, deps = {}) {
           state = newGame(); persist(); api.showStoryIntro(() => api.showSeasonIntro());
         },
         onTutorial: () => api.startMatch({ tutorial: true, from: 'title' }),
+        onMulti: () => api.showMultiplayer(),
         onSettings: () => api.showSettings(),
         onRules: () => api.showRules(),
         level: gameLevelOf(settings.get().gameLevel),
@@ -441,6 +450,141 @@ export function createApp(root, deps = {}) {
       };
       raf(tick);
       api.controller = ctl; api.matchView = view;
+    },
+    // ---------- 멀티플레이 ----------
+    /** 멀티플레이 로비: 방 만들기(6자리 코드) / 코드로 참가. 연결·시계 동기화가 끝나면 바로 경기 시작 */
+    showMultiplayer(opts = {}) {
+      loop = null; bgm.play('title');
+      let session = null;
+      const dropSession = (reason) => { const s = session; session = null; if (s) s.close(reason); };
+      const view = multiScreen({
+        onHost: () => begin('host'),
+        onJoin: (code) => {
+          if (!/^[A-Z2-9]{6}$/.test(code)) { view.setMode('menu', { message: '6자리 방 코드를 입력해 주세요.' }); return; }
+          begin('guest', code);
+        },
+        onCancel: () => { dropSession('cancel'); view.setMode('menu'); },
+        onBack: () => { dropSession('cancel'); api.showTitle(); },
+      });
+      const errText = (e) => {
+        const m = String(e?.message ?? e);
+        return m === 'room-not-found' ? '그 코드의 방이 없어요. 코드를 다시 확인해 주세요.'
+          : m === 'firebase-not-configured' ? '멀티플레이 서버 설정이 없어요.'
+          : m === 'connect-timeout' ? '연결 시간이 초과됐어요. 다시 시도해 주세요.' : '연결하지 못했어요. 네트워크를 확인하고 다시 시도해 주세요.';
+      };
+      async function begin(role, code = '') {
+        audio.unlock();
+        if (session) return;
+        const room = (deps.roomFactory ?? (() => new FirebaseRoom()))();
+        const s = createNetSession({
+          room, role, name: role === 'host' ? '방장' : '손님', nowFn, timers: deps.netTimers,
+          onPhase: (p) => { if (session === s && p === 'syncing') view.setMode('syncing'); },
+          onStart: (info, sess) => { if (session === s) session = null; api.startNetMatch({ session: sess, ...info }); }, // 첫 경기와 다시 하기 모두
+          onRematch: () => api.netResultView?.setStatus(api.netRematchMine ? 'wait' : 'asked'),
+          onGame: (msg) => api.netInbound(msg),
+          onEnd: (reason) => {
+            if (session === s) { session = null; view.setMode('menu', { message: reason === 'disconnected' || reason === 'peer-left' || reason === 'timeout' ? '연결이 끊겼어요.' : '' }); }
+            else api.netEnded?.(reason, s); // 경기 중·결과 화면에서 끊김
+          },
+        });
+        session = s;
+        try {
+          if (role === 'host') { view.setMode('hosting'); const c = await s.host(); view.setMode('hosting', { code: c }); }
+          else { view.setMode('joining'); await s.join(code); view.setMode('syncing'); }
+        } catch (e) {
+          if (session === s) { session = null; try { s.close('error'); } catch { /* 무시 */ } view.setMode('menu', { message: errText(e) }); }
+        }
+      }
+      if (opts.message) view.setMode('menu', { message: opts.message });
+      mount(view.el);
+    },
+    /** 상대 메시지: 경기 컨트롤러가 준비되기 전에 오면 큐에 둔다 */
+    netInbound(msg) { if (api.netController) api.netController.remoteMessage(msg); else (api.netBacklog ??= []).push(msg); },
+    /** 멀티플레이 경기. 서로 같은 능력치·판정·공 속도, 상성 포함 간단 조작. 기록·포인트·광고 없음 */
+    startNetMatch({ session, first, again = false }) {
+      const mode = 'simple';
+      const clock = createGameClock(nowFn, NET_BALL_SCALE); api.gameClock = clock;
+      const netClock = createNetClock({ nowFn, clock, scale: NET_BALL_SCALE, offset: session.offset });
+      const canvas = h('canvas', { class: 'court' });
+      let lastMiss = null; let ended = false; let result = null;
+      const exit = (notify = true) => { ended = true; loop = null; api.netController = null; api.netSession = null; if (notify) session.close('left'); api.showTitle(); };
+      const view = matchScreen({
+        oppName: session.peerName || '상대', oppTags: [], canvas, quitLabel: '나가기',
+        onSwing: (k) => { audio.unlock(); if (ctl.swing(clock(), k)) view.flashShot(k); },
+        onQuit: () => { if (!ended && ctl.phase !== 'over' && !confirmFn('나가면 이 경기는 패배로 끝나요. 나갈까요?')) return; exit(true); },
+      });
+      mount(view.el); bgm.play('match');
+      view.setShotBar(true); view.setLane('center'); view.setRps(true);
+      const renderer = createRenderer(canvas, { options: () => settings.get() });
+      renderer.setControlMode(mode); renderer.setOpponentLook('opp');
+      const iAmFirst = first === session.role;
+      const ctl = createMatchController({
+        stats: NET_STATS, rng: createRng((Date.now() & 0xffffffff) >>> 0), difficulty: NET_DIFFICULTY, controlMode: mode, useMatchup: true,
+        firstServer: iAmFirst ? 'me' : 'opp', courtWidth: canvas.clientWidth || 300,
+        remote: { clock: netClock, delay: () => session.delay, send: (msg) => session.send(msg) },
+        onEvent: (e) => {
+          renderer.notify(e, clock());
+          react(e, { audio, haptics });
+          if (e.type === 'lane') { view.setLane(e.lane); renderer.setLane(e.lane); }
+          if (e.type === 'grade') {
+            const mu = e.matchup === 'win' ? ' · 카운터!' : e.matchup === 'lose' ? ' · 역회전에 밀렸다…' : '';
+            view.setJudge((e.grade === 'MISS' ? 'MISS' : e.grade === 'PERFECT' ? 'PERFECT!' : e.grade === 'BAD' ? 'BAD' : 'GOOD') + (e.grade === 'MISS' ? '' : mu), e.grade.toLowerCase());
+          }
+          if (e.type === 'missed') lastMiss = e;
+          if (e.type === 'point') {
+            view.setScore(e.score.me, e.score.opp, null); view.flashScore(e.winner); view.setJudge('');
+            view.setPoint(describePoint(e, lastMiss)); lastMiss = null;
+          }
+          if (e.type === 'end') { result = { won: e.winner === 'me', score: e.score }; later(() => { if (!ended && loop === token) api.showNetResult({ session, ...result }); }, 900); }
+        },
+      });
+      api.netController = ctl; api.netSession = session; api.controller = ctl; api.matchView = view;
+      for (const m of api.netBacklog ?? []) ctl.remoteMessage(m);
+      api.netBacklog = [];
+      const token = {}; loop = token;
+      const toLocal = (ev) => { const r = canvas.getBoundingClientRect?.() ?? { left: 0, top: 0 }; return [ev.clientX - r.left, ev.clientY - r.top]; };
+      canvas.addEventListener('pointerdown', (ev) => { ev.preventDefault?.(); audio.unlock(); const [x, y] = toLocal(ev); ctl.pointerDown(clock(), x, y); });
+      canvas.addEventListener('contextmenu', (ev) => ev.preventDefault?.());
+      ctl.start(clock());
+      let wasServing = false; let shownServer = null;
+      const tick = () => {
+        if (loop !== token) return;
+        const now = clock();
+        ctl.update(now);
+        renderer.setHint(null);
+        renderer.draw(ctl, now);
+        view.setScore(ctl.match.score.me, ctl.match.score.opp, ctl.match.server);
+        const serving = ctl.phase === 'awaitServe' || ctl.phase === 'oppServeWait';
+        if (serving && !wasServing) { view.flashServe(ctl.match.server, mode); view.setPoint(null); view.setJudge(''); }
+        wasServing = serving;
+        if (ctl.match.server !== shownServer) { shownServer = ctl.match.server; view.setServe(shownServer); }
+        const situation = ctl.phase === 'flight' && ctl.timing && !ctl.pendingDown ? 'incoming' : null;
+        const inKey = situation && ctl.flight ? shotKeyOfSpin(ctl.flight.spin) : null;
+        view.setIncoming(inKey ? incomingLabel(inKey) : '', inKey);
+        const want = inKey && (ads.lifetimeMatches ?? 99) < HINT_MATCHES ? counterOf(inKey) : null; // 처음 몇 경기만 유리한 버튼 힌트
+        view.setShotHint(want);
+        raf(tick);
+      };
+      api.netRematchMine = false;
+      api.netEnded = (reason) => { // 연결이 끊김: 결과 화면이면 표시만, 경기 중이면 로비로
+        if (ended) return;
+        if (result) { api.netResultView?.setStatus('gone'); return; }
+        ended = true; loop = null; api.netController = null; api.netSession = null;
+        api.showMultiplayer({ message: reason === 'left' ? '' : '연결이 끊겨 경기가 끝났어요.' });
+      };
+      tick();
+    },
+    /** 멀티플레이 결과 화면: 한 번 더(둘 다 누르면 새 경기) / 나가기 */
+    showNetResult({ session, won, score }) {
+      loop = null; api.netController = null;
+      const view = netResultScreen({
+        won, score, peerName: session.peerName,
+        onAgain: () => { api.netRematchMine = true; session.rematch(); view.setStatus('wait'); },
+        onExit: () => { api.netResultView = null; api.netEnded = null; session.close('left'); api.showTitle(); },
+      });
+      api.netResultView = view;
+      react({ type: 'end', winner: won ? 'me' : 'opp' }, { audio, haptics });
+      mount(view.el);
     },
   };
   return api;

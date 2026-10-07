@@ -1,7 +1,7 @@
 // 득점/실점 원인 문구. point 이벤트(winner, reason) + 직전 missed 이벤트(타이밍 실수 종류) + 내 마지막 샷 종류로 만든다.
 // reason: 'miss'(받는 쪽이 못 쳤다) | 'net' | 'out'(리턴 샷의 실수) | 'serve-net' | 'serve-out'(서브 폴트)
 // 실점 원인은 언제나 "점수를 잃은 쪽의 실수"다 (winner 의 반대편).
-import { shotTypeOf } from './controls.js?v=1791353507';
+import { shotTypeOf } from './controls.js?v=1791354624';
 
 const other = (s) => (s === 'me' ? 'opp' : 'me');
 

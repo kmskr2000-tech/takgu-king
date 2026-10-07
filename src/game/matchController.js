@@ -1,11 +1,12 @@
-import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791353507';
-import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791353507';
-import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791353507';
-import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791353507';
+import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791354624';
+import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791354624';
+import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791354624';
+import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791354624';
+import { packShot, mirrorShot } from '../net/protocol.js?v=1791354624';
 import {
-  SIDES, STATES, GRADES, createMatch, createShot, createSpecialShot, flightOf, buildTiming, judgeTap, judgeNoTap,
+  SIDES, STATES, GRADES, MIN_REACTION_S, createMatch, createShot, createSpecialShot, flightOf, buildTiming, judgeTap, judgeNoTap,
   classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide,
-} from '../core/index.js?v=1791353507';
+} from '../core/index.js?v=1791354624';
 
 /** 난수 배율 래퍼: createShot 의 실수 난수(signed)만 k 배. k=1 이면 기존과 비트 동일 */
 export const scaledRng = (rng, k) => (k === 1 ? rng : { next: rng.next, signed: () => rng.signed() * k });
@@ -22,6 +23,7 @@ export function createMatchController({
   stats, oppParams, rng, firstServer = SIDES.ME, courtWidth = 300, onEvent = () => {}, difficulty = DEFAULT_DIFFICULTY,
   controlMode = 'advanced', // 'simple': 샷 버튼을 누르는 순간이 스윙(c.swing) · 코트 탭은 코스만 / 'advanced': 탭 + 쓸기(확정 창 COMMIT_WINDOW)
   useMatchup = true, // 상성(가위바위보) 적용. 튜토리얼은 끈다
+  remote = null, // 멀티플레이: { send(msg), clock(createNetClock), delay(초, 실시간) } — 상대가 AI 가 아니라 네트워크 너머의 사람
 }) {
   const diff = difficultyOf(difficulty);
   // 간단 조작: 고른 샷 종류가 내 타이밍 존 폭을 바꾼다 (탑스핀 좁음 / 일반 보통 / 커트 넓음). 고급 조작은 쓸기로 정해지므로 1
@@ -44,7 +46,7 @@ export function createMatchController({
   const m = createMatch({ firstServer });
   const c = {
     match: m, phase: null, flight: null, t0: 0, timing: null,
-    pendingDown: null, aiAt: null, aiPlan: null, resumeAt: 0, lastGrade: null, lastGradeMe: null, streak: 0, streakKey: null, bands: null, perfectStreak: 0, special: false,
+    pendingDown: null, awaitRemote: false, inbox: [], aiAt: null, aiPlan: null, resumeAt: 0, lastGrade: null, lastGradeMe: null, streak: 0, streakKey: null, bands: null, perfectStreak: 0, special: false,
   };
   c.matchup = (type) => matchupFor(type); // 누른 종류 기준 상성 (테스트·UI)
   c.lane = 'center'; // 간단 조작: 코스 마커 (코트 탭으로 정함, 버튼 스윙이 이 코스로 나간다)
@@ -64,7 +66,17 @@ export function createMatchController({
     c.aiAt = null;
   }
 
-  function afterShot(res, now, shooter) {
+  function sendMine(res, opt, at) {
+    if (opt.shot) {
+      remote.send({ t: 'shot', serve: !!opt.serve, shot: packShot(opt.shot), special: !!res.flight?.special, launchAt: remote.clock.gameToHost(at), judgement: opt.judge ? { grade: opt.judge.grade, offset: opt.judge.offset } : null });
+    } else remote.send({ t: 'miss' });
+  }
+
+  // 멀티플레이: 내가 친 공은 DELAY 만큼 늦게 발사해(스윙·소리는 즉시) 상대가 공을 볼 시간을 번다. opt.launchAt = 상대가 친 공의 발사 시각(게임 시계)
+  function afterShot(res, now0, shooter, opt = {}) {
+    const mine = remote && shooter === SIDES.ME;
+    const now = opt.launchAt ?? (mine ? now0 + remote.delay() * remote.clock.scale : now0); // 이 공이 실제로 날기 시작하는 시각
+    if (mine) sendMine(res, opt, now);
     if (shooter !== SIDES.ME) c.lastMatchup = 'even';
     // res: serve/respond 결과. 득점이면 pause, 아니면 받는 쪽 대기 설정
     if (res.flight) launch(res.flight, now);
@@ -85,6 +97,8 @@ export function createMatchController({
       c.bands = simple ? Object.fromEntries(SHOT_ORDER.map((k) => [k, bandFor(res.flight, k)])) : null; // 간단 조작: 구질별 리듬 밴드 3개(텔레그래핑 표시용)
       c.timingEnd = simple ? maxEnd(res.flight) : c.timing.end;
       c.pendingDown = null;
+    } else if (remote) {
+      c.awaitRemote = true; c.aiAt = null; c.aiPlan = null; // 상대(사람)의 응답(SHOT/MISS 메시지)을 기다린다
     } else {
       // AI 리턴을 지금 계산해 두고, 실제 탭 시각(미스면 창이 끝나는 시각)에 반영 → 공이 튀지 않는다
       const foeX = 100 - (res.flight.land?.x ?? 50);
@@ -132,7 +146,8 @@ export function createMatchController({
     if (c.phase === 'awaitServe') {
       const aim = simpleAim(COURSE_X[c.lane], key);
       c.lastMyShot = key; c.lastMatchup = 'even'; c.lastGradeMe = null;
-      afterShot(m.serve(createShot({ from: { x: 50, side: SIDES.ME }, aim, stats, rng })), now, SIDES.ME);
+      const sshot = fair((a) => createShot({ from: { x: 50, side: SIDES.ME }, aim: a, stats, rng }), aim);
+      afterShot(m.serve(sshot), now, SIDES.ME, { shot: sshot, serve: true });
       emit({ type: 'serve', side: SIDES.ME, shotType: key });
       return true;
     }
@@ -176,7 +191,21 @@ export function createMatchController({
 
   // 필살기: "상성 유리 + PERFECT" 를 동시에 만족한 타격이 SPECIAL_AT 회 쌓이면 다음 리턴이 필살기(코트에 들어가는 가장 빠른 공, 실수 없음).
   // 쌓은 횟수는 경기 안에서 끊기지 않고 유지된다(연속 아님) — 필살기를 쓰면 0 으로. 상성은 간단 조작에만 있어 고급 조작에선 쌓이지 않는다.
-  const makeShot = (args) => (c.special && args.grade !== GRADES.MISS ? createSpecialShot({ from: args.from, aim: args.aim, stats, grade: args.grade, offset: args.offset, hitY: args.hitY }) : createShot({ ...args, human: true }));
+  // 멀티플레이 공정성(사용자 지시 200ms): 상대(사람)가 받을 공도 바운드 → 중립 밴드 중심이 MIN_REACTION_S 이상이어야 한다. AI 공(buildAiShot)과 같은 규칙을 내 공에도 적용
+  const reactionGap = (flight) => buildTiming(flight, 0).center - flight.tLand; // buildAiShot 과 같은 잣대(집중 0 · 중립 밴드 중심)
+  const fair = (make, aim) => {
+    let shot = make(aim);
+    if (!remote) return shot;
+    for (let i = 0; i < 8; i++) {
+      const f = flightOf(shot);
+      if (f.kind !== 'in' || reactionGap(f) >= MIN_REACTION_S) break;
+      aim = { ...aim, power: Math.max(0.1, aim.power - 0.06) }; shot = make(aim);
+    }
+    return shot;
+  };
+  const makeShot = (args) => (c.special && args.grade !== GRADES.MISS
+    ? createSpecialShot({ from: args.from, aim: args.aim, stats, grade: args.grade, offset: args.offset, hitY: args.hitY, accept: remote ? (_s, f) => reactionGap(f) >= MIN_REACTION_S : null })
+    : fair((aim) => createShot({ ...args, aim, human: true }), args.aim));
   function noteSpecial(shot, grade, matchup) {
     if (shot?.special) { c.special = false; c.perfectStreak = 0; emit({ type: 'special' }); return; }
     if (c.special || !shot || grade !== GRADES.PERFECT || matchup !== 'win') return;
@@ -199,7 +228,7 @@ export function createMatchController({
     if (noTap) emit({ type: 'missed', reason: 'late', noTap: true }); // 노탭: 존이 끝날 때까지 안 눌렀다
     const res = m.respond(judge, shot);
     if (shot?.special && res.flight) res.flight.special = true; // AI 응답·연출이 필살기 공임을 안다
-    afterShot(res, now, SIDES.ME);
+    afterShot(res, now, SIDES.ME, { shot, judge });
     // 내 리턴 결과(튜토리얼·통계용): 판정 + 입력한 코스/스핀/파워 + 공이 코트에 들어갔는지('in') 네트/아웃인지
     if (gesture && shot) emit({ type: 'return', grade: judge.grade, course: gesture.course, spin: gesture.spin, power: gesture.power, shotType: gesture.shotType, matchup: gesture.matchup, kind: res.flight?.kind ?? 'in' });
     return res;
@@ -216,7 +245,7 @@ export function createMatchController({
       const shot = createShot({
         from: { x: 50, side: SIDES.ME }, aim, stats, rng,
       });
-      afterShot(m.serve(shot), now, SIDES.ME);
+      afterShot(m.serve(shot), now, SIDES.ME, { shot, serve: true });
       emit({ type: 'serve', side: SIDES.ME });
       return;
     }
@@ -238,7 +267,39 @@ export function createMatchController({
     else c.pendingDown = null;
   };
 
+  /** 멀티플레이: 상대 메시지(SHOT/MISS)를 받는다. 상태가 맞을 때(update)까지 큐에 둔다 — 득점 연출이 서로 달라도 순서가 뒤집히지 않는다 */
+  c.remoteMessage = (msg) => { c.inbox.push(msg); };
+  function applyInbox(now) {
+    while (c.inbox.length) {
+      const msg = c.inbox[0];
+      const serving = msg.t === 'shot' && msg.serve;
+      if (serving ? !(m.state === STATES.SERVE && m.server === SIDES.OPP) : !(m.state === STATES.RALLY && c.awaitRemote)) return;
+      c.inbox.shift();
+      if (msg.t === 'miss') {
+        c.awaitRemote = false;
+        emit({ type: 'aiReturn', kind: 'miss', power: 0 });
+        afterShot(m.respond({ grade: GRADES.MISS, offset: Infinity }), now, SIDES.OPP);
+      } else if (msg.t === 'shot') {
+        const shot = mirrorShot(msg.shot, SIDES.OPP);
+        const at = c.remoteAt(msg.launchAt);
+        if (serving) {
+          const res = m.serve(shot); if (res.flight) res.flight.special = false;
+          afterShot(res, now, SIDES.OPP, { launchAt: at });
+          emit({ type: 'serve', side: SIDES.OPP });
+        } else {
+          c.awaitRemote = false;
+          const res = m.respond({ grade: msg.judgement?.grade ?? GRADES.GOOD, offset: msg.judgement?.offset ?? 0 }, shot);
+          if (res.flight) res.flight.special = !!msg.special;
+          emit({ type: 'aiReturn', kind: shot.power >= 0.6 ? 'counter' : shot.power <= 0.35 ? 'weak' : 'normal', power: shot.power });
+          afterShot(res, now, SIDES.OPP, { launchAt: at });
+        }
+      }
+    }
+  }
+  c.remoteAt = (hostT) => (remote ? remote.clock.hostToGame(hostT) : 0); // 상대가 정한 발사 시각(호스트 실시간) → 내 게임 시계
+
   c.update = (now) => {
+    if (remote) applyInbox(now);
     // 고급 조작: 탭 후 COMMIT_WINDOW 안에 샷을 확정한다(손을 안 떼도) → 뗄 때까지 공이 멈춰 보이지 않는다. up 이 유실돼도 막히지 않는다
     const pd = c.pendingDown;
     if (pd && (c.phase === 'flight' || c.phase === 'awaitServe') && now - pd.now >= COMMIT_WINDOW) {
@@ -246,7 +307,7 @@ export function createMatchController({
     }
     switch (c.phase) {
       case 'oppServeWait':
-        if (now >= c.resumeAt) doOppServe(now);
+        if (!remote && now >= c.resumeAt) doOppServe(now);
         break;
       case 'flight':
         if (c.timing && !c.pendingDown && now - c.t0 > (c.timingEnd ?? c.timing.end)) {
@@ -275,7 +336,7 @@ export function createMatchController({
     if (!c.flight) return { visible: false };
     // 손가락이 닿아 있는 동안(드래그 중)엔 공이 타격 지점에 붙어 있다가, 뗄 때 그 지점에서 발사된다
     const held = c.phase === 'flight' && c.timing && c.pendingDown?.judge && c.pendingDown.judge.grade !== GRADES.MISS;
-    const t = (held ? c.pendingDown.now : now) - c.t0;
+    const t = Math.max(0, (held ? c.pendingDown.now : now) - c.t0); // (멀티플레이: 발사 전엔 타격 지점에 머문다)
     const f = c.flight;
     if (f.kind === 'net') {
       const p = f.pos(Math.min(t, f.tNet ?? f.tLand));

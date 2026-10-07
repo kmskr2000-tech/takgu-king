@@ -1,7 +1,7 @@
-import { GRADES, COURSE_X, AI_PERFECT_RATIO, AI_BAD_FRACTION } from './constants.js?v=1791353507';
-import { buildTiming, judgeTap } from './timing.js?v=1791353507';
-import { MIN_REACTION_S } from './constants.js?v=1791353507';
-import { createShot, flightOf, powerCap } from './shot.js?v=1791353507';
+import { GRADES, COURSE_X, AI_PERFECT_RATIO, AI_BAD_FRACTION } from './constants.js?v=1791354624';
+import { buildTiming, judgeTap } from './timing.js?v=1791354624';
+import { MIN_REACTION_S } from './constants.js?v=1791354624';
+import { createShot, flightOf, powerCap } from './shot.js?v=1791354624';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -25,7 +25,7 @@ export const LEAGUE_BASE = Object.freeze({
 // 가산은 등급 배율을 적용한 뒤에 더한다(등급별 반영 비율 TIER_UPLIFT_SHARE, 기본 전부 1).
 export const LEAGUE_UPLIFT = { amateur: 0, third: 0.10, second: 0.09, first: 0.02, world: -0.03 };
 export const TIER_UPLIFT_SHARE = { low: 1, mid: 1, high: 1, rival: 1 };
-// 상위 리그는 기본값이 이미 높아 등급 배율(×0.8~×1.4)이 clamp 로 뭉개져 상위·라이벌이 벽이 된다 → 리그별로 배율의 편차를 줄인다 (1 = 기존). 확정값 기준 시즌 후반 승률(사람 전략·skill 0.17): 3부 97/87/65/53 · 2부 93/83/63/37 · 1부 93/77/53/25 · 세계 75/53/45/27 (하위/중위/상위/라이벌 %). 2026-10-07 커트 득점 루트(cutNoise 4.3)·1부 캡·PERFECT 구간 축소(0.3→0.15, 플레이어만) 후 재보정(scripts/tune-balance.mjs --n 200 실측, 하위/중위/상위/라이벌): 3부 94/87/71/49 · 2부 94/89/70/32 · 1부 96/85/62/31 · 세계 76/56/36/47. 세계 라이벌만 목표보다 쉽고(+20) 상위는 어렵다(-9). AI 끼리 리그 사다리(상위 리그가 하위 리그를 이김)는 test/strategy.test.js 가 지킨다
+// 상위 리그는 기본값이 이미 높아 등급 배율(×0.8~×1.4)이 clamp 로 뭉개져 상위·라이벌이 벽이 된다 → 리그별로 배율의 편차를 줄인다 (1 = 기존). 확정값 기준 시즌 후반 승률(사람 전략·skill 0.17): 3부 97/87/65/53 · 2부 93/83/63/37 · 1부 93/77/53/25 · 세계 75/53/45/27 (하위/중위/상위/라이벌 %). 2026-10-07 커트 득점 루트(cutNoise 4.3)·1부 캡·PERFECT 구간 축소(0.3→0.15, 플레이어만) 후 재보정(scripts/tune-balance.mjs --n 250 --skill 0.17 실측(최종 가산 기준), 하위/중위/상위/라이벌): 3부 96/90/80/56 · 2부 96/92/74/48 · 1부 98/86/58/29 · 세계 78/66/54/57 — 목표보다 전반적으로 쉽다(3부 상위 +15, 세계 중위 +13·라이벌 +30). 주의: 이 봇은 탭 오차 σ0.17s 의 서투른 플레이어이고, σ0.06s(보통 사람) 봇은 모든 리그·등급에서 100% 이긴다 — 정밀한 플레이어에겐 아직 쉽다. AI 끼리 리그 사다리(상위 리그가 하위 리그를 이김)는 test/strategy.test.js 가 지킨다
 export const TIER_SPREAD = { amateur: 1, third: 0.65, second: 0.5, first: 0.5, world: 0.22 };
 
 /** 선수 난이도 배분 (설계서 5.3): 하위 -20%, 중위 0, 상위 +20%, 라이벌 +40% */

@@ -242,3 +242,12 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .story-intro .intro-caption.s { color: #ffffff; }
 .story-intro .intro-caption.n { color: #dfe6ec; }
 @media (max-height: 640px) { .intro-who { bottom: calc(48px + 3.4em); } }
+
+/* 멀티플레이 로비 */
+.hidden { display: none !important; }
+.screen.multi { gap: 12px; }
+.multi .net-menu, .multi .net-wait, .multi .net-busy { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.multi .join-row { display: flex; gap: 8px; } .multi .join-row .btn { flex: 0 0 auto; }
+.code-input { flex: 1 1 auto; min-width: 0; font: 700 1.3rem ui-monospace, monospace; letter-spacing: .25em; text-align: center; text-transform: uppercase; padding: 10px; border-radius: 10px; border: 2px solid #2c4057; background: #101b28; color: #fff; }
+.room-code { font: 800 2.6rem ui-monospace, monospace; letter-spacing: .3em; text-align: center; color: #ffd24a; text-shadow: 0 2px 0 #7a4b00; padding: 14px 0; background: #101b28; border-radius: 12px; user-select: all; }
+.net-status { text-align: center; min-height: 1.4em; color: #b8c7d9; } .net-status.err { color: #ff7a6a; }

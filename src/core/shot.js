@@ -1,7 +1,7 @@
 import {
   NET_Y, HIT_Z, SPEED_MIN, SPEED_MAX, SPIN_SPEED_TOP, SPIN_SPEED_BACK, GRADES,
-} from './constants.js?v=1791353507';
-import { gravityFor, simulateFlight } from './physics.js?v=1791353507';
+} from './constants.js?v=1791354624';
+import { gravityFor, simulateFlight } from './physics.js?v=1791354624';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -84,12 +84,13 @@ export const flightOf = (shot) => simulateFlight(shot.ball, shot.dir);
 // 높은 파워는 궤적이 평평해져 네트에 걸리기 쉬워서(스탯 주석 참고) 파워·스핀·스탯 후보를 훑어 안 걸리는 가장 빠른 공을 쓴다. 하나도 없으면 원래 샷.
 const SPECIAL_CANDIDATES = [];
 for (const sp of [12, 9, 7, 5]) for (const power of [1, 0.9]) for (const spin of [1, 0.6, 0.3, 0]) SPECIAL_CANDIDATES.push({ sp, power, spin });
-export function createSpecialShot({ from, aim, stats, grade = null, offset = 0, hitY = null }) {
+export function createSpecialShot({ from, aim, stats, grade = null, offset = 0, hitY = null, accept = null }) {
+  // accept(shot, flight): 추가 조건 (멀티플레이: 받는 쪽 반응 시간 하한). 통과하는 후보가 없으면 필살기가 되지 않는다(원래 샷)
   let best = null; let bestV = -1;
   for (const c of SPECIAL_CANDIDATES) {
     const shot = createShot({ from, aim: { ...aim, power: c.power, spin: c.spin }, stats: { ...stats, power: c.sp, spin: c.sp }, rng: null, grade, offset, hitY });
     const f = flightOf(shot);
-    if (f.kind !== 'in') continue;
+    if (f.kind !== 'in' || (accept && !accept(shot, f))) continue;
     const v = Math.abs(f.vyPost);
     if (v > bestV) { best = shot; bestV = v; }
   }
