@@ -1,4 +1,5 @@
-import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick } from '../core/index.js?v=1791332571';
+import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick } from '../core/index.js?v=1791334492';
+import { RIVAL_STORY, ensureStory } from './story.js?v=1791334492';
 
 export const SAVE_VERSION = 2;
 export const WIN_PT = 3;
@@ -9,14 +10,12 @@ export const LEAGUE_NAMES = Object.freeze({
   amateur: '아마추어 리그', third: '3부 리그', second: '2부 리그', first: '1부 리그', world: '세계대회',
 });
 
-// 리그별 라이벌 (설계서 5.3 — 라이벌은 고유 패턴)
-export const RIVALS = Object.freeze({
-  amateur: { name: '동호회장', style: 'cut', line: '커트로 숨통을 조여주마!' },
-  third: { name: '스핀 소년', style: 'balanced', line: '내 회전, 읽을 수 있겠어?' },
-  second: { name: '철벽 수비수', style: 'cut', line: '내 벽은 못 넘어.' },
-  first: { name: '챔피언 한', style: 'balanced', line: '정상은 하나뿐이다.' },
-  world: { name: '탁구 황제', style: 'balanced', line: '지면 다시. 그게 나의 길이다.' },
-});
+// 리그별 라이벌 (설계서 5.3 — 라이벌은 고유 패턴). 이름·별명·대사는 스토리(story.js, files/스토리라인.md)가 정본, style 은 AI 구질 성향.
+// line = 경기 전 대사(홈 화면의 '다음 경기'), firstLine = 첫 등장 대사(시즌 시작 화면).
+export const RIVALS = Object.freeze(Object.fromEntries(Object.entries(RIVAL_STORY).map(([lg, r]) => [lg,
+  { name: r.name, nickname: r.nickname, style: r.style, line: r.lines.pre, firstLine: r.lines.first, blurb: r.blurb }])));
+// 예전 저장의 라이벌 이름(스토리 반영 전) → 새 이름. 불러올 때 라이벌 팀의 이름·성향을 새 정의로 바꾼다
+const LEGACY_RIVAL_NAMES = ['동호회장', '스핀 소년', '철벽 수비수', '챔피언 한', '탁구 황제'];
 
 // 리그는 개인전: 상대 선수는 리그마다 개성 있는 별명을 가진다 (라이벌은 RIVALS). 한 리그에 비라이벌 8명
 export const PLAYER_NAMES = Object.freeze({
@@ -132,6 +131,7 @@ export function newGame(league = 'amateur') {
     unlocked: { grips: ['shake'], rackets: ['basic'] },
     cleared: false, // 세계대회 우승(엔딩 달성)
     endingPending: false,
+    story: { seen: [], met: [], rivalLosses: {} }, // 본 스토리 비트·만난 라이벌·라이벌전 패배 수 (story.js)
   };
   return startSeason(state, league);
 }
@@ -143,13 +143,14 @@ export const leagueIndex = (state) => LEAGUES.indexOf(state.league);
 /** 저장 데이터 마이그레이션: v1 → v2 (일정/로그/국면 보강). 알 수 없으면 null */
 export function migrate(raw) {
   if (!raw || typeof raw !== 'object' || !raw.stats || !LEAGUES.includes(raw.league)) return null;
-  if (raw.version === SAVE_VERSION && raw.teams && raw.schedule) { renameLegacyTeams(raw); return raw; }
+  if (raw.version === SAVE_VERSION && raw.teams && raw.schedule) { renameLegacyTeams(raw); ensureStory(raw); return raw; }
   const s = newGame(raw.league);
   s.stats = { power: raw.stats.power ?? 3, spin: raw.stats.spin ?? 3, focus: raw.stats.focus ?? 3 };
   s.statPoints = raw.statPoints ?? 0;
   if (raw.unlocked) s.unlocked = raw.unlocked;
   if (raw.grip && s.unlocked.grips.includes(raw.grip)) s.grip = raw.grip;
   if (raw.racket && s.unlocked.rackets.includes(raw.racket)) s.racket = raw.racket;
+  ensureStory(s);
   return s; // 진행 중이던 주차는 새 시즌으로 초기화 (스탯/포인트/장비 유지)
 }
 
@@ -352,7 +353,7 @@ export function seasonGoals(state) {
   ];
   return {
     title: LEAGUE_NAMES[state.league], subtitle: `${state.season}시즌 시작`, goals,
-    rival: rival ? { name: rival.name, line: rival.line } : null,
+    rival: rival ? { name: rival.name, nickname: rival.nickname, line: rival.blurb } : null, // 소개 한 줄 (대사는 라이벌전 직전 카드에서 처음 나온다)
   };
 }
 
@@ -361,4 +362,6 @@ function renameLegacyTeams(state) {
   const names = PLAYER_NAMES[state.league];
   if (!names || !Array.isArray(state.teams)) return;
   for (const t of state.teams) if (!t.me && !t.rival && LEGACY_TEAM_NAMES.includes(t.name) && names[t.id - 1]) t.name = names[t.id - 1];
+  const rv = RIVALS[state.league]; // 라이벌: 스토리 이름·성향으로 (옛 이름일 때만 — 이미 새 이름이면 그대로)
+  for (const t of state.teams) if (t.rival && rv && LEGACY_RIVAL_NAMES.includes(t.name)) { t.name = rv.name; t.style = rv.style; }
 }

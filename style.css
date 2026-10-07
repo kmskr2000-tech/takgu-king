@@ -208,3 +208,23 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .guide-card .g-title { font-size: 1.15rem; }
 .guide-card .g-text { margin: 0; line-height: 1.5; white-space: pre-line; font-size: .95rem; }
 .guide-card .g-skip { opacity: .8; font-size: .78rem; min-height: 32px; padding: 4px; background: transparent; border-color: transparent; text-decoration: underline; }
+
+/* 스토리: 라이벌 카드·스토리 컷·말풍선 */
+.rival-card, .story-beat-screen { text-align: center; padding-top: max(28px, 6dvh); }
+.rival-card .rc-tag, .story-beat-screen .sb-tag { display: block; color: #ffd24a; font-weight: 800; letter-spacing: 2px; }
+.rival-card h2 { font-size: 2rem; margin: 4px 0; text-shadow: 2px 2px 0 #000; }
+.rival-card .rc-nick { color: #ff9d90; font-weight: 800; margin: 0; }
+.rival-card .rc-role, .rival-card .rc-blurb { margin: 2px 0; color: #c8d3e0; font-size: .85rem; }
+.story-beat-screen h2 { font-size: 1.7rem; margin: 6px 0 12px; text-shadow: 2px 2px 0 #000; }
+.story-beat-screen .sb-text { margin: 6px 0; line-height: 1.6; }
+.bubbles { display: grid; gap: 8px; margin: 14px 0; text-align: left; }
+.bubble { max-width: 92%; background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.22); border-radius: 12px 12px 12px 2px; padding: 8px 12px; animation: siFade .4s ease-out both; animation-delay: calc(var(--i) * .5s); }
+.bubble b { display: block; color: #ffd24a; font-size: .8rem; }
+.bubble p { margin: 2px 0 0; line-height: 1.45; }
+.bubble.me { justify-self: end; background: rgba(255,210,74,.16); border-color: rgba(255,210,74,.5); border-radius: 12px 12px 2px 12px; }
+.screen.result .bubbles, .season-result .story-beat, .ending .story-beat { margin-top: 10px; }
+.story-beat p { margin: 4px 0; line-height: 1.5; }
+.season-intro .si-story { text-align: left; margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; background: rgba(255,210,74,.1); border: 2px solid rgba(255,210,74,.35); opacity: 0; animation: siFade .5s ease-out .8s forwards; }
+.season-intro .si-story small { display: block; color: #ffd24a; font-weight: 800; }
+.season-intro .si-story p { margin: 4px 0 0; font-weight: 600; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) { .bubble { animation: none; } }

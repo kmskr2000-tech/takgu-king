@@ -1,7 +1,7 @@
-import { GRADES, COURSE_X } from './constants.js?v=1791332571';
-import { buildTiming, judgeTap } from './timing.js?v=1791332571';
-import { MIN_REACTION_S } from './constants.js?v=1791332571';
-import { createShot, flightOf, powerCap } from './shot.js?v=1791332571';
+import { GRADES, COURSE_X } from './constants.js?v=1791334492';
+import { buildTiming, judgeTap } from './timing.js?v=1791334492';
+import { MIN_REACTION_S } from './constants.js?v=1791334492';
+import { createShot, flightOf, powerCap } from './shot.js?v=1791334492';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -136,7 +136,7 @@ export const AI_ANTICIPATE_FROM = { amateur: 2, third: 2, second: 3, first: 4, w
 // 리듬 시그니처 (설계안 §6.3, 라이벌 전용): tempoVar = 공 속도(파워) 변동폭(기본 0.1), tempoBase = 기본 템포 가산.
 // 모든 변칙은 MIN_REACTION_S(공정성 하한) 아래로 내려가지 않는다 — buildAiShot 이 강제.
 export const RIVAL_RHYTHM = {
-  amateur: { tempoVar: 0.03, tempoBase: 0 }, // 동호회장: 규칙적·안정
+  amateur: { tempoVar: 0.03, tempoBase: 0 }, // 오순자(철벽 오여사): 규칙적·안정
   third: { tempoVar: 0.06, tempoBase: 0.1 }, // 고등학생 천재: 고템포로 몰아침
   second: { tempoVar: 0.18, tempoBase: 0 }, // 전직 실업팀: 노련한 템포 변화
   first: { tempoVar: 0.16, tempoBase: 0.04 }, // 국가대표 후보: 복합

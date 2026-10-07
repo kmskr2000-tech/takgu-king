@@ -1,33 +1,34 @@
-import { h } from './dom.js?v=1791332571';
+import { h } from './dom.js?v=1791334492';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
-  equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen,
-} from './screens.js?v=1791332571';
+  equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen, rivalCardScreen, storyBeatScreen,
+} from './screens.js?v=1791334492';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791332571';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791332571';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791332571';
-import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791332571';
-import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791332571';
-import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791332571';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791332571';
-import { oppProfile } from '../game/oppProfile.js?v=1791332571';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791332571';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791332571';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791332571';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791332571';
-import { createAudio } from './audio.js?v=1791332571';
-import { createBgm } from './bgm.js?v=1791332571';
-import { createHaptics, react } from './feedback.js?v=1791332571';
-import { createRenderer } from './render.js?v=1791332571';
-import { createMatchController } from '../game/matchController.js?v=1791332571';
+} from './intro.js?v=1791334492';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791334492';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791334492';
+import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791334492';
+import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791334492';
+import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791334492';
+import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791334492';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791334492';
+import { oppProfile } from '../game/oppProfile.js?v=1791334492';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791334492';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791334492';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791334492';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791334492';
+import { createAudio } from './audio.js?v=1791334492';
+import { createBgm } from './bgm.js?v=1791334492';
+import { createHaptics, react } from './feedback.js?v=1791334492';
+import { createRenderer } from './render.js?v=1791334492';
+import { createMatchController } from '../game/matchController.js?v=1791334492';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult, seasonGoals,
-} from '../game/season.js?v=1791332571';
-import { createStore } from '../game/store.js?v=1791332571';
-import { createRng } from '../core/index.js?v=1791332571';
+} from '../game/season.js?v=1791334492';
+import { createStore } from '../game/store.js?v=1791334492';
+import { createRng } from '../core/index.js?v=1791334492';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -53,6 +54,7 @@ export function createApp(root, deps = {}) {
   });
   const tutorialStore = deps.tutorialStore ?? createTutorialStore(store.storage ?? globalThis.localStorage);
   const tipsStore = deps.tipsStore ?? createTipsStore(store.storage ?? globalThis.localStorage);
+  const storyOn = () => deps.story !== false; // 스토리 컷(라이벌 대사·시즌 비트). 테스트는 끌 수 있다
   const guideStore = deps.guideStore ?? createGuideStore(store.storage ?? globalThis.localStorage);
   const reducedMotion = deps.reducedMotion ?? (() => !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
   let state = migrate(store.load());
@@ -140,10 +142,14 @@ export function createApp(root, deps = {}) {
     /** 새 시즌 시작 연출(목표 안내). 새로 시작·다음 시즌에서만 보이고, 이어하기는 바로 홈 */
     showSeasonIntro() {
       loop = null;
-      mount(seasonIntroScreen({ intro: seasonGoals(state), onStart: () => api.showHome() }).el);
+      const story = storyOn() ? introBeat(state) : null; // 이 리그에서 처음일 때만 도입 컷
+      mount(seasonIntroScreen({ intro: seasonGoals(state), onStart: () => api.showHome(), story }).el);
+      if (story) { markBeat(state, 'intro'); persist(); }
     },
     showHome() {
       loop = null; bgm.play('title');
+      const beat = storyOn() && state ? pendingBeat(state) : null; // 주차가 되면 스토리 컷(연패·중반·관계·결승)을 한 장씩 보여 주고 홈으로
+      if (beat) { mount(storyBeatScreen({ beat, onNext: () => { markBeat(state, beat.id); persist(); api.showHome(); } })); return; }
       mount(leagueHomeScreen({
         state,
         onPlay: () => api.showEquip(),
@@ -170,9 +176,17 @@ export function createApp(root, deps = {}) {
           equip(state, kind === 'grip' ? id : state.grip, kind === 'racket' ? id : state.racket);
           persist(); api.showEquip();
         },
-        onStart: () => api.startMatch(),
+        onStart: () => api.beforeMatch(),
         onBack: () => api.showHome(),
       }));
+    },
+    /** 경기 시작 직전: 라이벌전이면 라이벌 소개·대사 컷(처음엔 '첫 등장' 대사까지)을 보여 주고 경기 화면으로 */
+    beforeMatch() {
+      const nm = storyOn() && state ? nextMatch(state) : null;
+      const pre = nm ? rivalPreMatch(state, nm.opp) : null;
+      if (!pre) { api.startMatch(); return; }
+      persist();
+      mount(rivalCardScreen({ rival: pre.rival, lines: pre.lines, first: pre.first, onStart: () => api.startMatch() }));
     },
     showResult(result) {
       loop = null; bgm.play('title');
@@ -209,13 +223,16 @@ export function createApp(root, deps = {}) {
     showSeasonResult() {
       loop = null;
       const summary = state.summary;
+      const story = storyOn() && summary.champion && !summary.ending ? clearBeat(state, summary.league) : null; // 우승 직후 스토리 컷 (세계대회 우승은 엔딩 화면이 맡는다)
+      if (story) { markBeat(state, 'clear', summary.league); persist(); }
       mount(seasonResultScreen({
-        summary,
+        summary, story,
         // 광고 훅: 시즌 종료 후 — 다음 시즌으로 넘어가는 끊김
         onNext: () => ads.runBreak('seasonEnd', () => {
           if (summary.ending && state.endingPending) {
             state.endingPending = false; persist();
-            mount(endingScreen({ onNext: () => { startNextSeason(state); persist(); api.showSeasonIntro(); } }));
+            if (storyOn()) markBeat(state, 'clear', summary.league);
+            mount(endingScreen({ story: storyOn() ? beatOf('world', 'clear') : null, onNext: () => { startNextSeason(state); persist(); api.showSeasonIntro(); } }));
           } else { startNextSeason(state); persist(); api.showSeasonIntro(); }
         }),
       }));
@@ -303,13 +320,15 @@ export function createApp(root, deps = {}) {
           }
           if (e.type === 'end') {
             const won = e.winner === 'me';
+            const br = state.bracket?.final; const isFinal = stage === 'tournament' && !!br && br.winner === null && (br.a === 0 || br.b === 0); // 리그를 가르는 결승인가
+            const story = storyOn() && opp.rival ? rivalPostMatch(state, opp, won, { final: isFinal }) : null; // 라이벌전: 승패 대사 (진 횟수도 센다 — 아래 persist 로 저장)
             // 결과 반영은 경기당 정확히 1회 (end 이벤트는 1회만 발생)
             const rng = createRng((Date.now() ^ (state.week * 7919)) >>> 0);
             const { gained } = stage === 'tournament'
               ? applyTournamentResult(state, { won, score: e.score }, rng)
               : applyRegularResult(state, { won, score: e.score }, rng);
             persist(); ads.noteMatchPlayed();
-            later(() => { if (loop === token) api.showResult({ won, score: e.score, gained }); }, 800);
+            later(() => { if (loop === token) api.showResult({ won, score: e.score, gained, story }); }, 800);
           }
         },
       });
