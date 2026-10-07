@@ -1,6 +1,6 @@
 // 스토리: 주인공 페르소나, 리그별 라이벌 대사(첫 등장/경기 전/패배 시/승리 시), 리그별 스토리 비트(도입/연패/중반/관계/결승/우승).
 // 출처: ../files/스토리라인.md. DOM 무관 순수 데이터·로직 — 시즌 저장(state.story)에 본 비트·만난 라이벌·라이벌전 패배 수만 기록한다.
-import { LEAGUES } from '../core/index.js?v=1791358894';
+import { LEAGUES } from '../core/index.js?v=1791359206';
 
 export const PROTAGONIST = Object.freeze({
   name: '도민구', nickname: '벽치기', age: 29, job: '물류센터 야간 상하차 알바',
