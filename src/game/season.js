@@ -1,6 +1,6 @@
-import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick } from '../core/index.js?v=1791424546';
-import { RIVAL_STORY, ensureStory } from './story.js?v=1791424546';
-import { statCurve } from './statcurve.js?v=1791424546';
+import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick } from '../core/index.js?v=1791434034';
+import { RIVAL_STORY, ensureStory } from './story.js?v=1791434034';
+import { statCurve } from './statcurve.js?v=1791434034';
 
 export const SAVE_VERSION = 2;
 export const WIN_PT = 3;
@@ -175,7 +175,7 @@ function record(state, a, b, winner, sa, sb, stage = 'regular') {
 
 function quickScore(rng) { return Math.floor(rng.next() * 10); } // 패자 점수 0..9
 
-function quickPlay(state, a, b, rng) {
+export function quickPlay(state, a, b, rng) {
   const side = simulateQuick(aiParamsFor(state, state.teams[a]), aiParamsFor(state, state.teams[b]), rng);
   const winner = side === 'me' ? a : b;
   const loserScore = quickScore(rng);
@@ -204,10 +204,10 @@ export function ranking(state) {
 export const standings = ranking;
 
 /**
- * 내 정규 경기 결과 반영 + 같은 라운드의 AI 경기 시뮬레이션 + 주차 진행.
+ * 내 정규 경기 결과 반영 + 같은 라운드의 AI 경기 시뮬레이션(preset 이 있으면 그 결과) + 주차 진행.
  * 반환: { gained, phase }
  */
-export function applyRegularResult(state, { won, score }, rng) {
+export function applyRegularResult(state, { won, score }, rng, preset = {}) {
   if (state.phase !== 'regular') throw new Error('정규 리그 중이 아님');
   const opp = weekOpponent(state);
   const round = state.schedule[state.week - 1];
@@ -218,7 +218,7 @@ export function applyRegularResult(state, { won, score }, rng) {
   state.log[state.log.length - 1].sb = score.opp;
   for (const [a, b] of round) {
     if (a === 0 || b === 0) continue;
-    const r = quickPlay(state, a, b, rng);
+    const r = preset[`${a}-${b}`] ?? quickPlay(state, a, b, rng); // preset: 경기 중 속보(liveRound)로 이미 보여준 다른 경기 결과 — 순위표와 어긋나지 않게 그대로 반영
     record(state, a, b, r.winner, r.sa, r.sb);
   }
   const gained = won ? WIN_PT : LOSE_PT;

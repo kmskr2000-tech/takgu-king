@@ -1,6 +1,6 @@
 // 경기 이벤트 → 효과음 + 진동. 설정(사운드/진동)은 호출 시점마다 확인한다.
 export const VIBRATION = Object.freeze({
-  perfect: [30, 20, 15, 20, 60], good: [8], bad: [6], miss: [40], counter: [10, 20, 10], blocked: [30], special: [60, 30, 40, 30, 120], specialReady: [15, 25, 15, 25, 40], pointMe: [20, 40, 20], pointOpp: [70], win: [30, 50, 30, 50, 90], lose: [120],
+  tap: [10], perfect: [30, 20, 15, 20, 60], good: [8], bad: [6], miss: [40], counter: [10, 20, 10], blocked: [30], special: [60, 30, 40, 30, 120], specialReady: [15, 25, 15, 25, 40], pointMe: [20, 40, 20], pointOpp: [70], win: [30, 50, 30, 50, 90], lose: [120],
 });
 
 const GAP_MS = 40;

@@ -299,3 +299,24 @@ html:has(.screen.match), body:has(.screen.match) { overflow: hidden; overscroll-
 .nick-input { font: 700 1rem system-ui, sans-serif; padding: 10px; border-radius: 10px; border: 2px solid #2c4057; background: #101b28; color: #fff; }
 .multi .room-host { opacity: .7; font-weight: 600; }
 .room-name { font: 800 1.6rem system-ui, sans-serif; text-align: center; color: #ffd24a; padding: 14px 0; background: #101b28; border-radius: 12px; word-break: break-all; }
+
+
+/* ===== 메뉴 버튼 누름 피드백 (2026-10-08): 누르면 scale .94 + 어두워짐. pressfx.js 가 .pressed 를 붙인다(iOS 는 :active 가 터치에서 불안정해 클래스로도) ===== */
+button, [role="button"] { -webkit-tap-highlight-color: transparent; }
+button:not(.shot-btn), [role="button"] { transition: transform .08s ease-out, filter .08s ease-out; }
+button:not(.shot-btn):not(:disabled):active, button:not(.shot-btn).pressed:not(:disabled), [role="button"].pressed { transform: scale(.94); filter: brightness(.76); }
+@media (prefers-reduced-motion: reduce) { button:not(.shot-btn):not(:disabled):active, button:not(.shot-btn).pressed:not(:disabled), [role="button"].pressed { transform: none; } }
+
+/* ===== 리그전 속보 한 줄 (경기 화면 코트 아래) ===== */
+.screen.match:has(.ticker) { --below: 158px; /* 속보 줄(24) + 간격(8) + 테두리가 추가로 붙는 동안 */ }
+.ticker { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; border-radius: 6px; background: #0a1220; border: 1px solid #2c4057; font-size: .78rem; line-height: 1; white-space: nowrap; overflow: hidden; color: #dbe6f3; }
+.ticker .tk-live { flex: none; font-size: .6rem; font-weight: 900; padding: 2px 5px; border-radius: 4px; background: #ff4a3a; color: #fff; }
+.ticker .tk-line { flex: 1; min-width: 0; display: flex; align-items: baseline; justify-content: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; }
+.ticker .tk-a, .ticker .tk-b { font-weight: 800; overflow: hidden; text-overflow: ellipsis; }
+.ticker .tk-sc { font-style: normal; font-weight: 900; font-variant-numeric: tabular-nums; color: #ffd24a; padding: 0 4px; border-radius: 4px; background: #1b2a3a; }
+.ticker .tk-a.hot, .ticker .tk-b.hot { color: #6af0a0; animation: tkhot .9s ease-out; } .ticker .tk-a.hot.h1, .ticker .tk-b.hot.h1 { animation-name: tkhot2; }
+@keyframes tkhot { 0% { transform: scale(1.25); background: rgba(255,210,74,.45); } 100% { transform: scale(1); background: transparent; } }
+@keyframes tkhot2 { 0% { transform: scale(1.25); background: rgba(255,210,74,.45); } 100% { transform: scale(1); background: transparent; } }
+.ticker .tk-tag { flex: none; font-size: .6rem; font-weight: 800; color: #ffd24a; min-width: 2.2em; text-align: right; } .ticker.done .tk-tag { color: #9fb3c8; }
+.ticker .tk-idx { flex: none; font-size: .6rem; color: #7f93a8; }
+@media (prefers-reduced-motion: reduce) { .ticker .tk-a.hot, .ticker .tk-b.hot { animation: none; background: rgba(255,210,74,.3); } }

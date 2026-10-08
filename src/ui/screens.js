@@ -1,14 +1,14 @@
-import { h } from './dom.js?v=1791424546';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791424546';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791424546';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791424546';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791424546';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791424546';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791424546';
+import { h } from './dom.js?v=1791434034';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791434034';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791434034';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791434034';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791434034';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791434034';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791434034';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791424546';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791424546';
+} from '../game/season.js?v=1791434034';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791434034';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -260,7 +260,7 @@ export function resultScreen({ result, onNext, reward = null }) {
     btn('계속', onNext, 'primary'));
 }
 
-export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, onQuit, quitLabel = '포기', onSwing = null }) {
+export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, onQuit, quitLabel = '포기', onSwing = null, ticker = false }) {
   const oppScore = h('span', { class: 'opp-score' }, '0');
   const meScore = h('span', { class: 'me-score' }, '0');
   // 점수판: '나'와 '상대'를 라벨·색으로 구분. 점수를 딴 쪽은 +1 이 튀어 오른다. 서브권은 ● 점
@@ -305,6 +305,11 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
   const gNext = h('button', { class: 'btn primary g-next', type: 'button', onclick: () => guideNext?.() }, '다음');
   const gSkip = h('button', { class: 'btn g-skip', type: 'button', onclick: () => guideSkip?.() }, '안내 건너뛰기');
   const guide = h('div', { class: 'guide', role: 'dialog', 'aria-live': 'assertive' }, h('div', { class: 'guide-card' }, gStep, gTitle, gText, gNext, gSkip));
+  // 리그전 속보 한 줄: 같은 라운드 다른 경기 스코어가 '오순자 2-1 김탁구' 식으로 흘러간다. 득점하면 그 경기로 넘어가 득점한 쪽이 반짝
+  const tkA = h('b', { class: 'tk-a' }, ''); const tkS = h('em', { class: 'tk-sc' }, ''); const tkB = h('b', { class: 'tk-b' }, '');
+  const tkTag = h('small', { class: 'tk-tag' }, ''); const tkIdx = h('small', { class: 'tk-idx' }, '');
+  const tickerEl = ticker ? h('div', { class: 'ticker', role: 'status', 'aria-label': '리그 다른 경기 속보' }, h('span', { class: 'tk-live' }, '속보'), h('span', { class: 'tk-line' }, tkA, tkS, tkB), tkTag, tkIdx) : null;
+  let tkN = 0;
   const badge = h('div', { class: 'serve-badge' }, '');
   const banner = h('div', { class: 'serve-banner', 'aria-live': 'polite' }, '');
   let flashes = 0; let pops = 0; let banners = 0; let presses = 0; let judgeN = 0;
@@ -327,7 +332,16 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
         banner, pointBanner, rps,
         // 힌트는 캔버스 아래 칸이 아니라 캔버스 위에 겹쳐 표시 (비어 있어도 자리를 차지하던 빈 줄 제거)
         tip),
-      bar, coach, guide),
+      tickerEl, bar, coach, guide),
+    /** 속보 한 줄 갱신: v = { aName, bName, sa, sb, done, flash('a'|'b'|null), index, total } */
+    setTicker(v) {
+      if (!tickerEl || !v) return;
+      tkN += 1;
+      tkA.textContent = v.aName; tkB.textContent = v.bName; tkS.textContent = `${v.sa}-${v.sb}`;
+      tkA.className = `tk-a${v.flash === 'a' ? ` hot h${tkN % 2}` : ''}`; tkB.className = `tk-b${v.flash === 'b' ? ` hot h${tkN % 2}` : ''}`;
+      tkTag.textContent = v.done ? '종료' : v.flash ? '득점!' : ''; tkIdx.textContent = `${v.index}/${v.total}`;
+      tickerEl.className = `ticker${v.done ? ' done' : ''}${v.flash && !v.done ? ' goal' : ''}`;
+    },
     /** 첫 경기 안내 한 페이지: { step: '1/3', title, text, last, onNext, onSkip }. 멈춘 동안 화면을 덮는다 */
     showGuide({ step, title, text, last = false, onNext, onSkip }) {
       gStep.textContent = step; gTitle.textContent = title; gText.textContent = text; gNext.textContent = last ? '시작!' : '다음';

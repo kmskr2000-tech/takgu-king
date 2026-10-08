@@ -15,7 +15,7 @@ export const SFX = Object.freeze({
   special: [{ f: 90, d: 0.28, type: 'sawtooth', v: 0.24, slide: -50 }, { f: 300, d: 0.3, type: 'square', v: 0.14, slide: 900 }, { f: 1320, d: 0.08, at: 0.12, type: 'square', v: 0.13 }, { f: 1760, d: 0.1, at: 0.18, type: 'square', v: 0.13 }, { f: 2640, d: 0.22, at: 0.25, type: 'triangle', v: 0.1 }],
   specialReady: [{ f: 784, d: 0.07, type: 'square', v: 0.11 }, { f: 988, d: 0.07, at: 0.07, type: 'square', v: 0.11 }, { f: 1175, d: 0.07, at: 0.14, type: 'square', v: 0.11 }, { f: 1568, d: 0.22, at: 0.21, type: 'square', v: 0.12 }],
   blocked: [{ f: 180, d: 0.1, type: 'triangle', v: 0.14 }], // 상성 불리: 둔탁하게
-  click: [{ f: 440, d: 0.03, type: 'square', v: 0.06 }],
+  click: [{ f: 440, d: 0.03, type: 'square', v: 0.06 }, { f: 660, d: 0.035, at: 0.025, type: 'square', v: 0.05 }], // 메뉴 버튼 누름: 짧은 '딱'
 });
 
 const defaultFactory = () => {

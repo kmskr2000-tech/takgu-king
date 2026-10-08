@@ -1,40 +1,42 @@
-import { h } from './dom.js?v=1791424546';
+import { h } from './dom.js?v=1791434034';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen, rivalCardScreen, storyBeatScreen, storyIntroScreen,
   multiScreen, netResultScreen,
-} from './screens.js?v=1791424546';
-import { createNetSession } from '../net/session.js?v=1791424546';
-import { createNetClock } from '../net/clock.js?v=1791424546';
-import { FirebaseRoom } from '../net/fireroom.js?v=1791424546';
+} from './screens.js?v=1791434034';
+import { createNetSession } from '../net/session.js?v=1791434034';
+import { createNetClock } from '../net/clock.js?v=1791434034';
+import { FirebaseRoom } from '../net/fireroom.js?v=1791434034';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791424546';
-import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791424546';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791424546';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791424546';
-import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791424546';
-import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791424546';
-import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791424546';
-import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791424546';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791424546';
-import { oppProfile } from '../game/oppProfile.js?v=1791424546';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791424546';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791424546';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791424546';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791424546';
-import { createAudio } from './audio.js?v=1791424546';
-import { createBgm } from './bgm.js?v=1791424546';
-import { createHaptics, react } from './feedback.js?v=1791424546';
-import { createRenderer } from './render.js?v=1791424546';
-import { createMatchController } from '../game/matchController.js?v=1791424546';
+} from './intro.js?v=1791434034';
+import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791434034';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791434034';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791434034';
+import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791434034';
+import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791434034';
+import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791434034';
+import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791434034';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791434034';
+import { oppProfile } from '../game/oppProfile.js?v=1791434034';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791434034';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791434034';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791434034';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791434034';
+import { createAudio } from './audio.js?v=1791434034';
+import { createBgm } from './bgm.js?v=1791434034';
+import { createHaptics, react } from './feedback.js?v=1791434034';
+import { installPressFeedback } from './pressfx.js?v=1791434034';
+import { planLiveRound, createLiveTicker } from '../game/liveRound.js?v=1791434034';
+import { createRenderer } from './render.js?v=1791434034';
+import { createMatchController } from '../game/matchController.js?v=1791434034';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult, seasonGoals,
-} from '../game/season.js?v=1791424546';
-import { createStore } from '../game/store.js?v=1791424546';
-import { createRng } from '../core/index.js?v=1791424546';
-import { applyIosTopGap } from './iosTopGap.js?v=1791424546';
+} from '../game/season.js?v=1791434034';
+import { createStore } from '../game/store.js?v=1791434034';
+import { createRng } from '../core/index.js?v=1791434034';
+import { applyIosTopGap } from './iosTopGap.js?v=1791434034';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -60,6 +62,7 @@ export function createApp(root, deps = {}) {
   audio.onUnlock?.(() => bgm.sync());
   globalThis.document?.addEventListener?.('visibilitychange', () => bgm.setSuspended(!!globalThis.document.hidden)); // 백그라운드 탭에서는 멈춤
   const haptics = deps.haptics ?? createHaptics({ enabled: () => settings.get().vibration });
+  installPressFeedback(root, { audio, haptics, nav: deps.nav ?? globalThis.navigator }); // 모든 메뉴 버튼: 누르면 작아지고 어두워짐 + 짧은 진동(iOS 제외) + 클릭음
   // 광고 훅: 기본은 '광고 없음'(provider 없음) → 동작 변화 없음. 나중에 provider 만 꽂으면 아래 자연스러운 끊김(AD_SLOTS)에서 동작
   const ads = deps.ads ?? createAdManager({
     provider: providerFromWindow(globalThis), nowFn, storage: store.storage,
@@ -170,7 +173,7 @@ export function createApp(root, deps = {}) {
       mount(settingsScreen({
         defs: SETTING_DEFS,
         values: settings.get(),
-        onToggle: (k) => { settings.cycle(k); audio.unlock(); bgm.sync(); audio.play('click'); api.showSettings(); },
+        onToggle: (k) => { settings.cycle(k); audio.unlock(); bgm.sync(); api.showSettings(); },
         onReset: () => {
           if (!confirmFn('저장된 시즌 데이터가 모두 삭제됩니다. 설정은 유지됩니다. 삭제할까요?')) return;
           store.clear(); resetGuides(); state = null; api.showTitle();
@@ -290,7 +293,11 @@ export function createApp(root, deps = {}) {
       // 첫 경기 안내(튜토리얼 제외, 평생 한 번): 중요한 순간마다 경기를 멈추고 설명한다. 안내가 남은 경기에선 일반 힌트(tips)를 대신한다
       const guide = createFirstGuide({ store: guideStore, mode: settings.get().controls, enabled: !tut && deps.firstGuide !== false && settings.get().tips });
       const canvas = h('canvas', { class: 'court' });
+      // 리그전 속보: 정규 리그 본 경기에서만. 다른 경기 결과는 시작 때 정해 두고(preset) 경기 시계에 맞춰 보여준 뒤 순위표에 그대로 반영한다
+      const live = !tut && stage === 'regular' && deps.liveTicker !== false ? planLiveRound(state, createRng(deps.seed != null ? (deps.seed ^ 0x5bd1e995) >>> 0 : (Date.now() ^ 0x9e3779b1) >>> 0)) : null;
+      const liveTicker = live?.games.length ? createLiveTicker(live.games) : null;
       const view = matchScreen({
+        ticker: !!liveTicker,
         oppName: opp.name,
         oppTags: oppProfile(opp, { tutorial: !!tut }).tags,
         canvas,
@@ -309,7 +316,7 @@ export function createApp(root, deps = {}) {
           const rng = createRng((Date.now() ^ (state.week * 104729)) >>> 0);
           const { gained } = stage === 'tournament'
             ? applyTournamentResult(state, { won: false, score }, rng)
-            : applyRegularResult(state, { won: false, score }, rng);
+            : applyRegularResult(state, { won: false, score }, rng, live?.preset);
           persist(); ads.noteMatchPlayed();
           react({ type: 'end', winner: 'opp' }, { audio, haptics });
           api.showResult({ won: false, score, gained, forfeit: true });
@@ -365,7 +372,7 @@ export function createApp(root, deps = {}) {
             const rng = createRng((Date.now() ^ (state.week * 7919)) >>> 0);
             const { gained } = stage === 'tournament'
               ? applyTournamentResult(state, { won, score: e.score }, rng)
-              : applyRegularResult(state, { won, score: e.score }, rng);
+              : applyRegularResult(state, { won, score: e.score }, rng, live?.preset);
             persist(); ads.noteMatchPlayed();
             later(() => { if (loop === token) api.showResult({ won, score: e.score, gained, story }); }, 800);
           }
@@ -428,6 +435,7 @@ export function createApp(root, deps = {}) {
         if (loop !== token) return;
         const now = clock();
         ctl.update(now);
+        if (liveTicker) { const v = liveTicker.update(nowFn() - startedAt - clock.pausedFor()); if (v) view.setTicker(v); } // 다른 경기 속보 (안내로 멈춘 시간은 뺀다)
         if (tut) view.drawCoachDiagram(nowFn(), mode); // 튜토리얼 설명 그림(움직임)
         renderer.setHint(tut ? tut.view.hint : null); // 레인·화살표 안내(튜토리얼 단계별)
         renderer.draw(ctl, now);
