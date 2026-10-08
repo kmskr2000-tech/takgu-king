@@ -1,40 +1,40 @@
-import { h } from './dom.js?v=1791369327';
+import { h } from './dom.js?v=1791419793';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen, rivalCardScreen, storyBeatScreen, storyIntroScreen,
   multiScreen, netResultScreen,
-} from './screens.js?v=1791369327';
-import { createNetSession } from '../net/session.js?v=1791369327';
-import { createNetClock } from '../net/clock.js?v=1791369327';
-import { FirebaseRoom } from '../net/fireroom.js?v=1791369327';
+} from './screens.js?v=1791419793';
+import { createNetSession } from '../net/session.js?v=1791419793';
+import { createNetClock } from '../net/clock.js?v=1791419793';
+import { FirebaseRoom } from '../net/fireroom.js?v=1791419793';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791369327';
-import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791369327';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791369327';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791369327';
-import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791369327';
-import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791369327';
-import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791369327';
-import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791369327';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791369327';
-import { oppProfile } from '../game/oppProfile.js?v=1791369327';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791369327';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791369327';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791369327';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791369327';
-import { createAudio } from './audio.js?v=1791369327';
-import { createBgm } from './bgm.js?v=1791369327';
-import { createHaptics, react } from './feedback.js?v=1791369327';
-import { createRenderer } from './render.js?v=1791369327';
-import { createMatchController } from '../game/matchController.js?v=1791369327';
+} from './intro.js?v=1791419793';
+import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791419793';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791419793';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791419793';
+import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791419793';
+import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791419793';
+import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791419793';
+import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791419793';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791419793';
+import { oppProfile } from '../game/oppProfile.js?v=1791419793';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791419793';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791419793';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791419793';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791419793';
+import { createAudio } from './audio.js?v=1791419793';
+import { createBgm } from './bgm.js?v=1791419793';
+import { createHaptics, react } from './feedback.js?v=1791419793';
+import { createRenderer } from './render.js?v=1791419793';
+import { createMatchController } from '../game/matchController.js?v=1791419793';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult, seasonGoals,
-} from '../game/season.js?v=1791369327';
-import { createStore } from '../game/store.js?v=1791369327';
-import { createRng } from '../core/index.js?v=1791369327';
-import { applyIosTopGap } from './iosTopGap.js?v=1791369327';
+} from '../game/season.js?v=1791419793';
+import { createStore } from '../game/store.js?v=1791419793';
+import { createRng } from '../core/index.js?v=1791419793';
+import { applyIosTopGap } from './iosTopGap.js?v=1791419793';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -464,46 +464,60 @@ export function createApp(root, deps = {}) {
       loop = null; bgm.play('title');
       let session = null;
       const dropSession = (reason) => { const s = session; session = null; if (s) s.close(reason); };
+      const T = deps.netTimers ?? { setInterval: (f, ms) => setInterval(f, ms), clearInterval: (i) => clearInterval(i) };
+      let poll = null; let listing = false;
+      const stopPoll = () => { if (poll != null) { T.clearInterval(poll); poll = null; } };
+      const refreshRooms = async () => { // 로비 목록: 메뉴를 보고 있을 때만 갱신
+        if (listing || session || view.mode !== 'menu') return;
+        listing = true;
+        try { const r = (deps.roomFactory ?? (() => new FirebaseRoom()))(); view.setRooms(await r.listRooms()); }
+        catch { view.setRooms(null, true); }
+        finally { listing = false; }
+      };
       const view = multiScreen({
-        onHost: () => begin('host'),
+        onHost: (title) => { stopPoll(); begin('host', '', title); },
         onJoin: (code) => {
           if (!/^[A-Z2-9]{6}$/.test(code)) { view.setMode('menu', { message: '6자리 방 코드를 입력해 주세요.' }); return; }
-          begin('guest', code);
+          stopPoll(); begin('guest', code);
         },
-        onCancel: () => { dropSession('cancel'); view.setMode('menu'); },
-        onBack: () => { dropSession('cancel'); api.showTitle(); },
+        onPick: (code) => { stopPoll(); begin('guest', code); },
+        onRefresh: () => { view.setRooms(null); refreshRooms(); },
+        onCancel: () => { dropSession('cancel'); view.setMode('menu'); startPoll(); },
+        onBack: () => { stopPoll(); dropSession('cancel'); api.showTitle(); },
       });
+      const startPoll = () => { stopPoll(); view.setRooms(null); refreshRooms(); poll = T.setInterval(refreshRooms, 5000); };
       const errText = (e) => {
         const m = String(e?.message ?? e);
-        return m === 'room-not-found' ? '그 코드의 방이 없어요. 코드를 다시 확인해 주세요.'
+        return m === 'room-not-found' ? '그 방이 없어졌어요. 목록을 새로고침해 주세요.'
           : m === 'firebase-not-configured' ? '멀티플레이 서버 설정이 없어요.'
           : m === 'connect-timeout' ? '연결 시간이 초과됐어요. 다시 시도해 주세요.' : '연결하지 못했어요. 네트워크를 확인하고 다시 시도해 주세요.';
       };
-      async function begin(role, code = '') {
+      async function begin(role, code = '', title = '') {
         audio.unlock();
         if (session) return;
         const room = (deps.roomFactory ?? (() => new FirebaseRoom()))();
         const s = createNetSession({
           room, role, name: role === 'host' ? '방장' : '손님', nowFn, timers: deps.netTimers,
           onPhase: (p) => { if (session === s && p === 'syncing') view.setMode('syncing'); },
-          onStart: (info, sess) => { if (session === s) session = null; api.startNetMatch({ session: sess, ...info }); }, // 첫 경기와 다시 하기 모두
+          onStart: (info, sess) => { stopPoll(); if (session === s) session = null; api.startNetMatch({ session: sess, ...info }); }, // 첫 경기와 다시 하기 모두
           onRematch: () => api.netResultView?.setStatus(api.netRematchMine ? 'wait' : 'asked'),
           onGame: (msg) => api.netInbound(msg),
           onEnd: (reason) => {
-            if (session === s) { session = null; view.setMode('menu', { message: reason === 'disconnected' || reason === 'peer-left' || reason === 'timeout' ? '연결이 끊겼어요.' : '' }); }
+            if (session === s) { session = null; view.setMode('menu', { message: reason === 'disconnected' || reason === 'peer-left' || reason === 'timeout' ? '연결이 끊겼어요.' : '' }); startPoll(); }
             else api.netEnded?.(reason, s); // 경기 중·결과 화면에서 끊김
           },
         });
         session = s;
         try {
-          if (role === 'host') { view.setMode('hosting'); const c = await s.host(); view.setMode('hosting', { code: c }); }
+          if (role === 'host') { view.setMode('hosting'); const c = await s.host(title); view.setMode('hosting', { code: c }); }
           else { view.setMode('joining'); await s.join(code); view.setMode('syncing'); }
         } catch (e) {
-          if (session === s) { session = null; try { s.close('error'); } catch { /* 무시 */ } view.setMode('menu', { message: errText(e) }); }
+          if (session === s) { session = null; try { s.close('error'); } catch { /* 무시 */ } view.setMode('menu', { message: errText(e) }); startPoll(); }
         }
       }
       if (opts.message) view.setMode('menu', { message: opts.message });
       mount(view.el);
+      startPoll();
     },
     /** 상대 메시지: 경기 컨트롤러가 준비되기 전에 오면 큐에 둔다 */
     netInbound(msg) { if (api.netController) api.netController.remoteMessage(msg); else (api.netBacklog ??= []).push(msg); },

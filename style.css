@@ -288,3 +288,10 @@ html:has(.screen.match), body:has(.screen.match) { overflow: hidden; overscroll-
 .screen.match .hud .hud-sub .judge, .screen.match .hud .hud-sub .judge.perfect, .screen.match .hud .hud-sub .judge.good, .screen.match .hud .hud-sub .judge.bad, .screen.match .hud .hud-sub .judge.miss { font-size: .95rem; }
 .screen.match .hud .hud-sub .incoming { font-size: .72rem; }
 .screen.match .hud .hud-sub .lane-chip, .screen .serve-badge { display: none !important; } /* 코스 문구·서브 글자 배지 없음 — 서브 차례는 캐릭터 주변 링(render.js drawServeCue) */
+.multi .title-input { flex: 1 1 auto; min-width: 0; }
+.multi .room-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 700; }
+.multi .room-list { display: flex; flex-direction: column; gap: 6px; max-height: 38vh; overflow-y: auto; }
+.multi .room-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 14px; min-height: 48px; border: 2px solid #2d4a68; border-radius: 10px; background: #101b28; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.multi .room-item .room-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.multi .room-item .room-go { flex: 0 0 auto; color: #ffd24a; font-weight: 800; }
+.title-input { font: 700 1rem system-ui, sans-serif; padding: 10px; border-radius: 10px; border: 2px solid #2c4057; background: #101b28; color: #fff; }

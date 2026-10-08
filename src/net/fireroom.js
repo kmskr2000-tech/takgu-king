@@ -16,7 +16,7 @@
 //       gc: {pushId: candidate}       <- guest ICE candidates
 //       hc: {pushId: candidate}       <- host ICE candidates
 
-import { parseMsg } from './protocol.js?v=1791369327';
+import { parseMsg } from './protocol.js?v=1791419793';
 
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no confusing 0/O/1/I
 const ROOMS_PATH = 'pkmspl-rooms';
@@ -24,6 +24,26 @@ export const ROOM_KEY_PREFIX = 'tabgu-'; // 스플렌더 방과 섞이지 않게
 export const roomPath = (code) => `${ROOMS_PATH}/${ROOM_KEY_PREFIX}${code}`;
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
 const JOIN_TIMEOUT_MS = 10000;
+
+// 로비(방 목록): 규칙이 `pkmspl-rooms/$code` 만 열어 두므로 목록도 같은 규칙 안의 고정 키(tabgu-LOBBY — 실제 코드는 5/6자리라 겹치지 않음)에 둔다.
+//   pkmspl-rooms/tabgu-LOBBY/rooms/{CODE}: {title, created, hb}   ← 방장이 HEARTBEAT_MS 마다 hb 갱신
+export const LOBBY_KEY = `${ROOM_KEY_PREFIX}LOBBY`;
+export const HEARTBEAT_MS = 20000;
+export const STALE_MS = 60000; // hb 가 이 시간 넘게 멈춘 방은 죽은 방 → 목록에서 빼고 지운다
+export const TITLE_MAX = 20;
+export const cleanTitle = (t) => String(t ?? '').replace(/\s+/g, ' ').trim().slice(0, TITLE_MAX) || '탁구 한판';
+const lobbyRoomPath = (code) => `${ROOMS_PATH}/${LOBBY_KEY}/rooms/${code}`;
+/** 목록 가공(순수): 죽은 방은 stale 로 분리, 산 방은 최신순 */
+export function pickLobby(rooms, now) {
+  const live = []; const stale = [];
+  for (const [code, r] of Object.entries(rooms || {})) {
+    if (!r || typeof r !== 'object') { stale.push(code); continue; }
+    if (now - (Number(r.hb) || Number(r.created) || 0) > STALE_MS) stale.push(code);
+    else live.push({ code, title: cleanTitle(r.title), created: Number(r.created) || 0 });
+  }
+  live.sort((a, b) => b.created - a.created);
+  return { live, stale };
+}
 
 export function genCode(len = 6) {
   const buf = new Uint32Array(len);
@@ -85,6 +105,26 @@ export class FirebaseRoom {
     this.code = null;
     this._joinToken = null;
     this._dbRefs = []; // {ref, cb} to detach on close
+    this._hb = null; // 로비 heartbeat 타이머
+  }
+
+  async _removeLobby() {
+    if (this._hb) { clearInterval(this._hb); this._hb = null; }
+    if (!this.code || !this._db) return;
+    try { const m = dbMod(this._db); await m.remove(m.ref(this._db, lobbyRoomPath(this.code))); } catch {}
+  }
+
+  /** 로비: 열려 있는 방 목록. 죽은 방(heartbeat 끊김)은 걸러내고 DB 에서도 지운다. */
+  async listRooms() {
+    this._db = await getDb();
+    const m = dbMod(this._db);
+    const snap = await m.get(m.ref(this._db, `${ROOMS_PATH}/${LOBBY_KEY}/rooms`));
+    const { live, stale } = pickLobby(snap.exists() ? snap.val() : {}, Date.now());
+    for (const code of stale) {
+      m.remove(m.ref(this._db, lobbyRoomPath(code))).catch(() => {});
+      m.remove(m.ref(this._db, roomPath(code))).catch(() => {});
+    }
+    return live;
   }
 
   _track(ref, cb) {
@@ -116,7 +156,7 @@ export class FirebaseRoom {
   // ---------- host ----------
 
   /** Host: create a room, return the 6-char code. */
-  async hostCreate() {
+  async hostCreate(title = '') {
     this.isHost = true;
     this._db = await getDb();
     const m = dbMod(this._db);
@@ -127,6 +167,14 @@ export class FirebaseRoom {
       if (snap.exists()) continue; // collision, retry
       await m.set(roomRef, { created: Date.now() });
       this.code = code;
+      // 로비에 등록 + heartbeat (방장이 죽으면 onDisconnect 가 지우고, 그것도 못 하면 STALE_MS 후 목록에서 빠진다)
+      try {
+        const lref = m.ref(this._db, lobbyRoomPath(code));
+        const now = Date.now();
+        await m.set(lref, { title: cleanTitle(title), created: now, hb: now });
+        try { m.onDisconnect?.(lref).remove(); m.onDisconnect?.(roomRef).remove(); } catch {}
+        this._hb = setInterval(() => { m.set(m.ref(this._db, `${lobbyRoomPath(code)}/hb`), Date.now()).catch(() => {}); }, HEARTBEAT_MS);
+      } catch {}
       // Listen for new guest handshakes.
       const hsRef = m.ref(this._db, `${ROOMS_PATH}/${ROOM_KEY_PREFIX}${code}/handshakes`);
       this._track(hsRef, (hsSnap) => this._onHandshakes(hsSnap));
@@ -169,7 +217,7 @@ export class FirebaseRoom {
     pc.ondatachannel = (e) => {
       peer.dc = e.channel;
       this._wireDataChannel(peer.dc, idx);
-      peer.dc.onopen = () => { if (!this.closed) this.onjoin(idx); };
+      peer.dc.onopen = () => { if (!this.closed) { this._removeLobby(); this.onjoin(idx); } }; // 1:1 이라 손님이 들어오면 목록에서 뺀다
     };
 
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
@@ -341,6 +389,7 @@ export class FirebaseRoom {
     this.closed = true;
     this._joinToken = Symbol('closed');
     this._untrackAll();
+    if (this.isHost) await this._removeLobby();
     for (const p of this.peers) { try { p.pc && p.pc.close(); } catch {} }
     this.peers = [];
     // Host removes the room so codes don't linger.

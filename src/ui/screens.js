@@ -1,14 +1,14 @@
-import { h } from './dom.js?v=1791369327';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791369327';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791369327';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791369327';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791369327';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791369327';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791369327';
+import { h } from './dom.js?v=1791419793';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791419793';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791419793';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791419793';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791419793';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791419793';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791419793';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791369327';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791369327';
+} from '../game/season.js?v=1791419793';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791419793';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -445,23 +445,36 @@ export function storyBeatScreen({ beat, onNext }) {
  * 멀티플레이 로비. mode: 'menu'(방 만들기 / 코드로 참가) · 'hosting'(내 방 코드를 보여주고 기다림) · 'joining'(연결 중) · 'syncing'(시계 맞추는 중)
  * 화면은 한 번 만들고 setMode 로 바꾼다 (입력 중인 코드가 사라지지 않게).
  */
-export function multiScreen({ onHost, onJoin, onCancel, onBack }) {
+export function multiScreen({ onHost, onJoin, onPick = () => {}, onRefresh = () => {}, onCancel, onBack }) {
   const codeInput = h('input', { class: 'code-input', type: 'text', maxlength: '6', placeholder: '6자리 코드', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false', 'aria-label': '방 코드' });
   const status = h('p', { class: 'net-status', 'aria-live': 'polite' }, '');
   const codeBox = h('div', { class: 'room-code', 'aria-label': '내 방 코드' }, '');
+  const titleInput = h('input', { class: 'title-input', type: 'text', maxlength: '20', placeholder: '방 제목 (예: 금요일 탁구)', autocomplete: 'off', spellcheck: 'false', 'aria-label': '방 제목' });
+  const roomList = h('div', { class: 'room-list', 'aria-live': 'polite' });
   const menu = h('div', { class: 'net-menu' },
-    btn('방 만들기', onHost, 'primary'),
+    h('div', { class: 'join-row' }, titleInput, btn('방 만들기', () => onHost(String(titleInput.value ?? '').trim()), 'primary')),
+    h('div', { class: 'room-head' }, h('span', {}, '열린 방'), btn('새로고침', onRefresh)),
+    roomList,
+    h('p', { class: 'hint' }, '또는 코드로 참가'),
     h('div', { class: 'join-row' }, codeInput, btn('참가하기', () => onJoin(String(codeInput.value ?? '').trim().toUpperCase()), 'primary')));
   const waiting = h('div', { class: 'net-wait' }, h('p', { class: 'hint' }, '친구에게 이 코드를 알려주세요'), codeBox, btn('취소', onCancel));
   const busy = h('div', { class: 'net-busy' }, btn('취소', onCancel));
   const el = h('section', { class: 'screen multi' },
     h('h2', {}, '멀티플레이'),
-    h('p', { class: 'quote' }, '친구와 실시간 1:1 대전. 한 명이 방을 만들고, 다른 한 명이 6자리 코드를 입력해요. 능력치는 같고, 타이밍·상성 싸움이에요.'),
+    h('p', { class: 'quote' }, '친구와 실시간 1:1 대전. 한 명이 제목을 정해 방을 만들고, 다른 한 명이 목록에서 방을 눌러 들어와요. 능력치는 같고, 타이밍·상성 싸움이에요.'),
     status, menu, waiting, busy, btn('뒤로', onBack));
   const show = (node, on) => { node.className = `${node.className.replace(/\s*\bhidden\b/g, '')}${on ? '' : ' hidden'}`; };
   let mode = 'menu';
   const api = {
-    el, codeInput,
+    el, codeInput, titleInput,
+    /** rooms: [{code,title}] 또는 null(불러오는 중) */
+    setRooms(rooms, failed = false) {
+      roomList.textContent = '';
+      if (failed) { roomList.appendChild(h('p', { class: 'hint err' }, '방 목록을 불러오지 못했어요. 새로고침을 눌러 주세요.')); return; }
+      if (rooms == null) { roomList.appendChild(h('p', { class: 'hint' }, '방 목록 불러오는 중…')); return; }
+      if (!rooms.length) { roomList.appendChild(h('p', { class: 'hint' }, '열린 방이 없어요. 방을 만들어 보세요!')); return; }
+      for (const r of rooms) roomList.appendChild(h('button', { class: 'room-item', type: 'button', onclick: () => onPick(r.code) }, h('span', { class: 'room-title' }, r.title), h('span', { class: 'room-go' }, '입장')));
+    },
     get mode() { return mode; },
     setMode(m, { code = '', message = '' } = {}) {
       mode = m;
