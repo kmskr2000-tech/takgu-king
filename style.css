@@ -320,3 +320,29 @@ button:not(.shot-btn):not(:disabled):active, button:not(.shot-btn).pressed:not(:
 .ticker .tk-tag { flex: none; font-size: .6rem; font-weight: 800; color: #ffd24a; min-width: 2.2em; text-align: right; } .ticker.done .tk-tag { color: #9fb3c8; }
 .ticker .tk-idx { flex: none; font-size: .6rem; color: #7f93a8; }
 @media (prefers-reduced-motion: reduce) { .ticker .tk-a.hot, .ticker .tk-b.hot { animation: none; background: rgba(255,210,74,.3); } }
+
+
+/* ===== 경기 후 상황 정리판 (2026-10-08): 라운드 결과 + 순위 변동 ===== */
+.recap { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; text-align: left; }
+.recap h3 { margin: 6px 0 0; font-size: .9rem; color: #ffd24a; }
+.recap-games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.recap-games .rg { display: grid; grid-template-columns: 1fr auto 1fr auto; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; background: var(--panel); font-size: .85rem; }
+.recap-games .rg b { font-weight: 600; color: #9fb3c8; } .recap-games .rg b:first-child { text-align: right; } .recap-games .rg b.w { color: #fff; font-weight: 900; }
+.recap-games .rg em { font-style: normal; font-weight: 900; color: #ffd24a; font-variant-numeric: tabular-nums; }
+.recap-games .rg small { font-weight: 900; } .recap-games .rg:not(.mine) { grid-template-columns: 1fr auto 1fr; }
+.recap-games .rg.mine { border: 2px solid #5ab8ff; } .recap-games .rg.mine.win small { color: #6af0a0; } .recap-games .rg.mine.lose small { color: #ff8a7a; }
+.recap-table { display: flex; flex-direction: column; background: var(--panel); border-radius: 6px; overflow: hidden; }
+.recap-table .rr { position: relative; display: grid; grid-template-columns: 1.8em 2.6em 1fr 3em 4.6em; align-items: center; gap: 4px; height: 30px; padding: 0 8px; border-bottom: 1px solid #2c3f52; font-size: .8rem; }
+.recap-table .rr .rk { font-weight: 900; } .recap-table .rr .nm { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .recap-table .rr span:nth-child(n+4) { text-align: right; }
+.recap-table .rr .mv { font-weight: 900; font-size: .75rem; color: #7f93a8; }
+.recap-table .rr.up .mv { color: #6af0a0; } .recap-table .rr.down .mv { color: #ff8a7a; }
+.recap-table .rr.me { background: #33481f; }
+.recap-table .rr.up { background: rgba(90,224,138,.16); } .recap-table .rr.down { background: rgba(255,106,90,.14); } .recap-table .rr.me.up, .recap-table .rr.me.down { background: #33481f; box-shadow: inset 0 0 0 2px currentColor; }
+.recap-table .rr.me.up { color: #6af0a0; } .recap-table .rr.me.down { color: #ff8a7a; } .recap-table .rr.me > * { color: #fff; } .recap-table .rr.me .mv { color: inherit; }
+.recap.animate .rg { animation: rgin .35s ease-out backwards; }
+.recap.animate .rr { animation: rrmove .9s cubic-bezier(.2,.8,.2,1) backwards; }
+.recap.animate .rr.up { z-index: 2; } .recap.animate .rr.up, .recap.animate .rr.down { animation-name: rrmove, rrglow; animation-duration: .9s, 1.6s; }
+@keyframes rgin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes rrmove { from { transform: translateY(var(--dy, 0px)); } to { transform: none; } }
+@keyframes rrglow { 0%, 100% { filter: none; } 40% { filter: brightness(1.7); } }
+@media (prefers-reduced-motion: reduce) { .recap.animate .rg, .recap.animate .rr { animation: none; } }

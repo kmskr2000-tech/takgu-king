@@ -1,14 +1,14 @@
-import { h } from './dom.js?v=1791434034';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791434034';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791434034';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791434034';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791434034';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791434034';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791434034';
+import { h } from './dom.js?v=1791436882';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791436882';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791436882';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791436882';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791436882';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791436882';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791436882';
 import {
   LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791434034';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791434034';
+} from '../game/season.js?v=1791436882';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791436882';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -248,11 +248,33 @@ export function bracketScreen({ bracket, onBack }) {
     btn('돌아가기', onBack, 'primary'));
 }
 
-export function resultScreen({ result, onNext, reward = null }) {
+/** 경기 후 상황 정리판: 이번 라운드 결과(내 경기 먼저) + 순위표(변동 화살표, 오르내린 팀은 제자리로 미끄러지며 하이라이트) */
+export function recapPanel(recap, { animate = true } = {}) {
+  const ROW_H = 30;
+  const games = recap.games.map((g, i) => {
+    const win = g.winner === 0 ? 'win' : g.mine ? 'lose' : '';
+    return h('li', { class: `rg${g.mine ? ' mine' : ''}${win ? ` ${win}` : ''}`, style: animate ? `animation-delay:${i * 110}ms` : null },
+      h('b', { class: g.winner === g.a ? 'w' : '' }, g.aName), h('em', {}, `${g.sa} : ${g.sb}`), h('b', { class: g.winner === g.b ? 'w' : '' }, g.bName),
+      g.mine && h('small', {}, g.winner === 0 ? '승' : '패'));
+  });
+  const rows = recap.rows.map((t) => {
+    const dir = t.delta > 0 ? 'up' : t.delta < 0 ? 'down' : 'same';
+    const mark = t.delta > 0 ? `▲${t.delta}` : t.delta < 0 ? `▼${-t.delta}` : '–';
+    return h('div', { class: `rr ${dir}${t.me ? ' me' : ''}`, style: `--dy:${t.delta * ROW_H}px;${animate ? ` animation-delay:${400 + games.length * 110}ms` : ''}` },
+      h('span', { class: 'rk' }, t.rank), h('span', { class: 'mv' }, mark), h('span', { class: 'nm' }, t.name),
+      h('span', {}, `${t.points}점`), h('span', {}, `${t.wins}승 ${t.losses}패`));
+  });
+  return h('div', { class: `recap${animate ? ' animate' : ''}` },
+    h('h3', {}, `${recap.round}라운드 결과`), h('ul', { class: 'recap-games' }, ...games),
+    h('h3', {}, '순위 변동'), h('div', { class: 'recap-table', role: 'table', 'aria-label': '순위표' }, ...rows));
+}
+
+export function resultScreen({ result, onNext, reward = null, animate = true }) {
   return h('section', { class: 'screen result' },
     h('h2', {}, result.won ? '승리!' : result.forfeit ? '기권패' : '패배…'),
     h('p', { class: 'score' }, `${result.score.me} : ${result.score.opp}`),
     h('p', {}, `획득 포인트 +${result.gained}`),
+    result.recap && recapPanel(result.recap, { animate }),
     result.rewarded && h('p', { class: 'win' }, `보상 지급! 포인트 +${result.gained} 추가`),
     result.story && storyBubbles(result.story.lines), // 라이벌전: 상대의 승리/패배 대사 (진 경우 주인공의 "…다시." 까지)
     !result.won && !result.story && h('p', { class: 'quote' }, `“${CATCHPHRASE}” — ${PROTAGONIST.name}`), // 그 밖의 패배: 주인공의 입버릇
