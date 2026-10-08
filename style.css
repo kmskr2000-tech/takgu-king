@@ -295,3 +295,7 @@ html:has(.screen.match), body:has(.screen.match) { overflow: hidden; overscroll-
 .multi .room-item .room-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .multi .room-item .room-go { flex: 0 0 auto; color: #ffd24a; font-weight: 800; }
 .title-input { font: 700 1rem system-ui, sans-serif; padding: 10px; border-radius: 10px; border: 2px solid #2c4057; background: #101b28; color: #fff; }
+.multi .nick-row { display: flex; align-items: center; gap: 8px; font-weight: 700; } .multi .nick-row .nick-input { flex: 1 1 auto; }
+.nick-input { font: 700 1rem system-ui, sans-serif; padding: 10px; border-radius: 10px; border: 2px solid #2c4057; background: #101b28; color: #fff; }
+.multi .room-host { opacity: .7; font-weight: 600; }
+.room-name { font: 800 1.6rem system-ui, sans-serif; text-align: center; color: #ffd24a; padding: 14px 0; background: #101b28; border-radius: 12px; word-break: break-all; }

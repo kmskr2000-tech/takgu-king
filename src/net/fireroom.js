@@ -16,7 +16,7 @@
 //       gc: {pushId: candidate}       <- guest ICE candidates
 //       hc: {pushId: candidate}       <- host ICE candidates
 
-import { parseMsg } from './protocol.js?v=1791419793';
+import { parseMsg } from './protocol.js?v=1791422732';
 
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no confusing 0/O/1/I
 const ROOMS_PATH = 'pkmspl-rooms';
@@ -26,11 +26,13 @@ const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
 const JOIN_TIMEOUT_MS = 10000;
 
 // 로비(방 목록): 규칙이 `pkmspl-rooms/$code` 만 열어 두므로 목록도 같은 규칙 안의 고정 키(tabgu-LOBBY — 실제 코드는 5/6자리라 겹치지 않음)에 둔다.
-//   pkmspl-rooms/tabgu-LOBBY/rooms/{CODE}: {title, created, hb}   ← 방장이 HEARTBEAT_MS 마다 hb 갱신
+//   pkmspl-rooms/tabgu-LOBBY/rooms/{CODE}: {title, host(닉네임), created, hb}   ← 방장이 HEARTBEAT_MS 마다 hb 갱신
 export const LOBBY_KEY = `${ROOM_KEY_PREFIX}LOBBY`;
 export const HEARTBEAT_MS = 20000;
 export const STALE_MS = 60000; // hb 가 이 시간 넘게 멈춘 방은 죽은 방 → 목록에서 빼고 지운다
 export const TITLE_MAX = 20;
+export const NICK_MAX = 12;
+export const cleanNick = (t) => String(t ?? '').replace(/\s+/g, ' ').trim().slice(0, NICK_MAX);
 export const cleanTitle = (t) => String(t ?? '').replace(/\s+/g, ' ').trim().slice(0, TITLE_MAX) || '탁구 한판';
 const lobbyRoomPath = (code) => `${ROOMS_PATH}/${LOBBY_KEY}/rooms/${code}`;
 /** 목록 가공(순수): 죽은 방은 stale 로 분리, 산 방은 최신순 */
@@ -39,7 +41,7 @@ export function pickLobby(rooms, now) {
   for (const [code, r] of Object.entries(rooms || {})) {
     if (!r || typeof r !== 'object') { stale.push(code); continue; }
     if (now - (Number(r.hb) || Number(r.created) || 0) > STALE_MS) stale.push(code);
-    else live.push({ code, title: cleanTitle(r.title), created: Number(r.created) || 0 });
+    else live.push({ code, title: cleanTitle(r.title), host: cleanNick(r.host) || '방장', created: Number(r.created) || 0 });
   }
   live.sort((a, b) => b.created - a.created);
   return { live, stale };
@@ -156,7 +158,7 @@ export class FirebaseRoom {
   // ---------- host ----------
 
   /** Host: create a room, return the 6-char code. */
-  async hostCreate(title = '') {
+  async hostCreate(title = '', nick = '') {
     this.isHost = true;
     this._db = await getDb();
     const m = dbMod(this._db);
@@ -171,7 +173,7 @@ export class FirebaseRoom {
       try {
         const lref = m.ref(this._db, lobbyRoomPath(code));
         const now = Date.now();
-        await m.set(lref, { title: cleanTitle(title), created: now, hb: now });
+        await m.set(lref, { title: cleanTitle(title), host: cleanNick(nick), created: now, hb: now });
         try { m.onDisconnect?.(lref).remove(); m.onDisconnect?.(roomRef).remove(); } catch {}
         this._hb = setInterval(() => { m.set(m.ref(this._db, `${lobbyRoomPath(code)}/hb`), Date.now()).catch(() => {}); }, HEARTBEAT_MS);
       } catch {}

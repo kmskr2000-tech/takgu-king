@@ -48,15 +48,15 @@ export const BEATS = Object.freeze({ topspin: 'cut', cut: 'normal', normal: 'top
 //  - noise: 샷 실수 난수 배율(createShot 의 rng 로 전달 — 1 이면 기존과 비트 동일). 불리 GOOD 은 네트/아웃 ≈ 33%, PERFECT 는 0%
 //  - aiSigma: 상대 탭 오차 배율. 내 타격 등급(PERFECT/GOOD)과 곱으로 쓴다 → 중립+PERFECT ≥ 유리+GOOD (타이밍 > 상성)
 export const MATCHUP_FX = Object.freeze({
-  win: { leniency: 1, noise: { PERFECT: 0.6, GOOD: 0.6, BAD: 1.15 }, aiSigma: { PERFECT: 1.6, GOOD: 1.25, BAD: 1.0 } },
-  lose: { leniency: 1, noise: { PERFECT: 2.5, GOOD: 2.5, BAD: 2.05 }, aiSigma: { PERFECT: 1.1, GOOD: 0.9, BAD: 0.7 } },
-  even: { leniency: 1, noise: { PERFECT: 1, GOOD: 1.6, BAD: 1.35 }, aiSigma: { PERFECT: 1.25, GOOD: 1, BAD: 0.8 } },
+  win: { leniency: 1, noise: { PERFECT: 0.6, GOOD: 0.6, BAD: 1.3 }, aiSigma: { PERFECT: 1.6, GOOD: 1.25, BAD: 1.0 } },
+  lose: { leniency: 1, noise: { PERFECT: 2.5, GOOD: 2.5, BAD: 2.5 }, aiSigma: { PERFECT: 1.1, GOOD: 0.9, BAD: 0.7 } },
+  even: { leniency: 1, noise: { PERFECT: 1, GOOD: 1.6, BAD: 1.65 }, aiSigma: { PERFECT: 1.25, GOOD: 1, BAD: 0.8 } },
 });
 // 타이밍 4단계(PERFECT/GOOD/BAD/MISS) 실수 매트릭스 (scripts/sim-matchup.mjs gradeMatrix 로 확정, 간단 조작·상성 사용 시):
-//   네트/아웃율  PERFECT 0% 전부 / GOOD 유리 0 · 중립 7 · 불리 33 / BAD 유리 11 · 중립 20 · 불리 50 (%)
+//   네트/아웃율  PERFECT 0% 전부 / GOOD 유리 0 · 중립 7 · 불리 33 / BAD 유리 16 · 중립 34 · 불리 60 (%) — 2026-10-08 BAD 패널티 강화(유리 8·중립 18·불리 49 에서 상향)
 /** 구질별 리듬 밴드: 탑스핀=이른 타점(shift<0)·좁음, 일반=기준, 커트=늦은 타점(shift>0)·넓음. shift 는 존 반폭 단위 (폭은 SHOT_TYPES.leniency) */
 export const RHYTHM_SHIFT = Object.freeze({ topspin: -0.5, normal: 0, cut: 0.5 });
-export { MIN_REACTION_S } from '../core/constants.js?v=1791419793'; // 공정성 하한(설계안 §6.4)
+export { MIN_REACTION_S } from '../core/constants.js?v=1791422732'; // 공정성 하한(설계안 §6.4)
 /** 구질 위장: 상위 리그는 타구 직후 이 시간(초) 동안 공 색/종류 표시가 중립(읽기 단서 지연). 읽기 시간(타구→바운드 ≥ 0.4s) 안에 끝난다 */
 export const DISGUISE_S = Object.freeze({ amateur: 0, third: 0, second: 0, first: 0.15, world: 0.2 });
 /** 힌트(유리한 버튼 반짝임)를 보여주는 경기 수: 튜토리얼 + 처음 이 경기 수까지 */

@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791419793';
-import { createEffects } from './effects.js?v=1791419793';
-import { createRng } from '../core/rng.js?v=1791419793';
+} from './sprites.js?v=1791422732';
+import { createEffects } from './effects.js?v=1791422732';
+import { createRng } from '../core/rng.js?v=1791422732';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -484,7 +484,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
       drawLane(now);
       const sp = !!ctl.flight?.special && ctl.flight.dir < 0 && opt().effects;
       if (sp) { ctx.fillStyle = 'rgba(24,0,48,0.38)'; ctx.fillRect(0, 0, VIEW_W, VIEW_H); } // 필살기 비행 중엔 화면이 어두워지고 공만 빛난다
-      drawBall(ctl.ballAt(now), ctl.spinHidden?.(now) ? 0 : (ctl.flight?.spin ?? 0), sp, now); // 구질 위장 중엔 중립색 // 공은 선수 뒤에 가려지지 않게 선수 다음에 그린다
+      drawBall(ctl.ballAt(now), (ctl.ballNeutral ?? ctl.spinHidden)?.(now) ? 0 : (ctl.flight?.spin ?? 0), sp, now); // 구질 위장 중엔 중립색 // 공은 선수 뒤에 가려지지 않게 선수 다음에 그린다
       fx.draw(ctx);
       drawPops(now);
       if (fx.flashAlpha > 0 && opt().effects) { ctx.fillStyle = fx.flashKind === 'special' ? `rgba(214,150,255,${(0.5 * fx.flashAlpha).toFixed(3)})` : `rgba(255,240,170,${(0.28 * fx.flashAlpha).toFixed(3)})`; ctx.fillRect(0, 0, VIEW_W, VIEW_H); } // PERFECT 번쩍임

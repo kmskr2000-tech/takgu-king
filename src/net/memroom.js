@@ -7,14 +7,14 @@ export function createMemoryNetwork({ oneWayMs = 20, schedule = (fn, ms) => setT
     const r = { onmessage: () => {}, onjoin: () => {}, onleave: () => {}, isHost: false, code: null, peer: null, closed: false };
     const deliver = (to, fn) => schedule(() => { if (!to.closed) fn(); }, net.oneWayMs);
     r.send = (raw) => { const p = r.peer; if (!p) return; deliver(p, () => { try { p.onmessage(0, JSON.parse(raw)); } catch { /* 무시 */ } }); };
-    r.hostCreate = async (title = '') => { r.isHost = true; r.title = String(title || '탁구 한판').slice(0, 20); r.code = `T${String(++seq).padStart(5, '0')}`.replace(/0/g, 'A').replace(/1/g, 'B'); registry.set(r.code, r); return r.code; };
+    r.hostCreate = async (title = '', nick = '') => { r.isHost = true; r.nick = String(nick || '방장').slice(0, 12); r.title = String(title || '탁구 한판').slice(0, 20); r.code = `T${String(++seq).padStart(5, '0')}`.replace(/0/g, 'A').replace(/1/g, 'B'); registry.set(r.code, r); return r.code; };
     r.guestJoin = async (code) => {
       const h = registry.get(String(code).toUpperCase());
       if (!h || h.peer) throw new Error('room-not-found');
       r.peer = h; h.peer = r; r.code = h.code; schedule(() => h.onjoin(0), net.oneWayMs);
     };
     r.cancelJoin = () => {};
-    r.listRooms = async () => [...registry.values()].filter((x) => x.isHost && !x.peer && !x.closed).map((x) => ({ code: x.code, title: x.title, created: 0 })).reverse();
+    r.listRooms = async () => [...registry.values()].filter((x) => x.isHost && !x.peer && !x.closed).map((x) => ({ code: x.code, title: x.title, host: x.nick, created: 0 })).reverse();
     r.close = async () => {
       if (r.closed) return; r.closed = true;
       if (r.isHost && r.code) registry.delete(r.code);
