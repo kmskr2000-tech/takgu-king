@@ -1,7 +1,7 @@
-import { GRADES, COURSE_X, AI_PERFECT_RATIO, AI_BAD_FRACTION } from './constants.js?v=1791422732';
-import { buildTiming, judgeTap } from './timing.js?v=1791422732';
-import { MIN_REACTION_S } from './constants.js?v=1791422732';
-import { createShot, flightOf, powerCap } from './shot.js?v=1791422732';
+import { GRADES, COURSE_X, AI_PERFECT_RATIO, AI_BAD_FRACTION } from './constants.js?v=1791424546';
+import { buildTiming, judgeTap } from './timing.js?v=1791424546';
+import { MIN_REACTION_S } from './constants.js?v=1791424546';
+import { createShot, flightOf, powerCap } from './shot.js?v=1791424546';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -163,6 +163,19 @@ export const AI_TEMPO = { cutPowerCap: 0.4, cutNoSpin: true, cutSigmaMult: 1.15,
 export const DIRECTION_FX = { base: 0.9, slope: 0.7 };
 export const reachMult = (landX, oppX) => (oppX == null ? 1 : DIRECTION_FX.base + DIRECTION_FX.slope * Math.min(1, Math.abs(landX - oppX) / 100));
 
+// 패턴 읽기 (싱글, 2026-10-08 확정): AI 는 내 최근 코스(왼/가운데/오른쪽) window 개를 기억해 가장 많이 친 쪽을 예측한다(need 개 이상 쌓였을 때).
+// 예측 적중(hit) → 탭 오차 ×hit(리턴 성공률↑), 방향 전환으로 예측이 깨지면(broken) → 탭 오차 ×broken + 탭이 halfTime×delay 만큼 늦어짐(반응 지연).
+// 읽는 확률은 리그·등급별 AI_READ 와 같다(코치·약한 리그는 덜 읽는다).
+export const AI_PATTERN = { window: 4, need: 2, hit: 0.75, broken: 1.3, delay: 0.2 };
+export const courseZone = (x) => (x < 35 ? 'L' : x > 65 ? 'R' : 'C');
+/** 코스 기록(최근순 배열 아님, 오래된→최신) → 예측 구역 또는 null */
+export function predictZone(hist) {
+  if (hist.length < AI_PATTERN.need) return null;
+  const n = { L: 0, C: 0, R: 0 }; for (const z of hist.slice(-AI_PATTERN.window)) n[z]++;
+  const best = Object.entries(n).sort((a, b) => b[1] - a[1]);
+  return best[0][1] > best[1][1] ? best[0][0] : null; // 동률이면 예측 불가
+}
+
 // 필살기(3연속 PERFECT 다음 샷)를 받는 AI 의 탭 오차 배율: 자동 득점이 아니라 "매우 강한 샷" — 리그가 높을수록 낮은 확률로 받아낸다 (scripts/sim-special.mjs 로 확정)
 export const SPECIAL_SIGMA = { amateur: 2.6, third: 2.7, second: 2.8, first: 3.0, world: 3.2 };
 
@@ -180,7 +193,7 @@ function gauss(rng) {
  * 탭 시각 = 중심 + N(0, σ), 실제 judgeTap 으로 PERFECT/GOOD/MISS 판정.
  * 반환: { judgement: {grade, offset}, shot|null, t(탭 시각, 공 발사 기준 초), timing }
  */
-export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { read = true, streak = null, capPower = streak != null, oppX = null, special = false } = {}) {
+export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { read = true, streak = null, capPower = streak != null, oppX = null, special = false, pattern = null } = {}) {
   const timing = buildTiming(flight, aiStats(p).focus * 0.5, { bad: true, perfectRatio: AI_PERFECT_RATIO, badFraction: AI_BAD_FRACTION }); // AI 는 판정 폭 보정을 절반만 받는다 (AI 도 같은 4단계 등급)
   const inSpin = flight.spin ?? 0;
   const cutIn = inSpin < -AI_TEMPO.spinThreshold; const topIn = inSpin > AI_TEMPO.spinThreshold;
@@ -188,7 +201,11 @@ export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { r
   const reads = read && p.counter !== false && rng.next() < Math.min(0.95, (AI_READ[p.league] ?? 0) * (TIER_MULT[p.tier] ?? 1) * (p.readProbMult ?? 1) * (p.tier === 'low' ? LOW_TIER_READ.prob : 1)) * slow;
   // 같은 종류를 되풀이하면(연속 N회 이상) 읽은 AI 는 그 공을 예상하고 있다 → 탭 오차가 줄어 더 잘 받아낸다 (스팸 억제)
   const anticipate = reads && streak != null && streak >= (AI_ANTICIPATE_FROM[p.league] ?? 3) ? AI_READ_ANTICIPATE : 1;
-  const t = timing.center + gauss(rng) * tapSigma(p, Math.abs(flight.vyPost)) * (cutIn ? AI_TEMPO.cutSigmaMult : topIn ? AI_TEMPO.topSigmaMult : 1) * (AI_MATCHUP_SIGMA[matchup] ?? 1) * anticipate * (p.reactMult ?? 1) * (special ? SPECIAL_SIGMA[p.league] ?? 2 : 1) * (p.counter === false ? 1 : reachMult(flight.land?.x ?? oppX, oppX));
+  // 패턴 읽기: 예측 적중이면 더 잘 받고, 깨지면 흔들리고 늦는다 (읽은 경우에만)
+  const patRead = pattern && p.counter !== false && rng.next() < Math.min(0.95, (AI_READ[p.league] ?? 0) * (TIER_MULT[p.tier] ?? 1));
+  const patMult = patRead ? (pattern === 'hit' ? AI_PATTERN.hit : AI_PATTERN.broken) : 1;
+  const patDelay = patRead && pattern === 'broken' ? timing.halfTime * AI_PATTERN.delay : 0;
+  const t = patDelay + timing.center + gauss(rng) * tapSigma(p, Math.abs(flight.vyPost)) * (cutIn ? AI_TEMPO.cutSigmaMult : topIn ? AI_TEMPO.topSigmaMult : 1) * (AI_MATCHUP_SIGMA[matchup] ?? 1) * anticipate * patMult * (p.reactMult ?? 1) * (special ? SPECIAL_SIGMA[p.league] ?? 2 : 1) * (p.counter === false ? 1 : reachMult(flight.land?.x ?? oppX, oppX));
   const judgement = judgeTap(t, timing);
   if (judgement.grade === GRADES.MISS) return { judgement, shot: null, t, timing };
   const pos = flight.postPos(t);

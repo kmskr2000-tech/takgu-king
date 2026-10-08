@@ -1,12 +1,12 @@
-import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791422732';
-import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791422732';
-import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791422732';
-import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791422732';
-import { packShot, mirrorShot } from '../net/protocol.js?v=1791422732';
+import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791424546';
+import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791424546';
+import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791424546';
+import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791424546';
+import { packShot, mirrorShot } from '../net/protocol.js?v=1791424546';
 import {
   SIDES, STATES, GRADES, MIN_REACTION_S, createMatch, createShot, createSpecialShot, flightOf, buildTiming, judgeTap, judgeNoTap,
-  classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide,
-} from '../core/index.js?v=1791422732';
+  classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide, courseZone, predictZone, PERFECT_RATIO,
+} from '../core/index.js?v=1791424546';
 
 /** 난수 배율 래퍼: createShot 의 실수 난수(signed)만 k 배. k=1 이면 기존과 비트 동일 */
 export const scaledRng = (rng, k) => (k === 1 ? rng : { next: rng.next, signed: () => rng.signed() * k });
@@ -39,13 +39,16 @@ export function createMatchController({
   const noiseFor = (mu, grade) => (useMatchup ? MATCHUP_FX[mu].noise[grade] ?? 1 : 1);
   const leniencyFor = (type) => diff.leniency * (simple ? shotTypeOf(type).leniency : 1);
   const shiftFor = (type) => (simple ? RHYTHM_SHIFT[type] ?? 0 : 0);
-  const timingFor = (flight, lenient, shift = 0) => buildTiming(flight, stats.focus, { leniency: lenient, shift, bad: true });
+  // 멀티 빈틈 공략 (2026-10-08 확정): 상대가 내 캐릭터 반대편 끝으로 치면 내 PERFECT 범위가 줄어든다. 공 속도는 그대로(속도 보너스 제외)
+  let gapPerfect = 1;
+  const timingFor = (flight, lenient, shift = 0) => buildTiming(flight, stats.focus, { leniency: lenient, shift, bad: true, perfectRatio: PERFECT_RATIO * gapPerfect });
   const bandFor = (flight, type) => timingFor(flight, leniencyFor(type), shiftFor(type));
   // 노탭 만료: 어떤 종류를 눌러도 받아줄 수 있는 가장 늦은 밴드가 끝난 뒤
   const maxEnd = (flight) => Math.max(...SHOT_ORDER.map((k) => bandFor(flight, k).end));
   const m = createMatch({ firstServer });
+  const GAP_DIST = 45; const GAP_PERFECT = 0.7; // 코트 폭(0..100) 중 내 위치에서 45 이상 떨어진 곳 = 반대편 빈틈. PERFECT 범위 ×0.7
   const c = {
-    match: m, phase: null, flight: null, t0: 0, timing: null,
+    match: m, courseHist: [], myX: 50, gap: false, phase: null, flight: null, t0: 0, timing: null,
     pendingDown: null, pendingPoint: null, shownScore: { me: 0, opp: 0 }, awaitRemote: false, inbox: [], aiAt: null, aiPlan: null, resumeAt: 0, lastGrade: null, lastGradeMe: null, streak: 0, streakKey: null, bands: null, perfectStreak: 0, special: false,
   };
   c.matchup = (type) => matchupFor(type); // 누른 종류 기준 상성 (테스트·UI)
@@ -82,6 +85,7 @@ export function createMatchController({
     // res: serve/respond 결과. 득점이면 pause, 아니면 받는 쪽 대기 설정
     if (res.flight) launch(res.flight, now);
     // 방향 전환 효과: 상대는 자기가 마지막으로 친 자리에 서 있다 (내 서브 직후엔 중앙). aiRespond 가 내 공과의 거리로 탭 오차를 키운다
+    if (shooter === SIDES.ME && res.flight) c.myX = res.flight.pos(0).x; else if (m.rally?.shots === 1) c.myX = 50; // 내 위치: 마지막으로 친 자리 (상대 서브 직후엔 중앙)
     if (shooter === SIDES.OPP && res.flight) c.oppX = res.flight.pos(0).x; else if (m.rally?.shots === 1) c.oppX = 50; // 내 서브: 상대는 중앙에서 받는다
     if (res.point) {
       c.resumeAt = now + (res.flight ? res.flight.tLand : 0) + POINT_PAUSE;
@@ -102,6 +106,8 @@ export function createMatchController({
     }
     c.phase = 'flight';
     const receiver = otherSide(shooter);
+    gapPerfect = 1; c.gap = false;
+    if (receiver === SIDES.ME && remote && res.flight.kind === 'in' && Math.abs((res.flight.land?.x ?? 50) - (c.myX ?? 50)) >= GAP_DIST) { gapPerfect = GAP_PERFECT; c.gap = true; }
     if (receiver === SIDES.ME) {
       c.timing = timingFor(res.flight, diff.leniency); // 중립(일반) 밴드 — 고급 조작 판정·기본 표시
       c.bands = simple ? Object.fromEntries(SHOT_ORDER.map((k) => [k, bandFor(res.flight, k)])) : null; // 간단 조작: 구질별 리듬 밴드 3개(텔레그래핑 표시용)
@@ -113,10 +119,15 @@ export function createMatchController({
       // AI 리턴을 지금 계산해 두고, 실제 탭 시각(미스면 창이 끝나는 시각)에 반영 → 공이 튀지 않는다
       const foeX = 100 - (res.flight.land?.x ?? 50);
       const key = useMatchup && simple ? `${c.lastMatchup}:${c.lastGradeMe ?? GRADES.GOOD}` : 'even';
-      const plan = aiRespond(oppParams, rng, SIDES.OPP, res.flight, foeX, key, { streak: c.streak, oppX: c.oppX, special: !!res.flight.special });
+      // 패턴 읽기: 내 최근 코스로 예측 → 적중/깨짐
+      const zone = courseZone(res.flight.land?.x ?? 50); const predicted = predictZone(c.courseHist);
+      const pattern = predicted ? (predicted === zone ? 'hit' : 'broken') : null;
+      c.courseHist.push(zone); if (c.courseHist.length > 8) c.courseHist.shift();
+      const plan = aiRespond(oppParams, rng, SIDES.OPP, res.flight, foeX, key, { streak: c.streak, oppX: c.oppX, special: !!res.flight.special, pattern });
       c.aiPlan = plan;
       c.aiAt = now + (plan.judgement.grade === GRADES.MISS ? plan.timing.end : plan.t);
     }
+    if (c.gap) emit({ type: 'gap' });
     emit({ type: 'hit', side: shooter, flight: res.flight });
   }
 

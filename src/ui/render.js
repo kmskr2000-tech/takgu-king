@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791422732';
-import { createEffects } from './effects.js?v=1791422732';
-import { createRng } from '../core/rng.js?v=1791422732';
+} from './sprites.js?v=1791424546';
+import { createEffects } from './effects.js?v=1791424546';
+import { createRng } from '../core/rng.js?v=1791424546';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -416,6 +416,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
         if (pm && opt().effects !== false) st.pops.push({ text: g, x: pm.x, y: pm.y - 34, t0: now, ...POP[g] });
       }
       if (e.type === 'special') st.pops.push({ text: '필살기!', x: VIEW_W / 2, y: 120, t0: now, color: '#e9b3ff', edge: '#4a0f7a', size: 22, life: 1.1, rise: 10, big: true });
+      if (e.type === 'gap' && opt().effects !== false) st.pops.push({ text: '빈틈!', x: VIEW_W / 2, y: 150, t0: now, color: '#ffb06a', edge: '#6a2e00', size: 14, life: 0.8, rise: 12 });
       if (e.type === 'specialReady') st.pops.push({ text: '필살기 준비!', x: VIEW_W / 2, y: 130, t0: now, color: '#e9b3ff', edge: '#4a0f7a', size: 14, life: 1.0, rise: 14 });
       if (e.type === 'grade') {
         st.lastGrade = e.grade; st.lastMatchup = e.matchup ?? 'even';
