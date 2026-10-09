@@ -1,18 +1,19 @@
-import { h } from './dom.js?v=1791528693';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791528693';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791528693';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791528693';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791528693';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791528693';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791528693';
+import { h } from './dom.js?v=1791530886';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791530886';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791530886';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791530886';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791530886';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791530886';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791530886';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791528693';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791528693';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791528693';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791528693';
-import { reviewPanel } from './careerScreens.js?v=1791528693';
-import { RELEGATION_RANK, RELEGATION_STRIKES } from '../game/season.js?v=1791528693';
+} from '../game/season.js?v=1791530886';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791530886';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791530886';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791530886';
+import { reviewPanel } from './careerScreens.js?v=1791530886';
+import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791530886';
+import { RELEGATION_RANK, RELEGATION_STRIKES } from '../game/season.js?v=1791530886';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -144,6 +145,7 @@ export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, o
   else if (!nm) nextLine = '토너먼트 탈락 — 결과를 기다리는 중';
   else nextLine = [h('strong', {}, state.phase === 'tournament' ? '토너먼트 상대: ' : '다음 경기: '), nm.opp.name, rival ? ` (${rival.nickname}) — “${rival.line}”` : ''];
   return h('section', { class: 'screen home' },
+    titleName(state) && h('p', { class: 'title-badge' }, `「${titleName(state)}」`),
     h('header', {}, h('h2', {}, `${LEAGUE_NAMES[state.league]} ${state.season}시즌${(state.cycle ?? 1) >= 2 ? ` · ${state.cycle}회차` : ''}`), h('span', { class: 'week' }, header)),
     h('table', { class: 'standings' },
       h('thead', {}, h('tr', {}, ['순위', '선수', '승점', '승', '패'].map((t) => h('th', {}, t)))),
@@ -157,11 +159,12 @@ export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, o
     onEvent && btn(eventLabel, onEvent, 'primary event-alert'),
     state.phase === 'seasonEnd' && btn('시즌 결과 보기', onSeasonEnd, 'primary'),
     nm && btn(state.phase === 'tournament' ? '토너먼트 경기 시작' : '경기 시작', onPlay, 'primary'),
-    btn('스탯 투자', onStats),
-    onTrain && btn('훈련 모드', onTrain),
-    onCup && btn(cupLabel, onCup),
-    btn('토너먼트 대진표', onBracket),
-    btn('타이틀', onTitle));
+    h('div', { class: 'actions' },
+      btn('스탯 투자', onStats),
+      onTrain && btn('훈련 모드', onTrain),
+      onCup && btn(cupLabel, onCup),
+      btn('토너먼트 대진표', onBracket),
+      btn('타이틀', onTitle)));
 }
 
 /**
@@ -182,7 +185,19 @@ export function seasonIntroScreen({ intro, onStart, story = null }) {
   return { el, skip() { el.className = 'screen season-intro skip'; }, count: items.length };
 }
 
-export function equipScreen({ state, onChange, onStart, onBack }) {
+/** 트로피 진열장 + 칭호·스킨 고르기 (우승한 리그만 열린다) */
+export function perksShelf(state, { onTitle = null, onSkin = null } = {}) {
+  const won = wonLeagues(state);
+  if (!won.length) return h('p', { class: 'perks-empty' }, '리그 우승 트로피를 모으면 칭호와 스킨이 열려요.');
+  const pick = (cls, label, active, fn) => h('button', { class: `btn perk${active ? ' primary' : ''} ${cls}`, type: 'button', onclick: fn }, label);
+  return h('div', { class: 'perks', 'aria-label': '트로피·칭호·스킨' },
+    h('h3', {}, '트로피'),
+    h('div', { class: 'trophies' }, won.map((lg) => h('span', { class: 'trophy chip' }, `${LEAGUE_NAMES[lg].replace(' 리그', '')} ×${state.trophies[lg]}`))),
+    onTitle && [h('h3', {}, '칭호'), pick('title-none', '칭호 없음', state.title == null, () => onTitle(null)), ...won.map((lg) => pick('title-pick', `「${CHAMPION_PERKS[lg].title}」`, state.title === lg, () => onTitle(lg)))],
+    onSkin && [h('h3', {}, '스킨'), pick('skin-pick', '기본', state.skin === DEFAULT_SKIN, () => onSkin(DEFAULT_SKIN)), ...won.map((lg) => pick('skin-pick', CHAMPION_PERKS[lg].skin, state.skin === lg, () => onSkin(lg)))]);
+}
+
+export function equipScreen({ state, onChange, onStart, onBack, onTitle = null, onSkin = null }) {
   const row = (title, table, owned, current, kind) => [
     h('h3', {}, title),
     ...Object.entries(table).map(([id, it]) => {
@@ -199,6 +214,7 @@ export function equipScreen({ state, onChange, onStart, onBack }) {
     row('그립', GRIPS, state.unlocked.grips, state.grip, 'grip'),
     row('라켓', RACKETS, state.unlocked.rackets, state.racket, 'racket'),
     h('p', { class: 'mystats' }, `적용 스탯 — 파워 ${fmt(eff.power)} / 스핀 ${fmt(eff.spin)} / 집중 ${fmt(eff.focus)}`),
+    perksShelf(state, { onTitle, onSkin }),
     btn('경기 시작', onStart, 'primary'),
     btn('돌아가기', onBack));
 }
@@ -212,7 +228,9 @@ export function seasonResultScreen({ summary, onNext, story = null, onTrain = nu
     h('h2', {}, summary.champion ? '리그 챔피언!' : summary.relegated ? '시즌 종료 — 강등' : '시즌 종료'),
     h('p', {}, `${LEAGUE_NAMES[summary.league]} 정규 ${summary.rank}위`),
     h('p', {}, `우승자: ${summary.championName}`),
-    summary.champion && h('p', { class: 'pts' }, `우승 보너스 +${summary.bonus}pt`),
+    summary.perks && h('div', { class: 'perks-got', role: 'group', 'aria-label': '우승 특전' },
+      h('p', { class: 'win' }, summary.perks.first ? `트로피 획득! 칭호「${summary.perks.title}」` : `트로피 ${summary.perks.count}개째!`),
+      summary.perks.first && h('p', {}, `스킨「${summary.perks.skin}」 해금 — 경기 전 장비 화면에서 고를 수 있어요`)),
     summary.goals && h('ul', { class: 'season-goals-result', 'aria-label': '시즌 목표 결과' }, ...summary.goals.map((g) => h('li', { class: g.met ? 'met' : 'unmet' }, `${g.met ? '✔' : '✘'} ${g.label}`))),
     summary.review && reviewPanel(summary.review),
     summary.promoted && h('p', { class: 'win' }, `${LEAGUE_NAMES[summary.nextLeague]}로 승격!`),

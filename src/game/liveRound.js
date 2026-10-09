@@ -1,7 +1,7 @@
 // 리그전 속보: 내 경기가 진행되는 동안 같은 라운드의 다른 경기(AI 끼리)가 '실시간으로' 흘러간다.
 // 시작 시점에 결과(승자·점수)와 득점 순서·시각을 미리 정해 두고(planLiveRound), 경기 시계에 맞춰 보여준다(createLiveTicker).
 // 결과는 preset 으로 applyRegularResult 에 넘겨 순위표에 그대로 반영 → 화면에서 본 점수와 최종 기록이 어긋나지 않는다.
-import { quickPlay } from './season.js?v=1791528693';
+import { quickPlay } from './season.js?v=1791530886';
 
 export const LIVE_PACE = Object.freeze({ min: 6, max: 13 }); // 한 점당 평균 초 (경기마다 템포가 다르고 점마다 ±40% 흔들림)
 export const ROTATE_EVERY = 2.6; // 득점이 없으면 이 초마다 다음 경기로 넘어간다

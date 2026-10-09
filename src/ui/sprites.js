@@ -76,6 +76,10 @@ export const SPRITES = Object.freeze({
 
 // 공 (5x5, 광택) / 라켓 아이콘(타이틀)
 export const BALL = ['.kkk.', 'kwwlk', 'kwwwk', 'kwwwk', '.kkk.'];
+/** 우승 특전 스킨: 내 팔레트에서 셔츠·바지 색만 바꾼 변형 (키 구성 동일 — 빠진 키는 그려지지 않는다). 라켓(r)·머리·피부는 그대로 */
+import { CHAMPION_PERKS } from '../game/perks.js?v=1791530886';
+export const SKIN_PALETTES = Object.freeze(Object.fromEntries(Object.entries(CHAMPION_PERKS).map(([lg, p]) => [lg, Object.freeze({ ...PALETTES.me, ...p.palette })])));
+export const palettesFor = (skin) => SKIN_PALETTES[skin] ?? PALETTES.me;
 export const BALL_PALETTE = { k: '#8a6a2a', w: '#fff6d8', l: '#ffffff' };
 
 export const ICON_PADDLE = [

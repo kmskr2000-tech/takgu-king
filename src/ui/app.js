@@ -1,49 +1,50 @@
-import { h } from './dom.js?v=1791528693';
+import { h } from './dom.js?v=1791530886';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen, rivalCardScreen, storyBeatScreen, storyIntroScreen,
   multiScreen, netResultScreen, trainingScreen,
-} from './screens.js?v=1791528693';
-import { eventScreen, eventResultScreen, cupScreen } from './careerScreens.js?v=1791528693';
-import { pendingEvent, resolveEvent } from '../game/events.js?v=1791528693';
-import { cupOffer, activeCup, startCup, skipCup, closeCup, cupMatch, cupParams, cupView, applyCupResult } from '../game/cup.js?v=1791528693';
-import { addMatchToTally } from '../game/review.js?v=1791528693';
-import { createNetSession } from '../net/session.js?v=1791528693';
-import { createNetClock } from '../net/clock.js?v=1791528693';
-import { FirebaseRoom } from '../net/fireroom.js?v=1791528693';
+} from './screens.js?v=1791530886';
+import { eventScreen, eventResultScreen, cupScreen } from './careerScreens.js?v=1791530886';
+import { pendingEvent, resolveEvent } from '../game/events.js?v=1791530886';
+import { cupOffer, activeCup, startCup, skipCup, closeCup, cupMatch, cupParams, cupView, applyCupResult } from '../game/cup.js?v=1791530886';
+import { addMatchToTally } from '../game/review.js?v=1791530886';
+import { selectSkin, selectTitle } from '../game/perks.js?v=1791530886';
+import { createNetSession } from '../net/session.js?v=1791530886';
+import { createNetClock } from '../net/clock.js?v=1791530886';
+import { FirebaseRoom } from '../net/fireroom.js?v=1791530886';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791528693';
-import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791528693';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791528693';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791528693';
-import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791528693';
-import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791528693';
-import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791528693';
-import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791528693';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791528693';
-import { oppProfile } from '../game/oppProfile.js?v=1791528693';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791528693';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791528693';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791528693';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791528693';
-import { createAudio } from './audio.js?v=1791528693';
-import { createBgm } from './bgm.js?v=1791528693';
-import { createHaptics, react } from './feedback.js?v=1791528693';
-import { installPressFeedback } from './pressfx.js?v=1791528693';
-import { planLiveRound, createLiveTicker } from '../game/liveRound.js?v=1791528693';
-import { snapshotBefore, buildRecap } from '../game/recap.js?v=1791528693';
-import { createMatchTally, createRecordsStore } from '../game/records.js?v=1791528693';
-import { createTrainingStore, trainingParams, trainingReward, TRAIN_OPPONENT } from '../game/training.js?v=1791528693';
-import { createRenderer } from './render.js?v=1791528693';
-import { createMatchController } from '../game/matchController.js?v=1791528693';
+} from './intro.js?v=1791530886';
+import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791530886';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791530886';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791530886';
+import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791530886';
+import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791530886';
+import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791530886';
+import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791530886';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791530886';
+import { oppProfile } from '../game/oppProfile.js?v=1791530886';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791530886';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791530886';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791530886';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791530886';
+import { createAudio } from './audio.js?v=1791530886';
+import { createBgm } from './bgm.js?v=1791530886';
+import { createHaptics, react } from './feedback.js?v=1791530886';
+import { installPressFeedback } from './pressfx.js?v=1791530886';
+import { planLiveRound, createLiveTicker } from '../game/liveRound.js?v=1791530886';
+import { snapshotBefore, buildRecap } from '../game/recap.js?v=1791530886';
+import { createMatchTally, createRecordsStore } from '../game/records.js?v=1791530886';
+import { createTrainingStore, trainingParams, trainingReward, TRAIN_OPPONENT } from '../game/training.js?v=1791530886';
+import { createRenderer } from './render.js?v=1791530886';
+import { createMatchController } from '../game/matchController.js?v=1791530886';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult, seasonGoals, startCycle,
-} from '../game/season.js?v=1791528693';
-import { createStore } from '../game/store.js?v=1791528693';
-import { createRng } from '../core/index.js?v=1791528693';
-import { applyIosTopGap } from './iosTopGap.js?v=1791528693';
+} from '../game/season.js?v=1791530886';
+import { createStore } from '../game/store.js?v=1791530886';
+import { createRng } from '../core/index.js?v=1791530886';
+import { applyIosTopGap } from './iosTopGap.js?v=1791530886';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -266,6 +267,8 @@ export function createApp(root, deps = {}) {
           equip(state, kind === 'grip' ? id : state.grip, kind === 'racket' ? id : state.racket);
           persist(); api.showEquip();
         },
+        onTitle: (id) => { selectTitle(state, id); persist(); api.showEquip(); },
+        onSkin: (id) => { selectSkin(state, id); persist(); api.showEquip(); },
         onStart: () => api.beforeMatch(),
         onBack: () => api.showHome(),
       }));
@@ -390,6 +393,7 @@ export function createApp(root, deps = {}) {
       renderer.setControlMode(mode);
       audio.unlock(); // 경기 시작 클릭(사용자 제스처) 안에서 오디오 허용
       renderer.setOpponentLook(opp.rival ? 'rival' : 'opp');
+      renderer.setSkin(tut ? 'default' : state?.skin ?? 'default'); // 우승 특전 스킨 (튜토리얼·멀티는 기본)
       const seed = deps.seed ?? ((Date.now() & 0xffffffff) >>> 0); // deps.seed: QA 정지 화면용 고정 시드
       const ctl = createMatchController({
         stats: tut ? TUTORIAL_STATS : effectiveStats(state),

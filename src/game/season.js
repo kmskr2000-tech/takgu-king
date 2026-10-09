@@ -1,13 +1,13 @@
-import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick, RIVAL_CYCLE } from '../core/index.js?v=1791528693';
-import { RIVAL_STORY, ensureStory, rivalStory } from './story.js?v=1791528693';
-import { statCurve } from './statcurve.js?v=1791528693';
-import { ensureTally, emptyTally, buildReview } from './review.js?v=1791528693';
-import { ensureEvents } from './events.js?v=1791528693';
+import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick, RIVAL_CYCLE } from '../core/index.js?v=1791530886';
+import { RIVAL_STORY, ensureStory, rivalStory } from './story.js?v=1791530886';
+import { statCurve } from './statcurve.js?v=1791530886';
+import { ensureTally, emptyTally, buildReview } from './review.js?v=1791530886';
+import { ensureEvents } from './events.js?v=1791530886';
+import { ensurePerks, grantPerks, registerUnlocks, CHAMPION_PERKS } from './perks.js?v=1791530886';
 
 export const SAVE_VERSION = 2;
 export const WIN_PT = 3;
 export const LOSE_PT = 1;
-export const CHAMPION_BONUS = 5;
 /** 강등: 정규 시즌 이 순위 이하(9~10위)로 목표 실패가 같은 리그에서 이 횟수만큼 연속이면 한 단계 아래로. 아마추어는 강등 없음 */
 export const RELEGATION_RANK = 9;
 export const RELEGATION_STRIKES = 2;
@@ -54,6 +54,8 @@ export const UNLOCKS = Object.freeze({
   first: { grips: [], rackets: ['wall'] },
   world: { grips: [], rackets: ['emperor'] },
 });
+
+registerUnlocks(UNLOCKS);
 
 /**
  * 해금 조건 문구 (UNLOCKS 표에서 파생 → 표와 문구가 어긋나지 않는다).
@@ -142,6 +144,7 @@ export function newGame(league = 'amateur') {
     cycle: 1, // 회차 (세계대회 우승 후 2회차를 시작하면 +1: 라이벌 변주)
     retries: {}, // 리그별 연속 실패 횟수 (우승하면 지움) — 재도전 안내용
     story: { seen: [], met: [], rivalLosses: {} }, // 본 스토리 비트·만난 라이벌·라이벌전 패배 수 (story.js)
+    trophies: {}, title: null, skin: 'default', // 우승 특전 (perks.js)
     events: { history: [] }, // 커리어 이벤트 선택 기록 (events.js)
     cupHistory: [], // 월간 컵 성적 (cup.js)
     radarPrev: null, // 지난 시즌 결산 레이더 (성장 비교용)
@@ -165,7 +168,7 @@ function ensureCycle(state) {
 }
 /** 재도전 횟수 필드 보강 (예전 저장에는 없다) */
 function ensureExtras(state) {
-  ensureEvents(state); ensureTally(state);
+  ensureEvents(state); ensureTally(state); ensurePerks(state, { retro: state.trophies === undefined });
   if (!Array.isArray(state.cupHistory)) state.cupHistory = [];
   if (!Array.isArray(state.cupsDone)) state.cupsDone = [];
   if (state.cup === undefined || (state.cup !== null && (typeof state.cup !== 'object' || !state.cup.rounds))) state.cup = null;
@@ -191,6 +194,7 @@ export function migrate(raw) {
   ensureStory(s);
   ensureRetries(s);
   s.cycle = Math.max(1, Math.floor(raw.cycle ?? 1));
+  s.cleared = !!raw.cleared; delete s.trophies; // v1 저장: 우승 특전은 소급 지급
   ensureExtras(s);
   return s; // 진행 중이던 주차는 새 시즌으로 초기화 (스탯/포인트/장비 유지)
 }
@@ -329,7 +333,7 @@ function finishSeason(state) {
   const prevLeague = state.league;
   const summary = {
     league: prevLeague, rank, champion: iWon, championName: state.teams[champion].name,
-    promoted: false, nextLeague: prevLeague, unlocked: { grips: [], rackets: [] }, bonus: 0, ending: false,
+    promoted: false, nextLeague: prevLeague, unlocked: { grips: [], rackets: [] }, ending: false,
   };
   // 시즌 목표 달성 여부 (시즌 시작 화면의 목표와 같은 기준) + 연속 실패(재도전) 횟수
   const lastLeague = LEAGUES.indexOf(prevLeague) === LEAGUES.length - 1;
@@ -348,8 +352,7 @@ function finishSeason(state) {
     summary.relegated = true; summary.nextLeague = LEAGUES[LEAGUES.indexOf(prevLeague) - 1]; delete retries[prevLeague];
   } else if (low) summary.relegationRisk = true;
   if (iWon) {
-    summary.bonus = CHAMPION_BONUS;
-    state.statPoints += CHAMPION_BONUS;
+    summary.perks = grantPerks(state, prevLeague); // 우승 특전: 트로피·칭호·스킨 (스탯 포인트 보너스는 폐지)
     const un = UNLOCKS[prevLeague];
     for (const g of un.grips) if (!state.unlocked.grips.includes(g)) { state.unlocked.grips.push(g); summary.unlocked.grips.push(g); }
     for (const r of un.rackets) if (!state.unlocked.rackets.includes(r)) { state.unlocked.rackets.push(r); summary.unlocked.rackets.push(r); }
@@ -418,7 +421,7 @@ export function seasonGoals(state) {
   const goals = [
     { icon: '🏓', label: '정규 시즌', text: '9경기 풀리그에서 상위 4위 안에 들기' },
     { icon: '🏆', label: '연말 토너먼트', text: last ? '세계대회 우승으로 정상에 서기' : `우승하면 ${next} 승격` },
-    { icon: '🎁', label: '우승 보상', text: `보너스 포인트 +${CHAMPION_BONUS}${names.length ? ` · 해금: ${names.join(', ')}` : ''}` },
+    { icon: '🎁', label: '우승 보상', text: `트로피 · 칭호「${CHAMPION_PERKS[state.league].title}」 · 스킨「${CHAMPION_PERKS[state.league].skin}」${names.length ? ` · 해금: ${names.join(', ')}` : ''}` },
   ];
   const retry = ensureRetries(state)[state.league] ?? 0;
   if (retry > 0) goals.push({ icon: '🔁', label: '재도전', text: `지난 시즌은 목표에 닿지 못했어요 — 훈련으로 감각을 다듬고 ${retry + 1}번째 도전!` });

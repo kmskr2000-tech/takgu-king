@@ -1,10 +1,10 @@
 // 경기 화면 Canvas 렌더러 v2: 내 선수 뒤에서 보는 원근(pseudo-3D) 시점. 도트 스타일(저해상도 버퍼 → CSS 확대).
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
-  SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791528693';
-import { createEffects } from './effects.js?v=1791528693';
-import { createRng } from '../core/rng.js?v=1791528693';
+  SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite, palettesFor,
+} from './sprites.js?v=1791530886';
+import { createEffects } from './effects.js?v=1791530886';
+import { createRng } from '../core/rng.js?v=1791530886';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -66,7 +66,7 @@ export function swingFrame(sinceHit) {
 /** 깊이에 따른 정수 도트 배율 (선수/공 스프라이트) */
 export const spriteScale = (k, mult = 2) => Math.max(1, Math.round(k * mult));
 
-import { tailRects, stripeRects, bounceRects, spinKind, BOUNCE_FX_S } from './ballfx.js?v=1791528693';
+import { tailRects, stripeRects, bounceRects, spinKind, BOUNCE_FX_S } from './ballfx.js?v=1791530886';
 
 export function createRenderer(canvas, { rng, options } = {}) {
   // 설정(이펙트/흔들림/가이드)은 프레임마다 읽는다 → 토글 즉시 반영
@@ -79,7 +79,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
   let prevZ = 0; let bounceAt = null; // 바운드 연출 상태 (drawBall)
   const fx = createEffects(rng);
   const st = {
-    reachFar: false, specialNow: false, pops: [], controlMode: 'advanced', meTarget: 50, meK: 3, lean: 0, lastAct: null, hint: null, swing: { me: null, opp: null }, meX: 50, oppX: 50, lastNow: null, lastGrade: 'GOOD', look: 'opp', shake: 0, lane: 'center',
+    reachFar: false, specialNow: false, pops: [], controlMode: 'advanced', meTarget: 50, meK: 3, lean: 0, lastAct: null, hint: null, swing: { me: null, opp: null }, meX: 50, oppX: 50, lastNow: null, lastGrade: 'GOOD', look: 'opp', skin: 'default', shake: 0, lane: 'center',
   };
 
   const R = (g, x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
@@ -262,7 +262,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
     const so = spriteScale(po.k); const sm = spriteScale(pm.k); // 상대 2배, 나 4배 도트
     drawSprite(ctx, SPRITES.opp[oppFrame], PALETTES[st.look], Math.round(po.x - (SPRITE_W * so) / 2), Math.round(po.y - SPRITE_H * so), { scale: so });
     R(ctx, Math.round(pm.x - (SPRITE_W * sm) / 2), Math.round(pm.y - 2), SPRITE_W * sm, 3, C.shadow); // 발 그림자
-    drawSprite(ctx, SPRITES.me[meFrame], PALETTES.me, Math.round(pm.x - (SPRITE_W * sm) / 2), Math.round(pm.y - SPRITE_H * sm), { scale: sm });
+    drawSprite(ctx, SPRITES.me[meFrame], palettesFor(st.skin), Math.round(pm.x - (SPRITE_W * sm) / 2), Math.round(pm.y - SPRITE_H * sm), { scale: sm });
   }
 
   // 판정 글자: 떠오르며 사라진다. 처음 0.12초는 크게 튀어 오른다 (외곽선으로 어떤 배경에서도 읽힌다)
@@ -422,6 +422,8 @@ export function createRenderer(canvas, { rng, options } = {}) {
     setControlMode(m) { st.controlMode = m; },
     /** 코스 마커: 'left' | 'center' | 'right' */
     setLane(lane) { st.lane = lane; },
+    /** 내 선수 스킨(우승 특전). 없거나 모르는 값이면 기본 */
+    setSkin(skin) { st.skin = skin; },
     setOpponentLook(look) { st.look = look === 'rival' ? 'rival' : 'opp'; },
     /** 컨트롤러 이벤트 수신: 스윙 애니메이션 + 이펙트 */
     notify(e, now) {
