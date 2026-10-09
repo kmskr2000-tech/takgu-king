@@ -1,16 +1,18 @@
-import { h } from './dom.js?v=1791523471';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791523471';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791523471';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791523471';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791523471';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791523471';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791523471';
+import { h } from './dom.js?v=1791528693';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791528693';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791528693';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791528693';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791528693';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791528693';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791528693';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791523471';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791523471';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791523471';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791523471';
+} from '../game/season.js?v=1791528693';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791528693';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791528693';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791528693';
+import { reviewPanel } from './careerScreens.js?v=1791528693';
+import { RELEGATION_RANK, RELEGATION_STRIKES } from '../game/season.js?v=1791528693';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -131,7 +133,7 @@ export function rulesScreen({ onBack, mode = 'simple' }) {
   };
 }
 
-export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, onSeasonEnd, onTrain = null }) {
+export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, onSeasonEnd, onTrain = null, onCup = null, cupLabel = '월간 컵', onEvent = null, eventLabel = '' }) {
   const table = standings(state);
   const nm = nextMatch(state);
   const rival = nm?.opp?.rival ? rivalFor(state) : null;
@@ -145,17 +147,19 @@ export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, o
     h('header', {}, h('h2', {}, `${LEAGUE_NAMES[state.league]} ${state.season}시즌${(state.cycle ?? 1) >= 2 ? ` · ${state.cycle}회차` : ''}`), h('span', { class: 'week' }, header)),
     h('table', { class: 'standings' },
       h('thead', {}, h('tr', {}, ['순위', '선수', '승점', '승', '패'].map((t) => h('th', {}, t)))),
-      h('tbody', {}, table.map((t) => h('tr', { class: t.me ? 'me' : '' },
+      h('tbody', {}, table.map((t) => h('tr', { class: [t.me ? 'me' : '', state.league !== 'amateur' && t.rank >= RELEGATION_RANK ? 'drop' : '', t.rank <= 4 ? 'top' : ''].filter(Boolean).join(' ') },
         h('td', {}, t.rank), h('td', {}, t.name), h('td', {}, t.points), h('td', {}, t.wins), h('td', {}, t.losses))))),
     h('div', { class: 'next' }, nextLine),
     h('div', { class: 'mystats' },
       Object.entries(STAT_INFO).map(([k, v]) => h('span', { class: 'chip' },
         `${v.label} ${state.stats[k]}${fmt(eff[k]) !== String(state.stats[k]) ? ` (${fmt(eff[k])})` : ''}`)),
       h('span', { class: 'chip pts' }, `포인트 ${state.statPoints}`)),
+    onEvent && btn(eventLabel, onEvent, 'primary event-alert'),
     state.phase === 'seasonEnd' && btn('시즌 결과 보기', onSeasonEnd, 'primary'),
     nm && btn(state.phase === 'tournament' ? '토너먼트 경기 시작' : '경기 시작', onPlay, 'primary'),
     btn('스탯 투자', onStats),
     onTrain && btn('훈련 모드', onTrain),
+    onCup && btn(cupLabel, onCup),
     btn('토너먼트 대진표', onBracket),
     btn('타이틀', onTitle));
 }
@@ -205,15 +209,18 @@ export function seasonResultScreen({ summary, onNext, story = null, onTrain = nu
     ...summary.unlocked.rackets.map((r) => RACKETS[r].name),
   ];
   return h('section', { class: 'screen season-result' },
-    h('h2', {}, summary.champion ? '리그 챔피언!' : '시즌 종료'),
+    h('h2', {}, summary.champion ? '리그 챔피언!' : summary.relegated ? '시즌 종료 — 강등' : '시즌 종료'),
     h('p', {}, `${LEAGUE_NAMES[summary.league]} 정규 ${summary.rank}위`),
     h('p', {}, `우승자: ${summary.championName}`),
     summary.champion && h('p', { class: 'pts' }, `우승 보너스 +${summary.bonus}pt`),
     summary.goals && h('ul', { class: 'season-goals-result', 'aria-label': '시즌 목표 결과' }, ...summary.goals.map((g) => h('li', { class: g.met ? 'met' : 'unmet' }, `${g.met ? '✔' : '✘'} ${g.label}`))),
+    summary.review && reviewPanel(summary.review),
     summary.promoted && h('p', { class: 'win' }, `${LEAGUE_NAMES[summary.nextLeague]}로 승격!`),
+    summary.relegated && h('p', { class: 'lose relegated' }, `${LEAGUE_NAMES[summary.nextLeague]}로 강등… 거기서 다시 올라와요!`),
+    summary.relegationRisk && h('p', { class: 'lose relegation-risk' }, `하위권(${RELEGATION_RANK}위 이하) 위험! ${RELEGATION_STRIKES}시즌 연속 목표에 못 닿고 하위권이면 한 단계 강등돼요.`),
     story && h('div', { class: 'story-beat' }, h('b', {}, story.title), ...story.text.split('\n').map((t) => h('p', {}, t))),
-    !summary.champion && h('p', { class: 'quote' }, `“${CATCHPHRASE}” — ${PROTAGONIST.name}. 같은 리그에서 다음 시즌!`),
-    !summary.champion && h('p', { class: 'retry-note' }, `목표에 닿지 못했어요 — ${LEAGUE_NAMES[summary.league]} ${(summary.retryCount ?? 1) + 1}번째 도전. 훈련 모드로 감각을 다듬고 다시 가요!`),
+    !summary.champion && !summary.relegated && h('p', { class: 'quote' }, `“${CATCHPHRASE}” — ${PROTAGONIST.name}. 같은 리그에서 다음 시즌!`),
+    !summary.champion && !summary.relegated && h('p', { class: 'retry-note' }, `목표에 닿지 못했어요 — ${LEAGUE_NAMES[summary.league]} ${(summary.retryCount ?? 1) + 1}번째 도전. 훈련 모드로 감각을 다듬고 다시 가요!`),
     !summary.champion && onTrain && btn(`훈련하러 가기 (오늘 남은 ${trainLeft}회)`, onTrain),
     unlockedNames.length > 0 && h('p', {}, `해금: ${unlockedNames.join(', ')}`),
     btn(summary.ending ? '엔딩 보기' : summary.cycleOffer && onCycle ? '세계대회 계속 (다음 시즌)' : '다음 시즌', onNext, 'primary'),

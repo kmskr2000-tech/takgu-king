@@ -365,3 +365,37 @@ button:not(.shot-btn):not(:disabled):active, button:not(.shot-btn).pressed:not(:
 .season-goals-result li { padding: 5px 8px; border-radius: 6px; background: var(--panel); font-weight: 700; }
 .season-goals-result li.met { color: #7dff8a; } .season-goals-result li.unmet { color: #ff8a7a; }
 .retry-note { font-size: .88rem; color: #ffd24a; }
+
+/* ---- 커리어: 랜덤 이벤트 · 시즌 결산 레이더 · 월간 컵 · 승강 구역 ---- */
+.event-crumb { margin:0; color:var(--dim); font-size:.85rem; }
+.event-title { margin:0; text-align:center; color:var(--accent); text-shadow:2px 2px 0 #000; font-size:1.7rem; }
+.event-scene { margin:0; text-align:center; color:var(--text); }
+.event-line { margin:4px 0; padding:10px; background:var(--panel); border:2px solid #2c3f52; border-radius:6px; }
+.event-choices { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.event-choice { font:inherit; color:var(--text); display:flex; flex-direction:column; gap:6px; align-items:center; text-align:center; padding:12px 8px; min-height:150px; border-radius:6px; border:3px solid; }
+.event-choice b { font-size:1rem; line-height:1.3; }
+.event-choice small { color:inherit; opacity:.85; }
+.event-choice .odds { margin-top:auto; padding:3px 12px; border-radius:12px; background:rgba(0,0,0,.35); font-weight:700; }
+.event-choice.risky { background:#a8531a; border-color:#ff9a3d; }
+.event-choice.safe { background:#2d3b4b; border-color:#7f93a8; }
+.event-foot { margin:0; text-align:center; color:var(--dim); font-size:.8rem; }
+.event-result .event-head { text-align:center; font-size:1.5rem; margin:0; font-weight:700; }
+.event-result.win .event-head { color:var(--accent); } .event-result.lose .event-head { color:#ff9d90; }
+.btn.event-alert { border-style:dashed; }
+.review { display:flex; flex-direction:column; gap:8px; align-items:center; }
+.review-season { margin:0; color:#7fd6d0; letter-spacing:2px; font-weight:700; }
+svg.radar { width:100%; max-width:320px; height:auto; background:#13243a; border:2px solid #2d8fb5; border-radius:10px; }
+.radar-ring { fill:none; stroke:#2d8fb5; stroke-width:1; opacity:.7; }
+.radar-axis { stroke:#2d8fb5; stroke-width:1; opacity:.5; }
+.radar-shape { fill:rgba(255,154,61,.55); stroke:#ff9a3d; stroke-width:2; }
+.radar-prev { fill:none; stroke:#eef3f7; stroke-width:1.5; stroke-dasharray:4 3; opacity:.8; }
+.radar-label { fill:var(--accent); font-size:11px; font-weight:700; }
+.review-note, .review-growth { margin:0; color:var(--dim); font-size:.8rem; text-align:center; }
+.review-tiles { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; }
+.review-tiles .tile { background:var(--panel); border:2px solid #2d8fb5; border-radius:8px; padding:10px; text-align:center; }
+.review-tiles .tile small { display:block; color:var(--dim); } .review-tiles .tile b { font-size:1.4rem; color:var(--accent); }
+.lose { color:#ff9d90; font-weight:700; }
+.standings tr.top td:first-child { border-left:4px solid #5ab86a; }
+.standings tr.drop td:first-child { border-left:4px solid #e0624f; }
+.screen.cup .match-slot.mine { background:#33481f; border-radius:4px; padding:2px 6px; }
+@media (prefers-reduced-motion: reduce) { .event-choice { transition:none; } }

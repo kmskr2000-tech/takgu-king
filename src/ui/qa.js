@@ -1,9 +1,9 @@
 // QA 직접 링크(#qa-match / #qa-tutorial / #qa-home / #qa-season-intro / #qa-result): 레이아웃 점검용으로 "정지 화면"을 만든다.
 // 안전: 실제 저장소(localStorage)를 절대 읽거나 쓰지 않는다 — 메모리 저장소 + 고정 시드 + 수동 시계. 인트로·소리 없음.
-import { createApp } from './app.js?v=1791523471';
-import { createStore } from '../game/store.js?v=1791523471';
-import { newGame } from '../game/season.js?v=1791523471';
-import { describePoint } from '../game/pointReason.js?v=1791523471';
+import { createApp } from './app.js?v=1791528693';
+import { createStore } from '../game/store.js?v=1791528693';
+import { newGame } from '../game/season.js?v=1791528693';
+import { describePoint } from '../game/pointReason.js?v=1791528693';
 
 export const QA_ROUTES = Object.freeze(['match', 'tutorial', 'home', 'season-intro', 'result']);
 

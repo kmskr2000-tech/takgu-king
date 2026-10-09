@@ -1,11 +1,16 @@
-import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick, RIVAL_CYCLE } from '../core/index.js?v=1791523471';
-import { RIVAL_STORY, ensureStory, rivalStory } from './story.js?v=1791523471';
-import { statCurve } from './statcurve.js?v=1791523471';
+import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick, RIVAL_CYCLE } from '../core/index.js?v=1791528693';
+import { RIVAL_STORY, ensureStory, rivalStory } from './story.js?v=1791528693';
+import { statCurve } from './statcurve.js?v=1791528693';
+import { ensureTally, emptyTally, buildReview } from './review.js?v=1791528693';
+import { ensureEvents } from './events.js?v=1791528693';
 
 export const SAVE_VERSION = 2;
 export const WIN_PT = 3;
 export const LOSE_PT = 1;
 export const CHAMPION_BONUS = 5;
+/** 강등: 정규 시즌 이 순위 이하(9~10위)로 목표 실패가 같은 리그에서 이 횟수만큼 연속이면 한 단계 아래로. 아마추어는 강등 없음 */
+export const RELEGATION_RANK = 9;
+export const RELEGATION_STRIKES = 2;
 
 export const LEAGUE_NAMES = Object.freeze({
   amateur: '아마추어 리그', third: '3부 리그', second: '2부 리그', first: '1부 리그', world: '세계대회',
@@ -92,7 +97,7 @@ export function roundRobin(n = 10) {
   return rounds;
 }
 
-function buildTeams(league, cycle = 1) {
+export function buildTeams(league, cycle = 1) {
   const rivalIdx = 8; // 상위권 한 명을 라이벌로
   const teams = [{ id: 0, name: '나', me: true }];
   TIER_LAYOUT.forEach((tier, i) => {
@@ -118,6 +123,8 @@ export function startSeason(state, league = state.league) {
   state.log = []; // { a, b, winner, sa, sb, stage }
   state.bracket = null;
   state.summary = null;
+  state.seasonTally = emptyTally(); // 이번 시즌 경기 집계 (결산 레이더용)
+  state.cup = null; state.cupsDone = []; // 월간 컵은 시즌마다 새로
   return state;
 }
 
@@ -135,6 +142,9 @@ export function newGame(league = 'amateur') {
     cycle: 1, // 회차 (세계대회 우승 후 2회차를 시작하면 +1: 라이벌 변주)
     retries: {}, // 리그별 연속 실패 횟수 (우승하면 지움) — 재도전 안내용
     story: { seen: [], met: [], rivalLosses: {} }, // 본 스토리 비트·만난 라이벌·라이벌전 패배 수 (story.js)
+    events: { history: [] }, // 커리어 이벤트 선택 기록 (events.js)
+    cupHistory: [], // 월간 컵 성적 (cup.js)
+    radarPrev: null, // 지난 시즌 결산 레이더 (성장 비교용)
   };
   return startSeason(state, league);
 }
@@ -154,6 +164,15 @@ function ensureCycle(state) {
   return state.cycle;
 }
 /** 재도전 횟수 필드 보강 (예전 저장에는 없다) */
+function ensureExtras(state) {
+  ensureEvents(state); ensureTally(state);
+  if (!Array.isArray(state.cupHistory)) state.cupHistory = [];
+  if (!Array.isArray(state.cupsDone)) state.cupsDone = [];
+  if (state.cup === undefined || (state.cup !== null && (typeof state.cup !== 'object' || !state.cup.rounds))) state.cup = null;
+  if (state.radarPrev === undefined) state.radarPrev = null;
+  return state;
+}
+/** 재도전 횟수 필드 보강 (예전 저장에는 없다) */
 function ensureRetries(state) {
   if (!state.retries || typeof state.retries !== 'object' || Array.isArray(state.retries)) state.retries = {};
   return state.retries;
@@ -162,7 +181,7 @@ function ensureRetries(state) {
 /** 저장 데이터 마이그레이션: v1 → v2 (일정/로그/국면 보강). 알 수 없으면 null */
 export function migrate(raw) {
   if (!raw || typeof raw !== 'object' || !raw.stats || !LEAGUES.includes(raw.league)) return null;
-  if (raw.version === SAVE_VERSION && raw.teams && raw.schedule) { renameLegacyTeams(raw); ensureStory(raw); ensureRetries(raw); ensureCycle(raw); return raw; }
+  if (raw.version === SAVE_VERSION && raw.teams && raw.schedule) { renameLegacyTeams(raw); ensureStory(raw); ensureRetries(raw); ensureCycle(raw); ensureExtras(raw); return raw; }
   const s = newGame(raw.league);
   s.stats = { power: raw.stats.power ?? 3, spin: raw.stats.spin ?? 3, focus: raw.stats.focus ?? 3 };
   s.statPoints = raw.statPoints ?? 0;
@@ -172,6 +191,7 @@ export function migrate(raw) {
   ensureStory(s);
   ensureRetries(s);
   s.cycle = Math.max(1, Math.floor(raw.cycle ?? 1));
+  ensureExtras(s);
   return s; // 진행 중이던 주차는 새 시즌으로 초기화 (스탯/포인트/장비 유지)
 }
 
@@ -321,6 +341,12 @@ function finishSeason(state) {
   if (iWon) delete retries[prevLeague]; else retries[prevLeague] = (retries[prevLeague] ?? 0) + 1;
   summary.cycleOffer = lastLeague && iWon; // 세계대회 우승: 2회차 시작을 고를 수 있다 (기본 흐름은 그대로 세계대회 계속)
   summary.retryCount = retries[prevLeague] ?? 0; // 같은 리그를 다시 도전하는 횟수 (우승이면 0)
+  // 강등: 아마추어 제외, 정규 9~10위로 목표 실패가 같은 리그에서 연속 RELEGATION_STRIKES 번째면 한 단계 아래 리그로. 첫 번째는 '강등 위기' 경고만
+  const low = rank >= RELEGATION_RANK && prevLeague !== LEAGUES[0] && !iWon;
+  summary.relegated = false; summary.relegationRisk = false;
+  if (low && (retries[prevLeague] ?? 0) >= RELEGATION_STRIKES) {
+    summary.relegated = true; summary.nextLeague = LEAGUES[LEAGUES.indexOf(prevLeague) - 1]; delete retries[prevLeague];
+  } else if (low) summary.relegationRisk = true;
   if (iWon) {
     summary.bonus = CHAMPION_BONUS;
     state.statPoints += CHAMPION_BONUS;
@@ -331,6 +357,8 @@ function finishSeason(state) {
     if (idx < LEAGUES.length - 1) { summary.promoted = true; summary.nextLeague = LEAGUES[idx + 1]; }
     else if (!state.cleared) { state.cleared = true; summary.ending = true; state.endingPending = true; }
   }
+  const me = state.teams[0];
+  summary.review = buildReview(state, { rank, wins: me.wins, losses: me.losses }, effectiveStats(state)); // 결산: 6각 레이더·전적·순위
   state.summary = summary;
   state.phase = 'seasonEnd';
 }
