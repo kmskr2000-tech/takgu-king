@@ -1,19 +1,19 @@
-import { h } from './dom.js?v=1791531836';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791531836';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791531836';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791531836';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791531836';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791531836';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791531836';
+import { h } from './dom.js?v=1791532253';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791532253';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791532253';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791532253';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791532253';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791532253';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791532253';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791531836';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791531836';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791531836';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791531836';
-import { reviewPanel } from './careerScreens.js?v=1791531836';
-import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791531836';
-import { RELEGATION_RANK, RELEGATION_STRIKES } from '../game/season.js?v=1791531836';
+} from '../game/season.js?v=1791532253';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791532253';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791532253';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791532253';
+import { reviewPanel } from './careerScreens.js?v=1791532253';
+import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791532253';
+import { RELEGATION_RANK, RELEGATION_STRIKES } from '../game/season.js?v=1791532253';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },

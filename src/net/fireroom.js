@@ -16,7 +16,7 @@
 //       gc: {pushId: candidate}       <- guest ICE candidates
 //       hc: {pushId: candidate}       <- host ICE candidates
 
-import { parseMsg } from './protocol.js?v=1791531836';
+import { parseMsg } from './protocol.js?v=1791532253';
 
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no confusing 0/O/1/I
 const ROOMS_PATH = 'pkmspl-rooms';

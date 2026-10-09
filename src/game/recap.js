@@ -1,5 +1,5 @@
 // 경기 후 상황 정리판(FM 식): 이번 라운드 내 경기 + 다른 경기 결과 + 순위 변동. 순수 데이터.
-import { ranking } from './season.js?v=1791531836';
+import { ranking } from './season.js?v=1791532253';
 
 /** 정규 경기 결과를 반영하기 직전에 부른다: { before: 순위표, n: 로그 길이 } */
 export const snapshotBefore = (state) => ({ before: ranking(state), n: state.log.length });

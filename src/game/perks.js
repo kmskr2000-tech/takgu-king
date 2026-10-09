@@ -2,7 +2,7 @@
 //  - CHAMPION_PERKS 한 곳이 정본 — 시즌 목표 문구·결과 화면·진열장이 모두 여기서 파생한다.
 //  - 트로피는 리그별 우승 횟수(2회차·세계대회 계속에서 다시 우승하면 +1). 칭호·스킨은 해당 리그를 한 번이라도 우승하면 소유.
 //  - 스킨은 내 선수 팔레트만 바꾼다(스프라이트 불변). 튜토리얼·멀티플레이는 기본 스킨.
-import { LEAGUES } from '../core/index.js?v=1791531836';
+import { LEAGUES } from '../core/index.js?v=1791532253';
 
 export const DEFAULT_SKIN = 'default';
 export const CHAMPION_PERKS = Object.freeze({

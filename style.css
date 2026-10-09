@@ -478,3 +478,7 @@ svg.radar { width: 100%; max-width: 300px; height: auto; background: var(--s1); 
 .event-foot { margin: 0; text-align: center; color: var(--tx3); font-size: 12px; }
 .event-result .event-head { margin: 0; text-align: center; font-size: 24px; font-weight: 600; }
 .event-result.win .event-head { color: var(--gold); } .event-result.lose .event-head { color: var(--bad); }
+
+/* 타이틀 게임 난이도: 다른 메뉴 버튼처럼 가운데 정렬 ("게임 난이도  보통 ▸" 한 줄) */
+.screen.title .btn.level { justify-content: center; gap: 10px; text-align: center; }
+.screen.title .btn.level .sstate { color: var(--gold); }

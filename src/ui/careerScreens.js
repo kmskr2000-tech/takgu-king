@@ -1,7 +1,7 @@
 // 커리어 화면: 랜덤 이벤트, 월간 컵 대진표, 시즌 결산 레이더. 목업(files/media-generation-takgu-*.webp) 구성을 따른다.
-import { h, svg } from './dom.js?v=1791531836';
-import { radarGeometry } from '../game/review.js?v=1791531836';
-import { safeReward, FAIL_LOSS } from '../game/events.js?v=1791531836';
+import { h, svg } from './dom.js?v=1791532253';
+import { radarGeometry } from '../game/review.js?v=1791532253';
+import { safeReward, FAIL_LOSS } from '../game/events.js?v=1791532253';
 
 const btn = (text, onclick, cls = '') => h('button', { class: `btn ${cls}`.trim(), onclick, type: 'button' }, text);
 const pct = (p) => `${Math.round(p * 100)}%`;
