@@ -1,6 +1,6 @@
 // 스토리: 주인공 페르소나, 리그별 라이벌 대사(첫 등장/경기 전/패배 시/승리 시), 리그별 스토리 비트(도입/연패/중반/관계/결승/우승).
 // 출처: ../files/스토리라인.md. DOM 무관 순수 데이터·로직 — 시즌 저장(state.story)에 본 비트·만난 라이벌·라이벌전 패배 수만 기록한다.
-import { LEAGUES } from '../core/index.js?v=1791436882';
+import { LEAGUES, RIVAL_CYCLE } from '../core/index.js?v=1791523471';
 
 export const PROTAGONIST = Object.freeze({
   name: '도민구', nickname: '벽치기', age: 29, job: '물류센터 야간 상하차 알바',
@@ -163,7 +163,7 @@ const GENERIC_CLEAR = { title: '우승', text: '우승했다. 지고, 다시 하
  *  - final 은 내가 토너먼트에 올랐을 때만. 라이벌이 대진에 없으면 라이벌 언급이 없는 문구로 바꾼다.
  */
 export function pendingBeat(state) {
-  if (state.phase === 'seasonEnd') return null;
+  if (state.phase === 'seasonEnd' || (state.cycle ?? 1) >= 2) return null; // 2회차는 도입 컷(introBeat)만 — 1회차 비트를 다시 쏟지 않는다
   const lg = state.league;
   const wk = state.phase === 'regular' ? state.week : 99;
   for (const id of ['early', 'mid', 'bond', 'final']) {
@@ -183,8 +183,17 @@ export function pendingBeat(state) {
   return null;
 }
 
+/** 2회차는 리그마다 별도의 짧은 도입 컷을 한 번 보여 준다 (본 기록 키 `리그:intro@회차`) */
+const cycleIntroId = (state) => `intro@${state.cycle}`;
+const metKey = (state) => ((state.cycle ?? 1) >= 2 ? `${state.league}@${state.cycle}` : state.league);
+
 /** 시즌 시작 화면용 intro 비트 (이 리그에서 처음일 때만) */
 export function introBeat(state) {
+  if ((state.cycle ?? 1) >= 2) {
+    const id = cycleIntroId(state); const v = RIVAL_CYCLE_STORY[state.league]?.intro;
+    if (!v || beatSeen(state, id)) return null;
+    return { id, label: BEAT_LABEL.intro, league: state.league, leagueTitle: LEAGUE_STORY[state.league].title, ...v };
+  }
   if (beatSeen(state, 'intro')) return null;
   const b = beatOf(state.league, 'intro');
   return b ? { id: 'intro', label: BEAT_LABEL.intro, league: state.league, leagueTitle: LEAGUE_STORY[state.league].title, ...b } : null;
@@ -198,18 +207,79 @@ export function clearBeat(state, league) {
 }
 
 // ---- 라이벌 대사 ----
-export const rivalStory = (league) => RIVAL_STORY[league] ?? null;
+/** 2회차 라이벌 변주 대사·소개 (files/스토리라인.md 2회차 절). 이름·나이·역할은 그대로, 별명·소개·대사가 바뀐다 */
+export const RIVAL_CYCLE_STORY = Object.freeze({
+  amateur: {
+    nickname: '코치 오여사', blurb: '커트 전형을 버렸다. 민구가 떠난 뒤 탑스핀과 드라이브를 몰래 배웠다.',
+    lines: {
+      first: '민구야, 돌아왔구나. 이번엔 커트만 안 쳐. 이 할미도 공부했거든.',
+      pre: '커트인 줄 알았지? 탑스핀도 칠 줄 알아, 이 할미가.',
+      lose: '손으로 치지 말고 눈으로 쳐라. 공은 먼저 말을 한단다.',
+      win: '허허, 그래. 이제 가르칠 게 없구나. 가거라.',
+    },
+    intro: { title: '다시, 처음', text: '새마을 탁구장. 오여사가 커트 대신 라켓을 거꾸로 쥐고 웃는다.\n“한 바퀴 돌았으니 다시 시작이지. 이번엔 내가 달라.”' },
+  },
+  third: {
+    nickname: '완급 하늘', blurb: '속도만 믿던 천재가 일부러 늦추는 법을 익혀 돌아왔다.',
+    lines: {
+      first: '아저씨! 저 이제 느린 공도 쳐요. 졌던 게 분해서 밤새 연습했어요.',
+      pre: '빠르기만 한 줄 알았죠? 이번엔 일부러 늦출 거예요.',
+      lose: '완급이에요, 완급. 아저씨한테 배운 거예요.',
+      win: '…또 졌네요. 근데 이번엔 안 무서워요.',
+    },
+    intro: { title: '3부, 다시', text: '3부 코트. 하늘이 먼저 손을 흔든다.\n“이번엔 3초 안에 안 끝나요. 오래 쳐요, 우리.”' },
+  },
+  second: {
+    nickname: '변박 메트로놈', blurb: '박자가 더 흔들리고, 구질을 숨기는 법까지 익혔다.',
+    lines: {
+      first: '다시 왔네요. 이번엔 박자만이 아니라 표정도 숨겨요.',
+      pre: '둘에 친다고 했죠? 오늘은 아무 데서나 칩니다.',
+      lose: '듣지 말고 보세요. 공이 말해 주니까.',
+      win: '박자도 얼굴도 읽혔네. …고마워요, 또.',
+    },
+    intro: { title: '2부, 다시', text: '2부 체육관. 도철이 커피를 두 잔 내려놓는다.\n“한 잔은 시합 전에, 한 잔은 시합 후에. 이번엔 후에도 마실 거죠?”' },
+  },
+  first: {
+    nickname: '비공개 데이터', blurb: '노트를 새로 썼다. 이번엔 구질을 한 박자 늦게 보여 준다.',
+    lines: {
+      first: '노트를 새로 썼어요. 제목은 \'도민구 2회차\'.',
+      pre: '이번엔 구질을 한 박자 늦게 보여 줄게요. 보고 치지 말고 느껴요.',
+      lose: '예측했죠? 이번 데이터는 비공개예요.',
+      win: '…또 노트 밖이네요. 세계대회에서 보여 줘요, 한 번 더.',
+    },
+    intro: { title: '1부, 다시', text: '1부 개막전. 유나가 빈 노트를 덮고 말한다.\n“오늘은 기록 안 해요. 읽히면 재미없잖아요.”' },
+  },
+  world: {
+    nickname: '숨긴 벽', blurb: '벽에게도 연습 상대가 생겼다. 이제 구질을 끝까지 숨긴다.',
+    lines: {
+      first: '다시 와 줬군요. 이번엔 나도 혼자가 아니에요.',
+      pre: '이번 공은 끝까지 숨길게요. 읽을 수 있으면 읽어 봐요.',
+      lose: '…\'다음\'이 뭔지 이제 좀 알 것 같아요.',
+      win: '또 넘겨 줬네요. 그럼 우리, 다시.',
+    },
+    intro: { title: '세계대회, 다시', text: '세계대회. 제노의 연습장에 이제 벽이 하나 더 있다.\n“오래 걸렸죠. 다시, 해요.”' },
+  },
+});
+
+/** 라이벌 설정. cycle>=2 이면 변주(별명·소개·대사·구질 성향)를 덮어쓴다 */
+export function rivalStory(league, cycle = 1) {
+  const base = RIVAL_STORY[league];
+  const v = cycle >= 2 ? RIVAL_CYCLE_STORY[league] : null;
+  if (!base || !v) return base ?? null;
+  return { ...base, nickname: v.nickname, blurb: v.blurb, style: RIVAL_CYCLE[league]?.style ?? base.style, lines: { ...base.lines, ...v.lines } };
+}
 
 /**
  * 라이벌전 직전 컷: 처음 만나면 '첫 등장' 대사 + '경기 전' 대사, 이후엔 '경기 전' 대사만. 만난 걸로 저장한다.
  * 반환 { rival, lines:[{who,text}], first } (라이벌전이 아니면 null)
  */
 export function rivalPreMatch(state, opp) {
-  const r = opp?.rival ? rivalStory(state.league) : null;
+  const r = opp?.rival ? rivalStory(state.league, state.cycle ?? 1) : null;
   if (!r) return null;
   const s = ensureStory(state);
-  const first = !s.met.includes(state.league);
-  if (first) s.met.push(state.league);
+  const mk = metKey(state); // 2회차는 라이벌을 다시 '처음 만난' 것으로 (첫 등장 대사 재생)
+  const first = !s.met.includes(mk);
+  if (first) s.met.push(mk);
   const lines = [...(first ? [{ who: r.name, text: r.lines.first }] : []), { who: r.name, text: r.lines.pre }];
   return { rival: r, lines, first };
 }
@@ -219,7 +289,7 @@ export function rivalPreMatch(state, opp) {
  * 라이벌전이 아니면 null — 지기만 한 경기도 "…다시." 는 결과 화면이 따로 보여 준다.
  */
 export function rivalPostMatch(state, opp, won, { final = true } = {}) {
-  const r = opp?.rival ? rivalStory(state.league) : null;
+  const r = opp?.rival ? rivalStory(state.league, state.cycle ?? 1) : null;
   if (!r) return null;
   const s = ensureStory(state);
   // 승리 대사는 "리그를 가르는 결승"에서만 (정규 시즌·4강의 승리엔 3부 가라/세계대회에서 보자 같은 대사가 어긋난다). 패배 대사는 언제든 어울린다

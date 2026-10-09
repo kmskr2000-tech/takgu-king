@@ -1,7 +1,7 @@
-import { GRADES, COURSE_X, AI_PERFECT_RATIO, AI_BAD_FRACTION } from './constants.js?v=1791436882';
-import { buildTiming, judgeTap } from './timing.js?v=1791436882';
-import { MIN_REACTION_S } from './constants.js?v=1791436882';
-import { createShot, flightOf, powerCap } from './shot.js?v=1791436882';
+import { GRADES, COURSE_X, AI_PERFECT_RATIO, AI_BAD_FRACTION } from './constants.js?v=1791523471';
+import { buildTiming, judgeTap } from './timing.js?v=1791523471';
+import { MIN_REACTION_S } from './constants.js?v=1791523471';
+import { createShot, flightOf, powerCap } from './shot.js?v=1791523471';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -38,7 +38,19 @@ export const TIER_LAYOUT = Object.freeze(['low', 'low', 'low', 'mid', 'mid', 'mi
  * AI 파라미터 생성. style: 'balanced' | 'cut'(커트 위주 라이벌 등)
  * 라이벌은 tier 'rival' + 고유 style 로 지정.
  */
-export function makeAiParams(league, tier = 'mid', style = 'balanced') {
+// 2회차(세계대회 우승 후 아마추어부터 다시) 라이벌 변주: 수치를 올리는 게 아니라 "읽는 방법"이 달라진다 — 구질 성향·리듬 변칙·구질 위장 길이.
+// 모든 변칙은 MIN_REACTION_S(공정성 하한)를 지킨다(buildAiShot 강제). 1회차(cycle 1)의 makeAiParams 출력은 이 변주와 무관하게 이전과 동일하다.
+export const RIVAL_CYCLE = Object.freeze({
+  amateur: { style: 'balanced', variety: 0.55, rhythm: { tempoVar: 0.14, tempoBase: 0 } }, // 오순자: 커트 전형을 버리고 구질을 섞는다
+  third: { variety: 0.6, rhythm: { tempoVar: 0.2, tempoBase: 0.02 } }, // 차하늘: 빠르기만 하던 템포에 완급
+  second: { disguiseS: 0.1, rhythm: { tempoVar: 0.26, tempoBase: 0 } }, // 마도철: 박자가 더 흔들리고 구질도 살짝 숨긴다
+  first: { disguiseS: 0.25, variety: 0.7, rhythm: { tempoVar: 0.2, tempoBase: 0.04 } }, // 서유나: 구질을 한 박자 늦게 보여 준다
+  world: { disguiseS: 0.25, variety: 0.8, rhythm: { tempoVar: 0.26, tempoBase: 0.04 } }, // 제노: 끝까지 숨기고 템포가 크게 흔들린다
+});
+/** 2회차부터 모든 상대의 리턴율·정확도에 회차마다 더하는 값 (스탯이 이월되므로 약간만) */
+export const CYCLE_UPLIFT = 0.04;
+
+export function makeAiParams(league, tier = 'mid', style = 'balanced', cycle = 1) {
   const base = LEAGUE_BASE[league];
   if (!base) throw new Error(`알 수 없는 리그: ${league}`);
   const mult0 = TIER_MULT[tier];
@@ -48,6 +60,18 @@ export function makeAiParams(league, tier = 'mid', style = 'balanced') {
   if (tier === 'rival') p.rhythm = RIVAL_RHYTHM[league];
   const up = (LEAGUE_UPLIFT[league] ?? 0) * (TIER_UPLIFT_SHARE[tier] ?? 0);
   for (const k of Object.keys(base)) p[k] = clamp(base[k] * mult + (k === 'returnRate' || k === 'accuracy' ? up : 0), 0, 1);
+  if (cycle >= 2) { // 2회차 이상: 전원 소폭 상향 + 라이벌은 변주 (구질 성향·리듬·위장). 1회차는 이 블록을 지나지 않는다
+    const cu = CYCLE_UPLIFT * (cycle - 1);
+    p.returnRate = clamp(p.returnRate + cu, 0, 1); p.accuracy = clamp(p.accuracy + cu, 0, 1);
+    const v = tier === 'rival' ? RIVAL_CYCLE[league] : null;
+    if (v) {
+      p.rhythm = { ...(p.rhythm ?? {}), ...v.rhythm };
+      if (v.style) p.style = v.style;
+      if (v.variety != null) p.variety = v.variety;
+      if (v.disguiseS != null) p.disguiseS = v.disguiseS;
+    }
+    p.cycle = cycle;
+  }
   return p;
 }
 
@@ -97,7 +121,7 @@ function buildAiShot(p, rng, side, from, hitY, grade, offset, foeX, powerCap = 1
   const make = () => createShot({ from: { x: from, side }, aim, stats: aiStats(p), rng: shotRng, grade, offset, hitY });
   let shot = make();
   // 공정성 하한(설계안 §6.4): 바운드 → 밴드 중심이 MIN_REACTION_S 보다 짧은 공은 만들지 않는다 (파워를 낮춰 다시)
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < (p.cycle >= 2 ? 14 : 6); i++) { // 2회차는 반응창 하한을 끝까지 지킨다. 1회차는 확정된 기존 동작 유지(드물게 0.194s 까지 내려가는 점은 보고서에 기록)
     const f = flightOf(shot);
     if (f.kind !== 'in' || buildTiming(f, 0).center - f.tLand >= MIN_REACTION_S) break;
     aim.power = Math.max(0.1, aim.power - 0.08); shot = make();

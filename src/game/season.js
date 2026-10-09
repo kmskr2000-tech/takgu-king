@@ -1,6 +1,6 @@
-import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick } from '../core/index.js?v=1791436882';
-import { RIVAL_STORY, ensureStory } from './story.js?v=1791436882';
-import { statCurve } from './statcurve.js?v=1791436882';
+import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick, RIVAL_CYCLE } from '../core/index.js?v=1791523471';
+import { RIVAL_STORY, ensureStory, rivalStory } from './story.js?v=1791523471';
+import { statCurve } from './statcurve.js?v=1791523471';
 
 export const SAVE_VERSION = 2;
 export const WIN_PT = 3;
@@ -92,7 +92,7 @@ export function roundRobin(n = 10) {
   return rounds;
 }
 
-function buildTeams(league) {
+function buildTeams(league, cycle = 1) {
   const rivalIdx = 8; // 상위권 한 명을 라이벌로
   const teams = [{ id: 0, name: '나', me: true }];
   TIER_LAYOUT.forEach((tier, i) => {
@@ -101,7 +101,7 @@ function buildTeams(league) {
       id: i + 1,
       name: isRival ? RIVALS[league].name : PLAYER_NAMES[league][i],
       tier: isRival ? 'rival' : tier,
-      style: isRival ? RIVALS[league].style : 'balanced',
+      style: isRival ? (cycle >= 2 ? RIVAL_CYCLE[league]?.style ?? RIVALS[league].style : RIVALS[league].style) : 'balanced',
       rival: isRival,
     });
   });
@@ -111,7 +111,7 @@ function buildTeams(league) {
 /** 시즌 초기화: 선수/일정/기록 리셋 (스탯·장비·포인트는 유지) */
 export function startSeason(state, league = state.league) {
   state.league = league;
-  state.teams = buildTeams(league);
+  state.teams = buildTeams(league, state.cycle ?? 1);
   state.schedule = roundRobin(10);
   state.week = 1;
   state.phase = 'regular'; // regular | tournament | seasonEnd
@@ -132,19 +132,37 @@ export function newGame(league = 'amateur') {
     unlocked: { grips: ['shake'], rackets: ['basic'] },
     cleared: false, // 세계대회 우승(엔딩 달성)
     endingPending: false,
+    cycle: 1, // 회차 (세계대회 우승 후 2회차를 시작하면 +1: 라이벌 변주)
+    retries: {}, // 리그별 연속 실패 횟수 (우승하면 지움) — 재도전 안내용
     story: { seen: [], met: [], rivalLosses: {} }, // 본 스토리 비트·만난 라이벌·라이벌전 패배 수 (story.js)
   };
   return startSeason(state, league);
 }
 
-export const aiParamsFor = (state, team) => makeAiParams(state.league, team.tier, team.style);
+export const aiParamsFor = (state, team) => makeAiParams(state.league, team.tier, team.style, state.cycle ?? 1);
+/** 지금 회차 기준 라이벌 소개·대사 (1회차는 RIVALS 와 동일) */
+export function rivalFor(state) {
+  const r = rivalStory(state.league, state.cycle ?? 1);
+  return r ? { name: r.name, nickname: r.nickname, style: r.style, line: r.lines.pre, firstLine: r.lines.first, blurb: r.blurb } : null;
+}
 export const teamById = (state, id) => state.teams[id];
 export const leagueIndex = (state) => LEAGUES.indexOf(state.league);
+
+/** 회차 필드 보강 (예전 저장에는 없다 = 1회차) */
+function ensureCycle(state) {
+  if (!Number.isInteger(state.cycle) || state.cycle < 1) state.cycle = 1;
+  return state.cycle;
+}
+/** 재도전 횟수 필드 보강 (예전 저장에는 없다) */
+function ensureRetries(state) {
+  if (!state.retries || typeof state.retries !== 'object' || Array.isArray(state.retries)) state.retries = {};
+  return state.retries;
+}
 
 /** 저장 데이터 마이그레이션: v1 → v2 (일정/로그/국면 보강). 알 수 없으면 null */
 export function migrate(raw) {
   if (!raw || typeof raw !== 'object' || !raw.stats || !LEAGUES.includes(raw.league)) return null;
-  if (raw.version === SAVE_VERSION && raw.teams && raw.schedule) { renameLegacyTeams(raw); ensureStory(raw); return raw; }
+  if (raw.version === SAVE_VERSION && raw.teams && raw.schedule) { renameLegacyTeams(raw); ensureStory(raw); ensureRetries(raw); ensureCycle(raw); return raw; }
   const s = newGame(raw.league);
   s.stats = { power: raw.stats.power ?? 3, spin: raw.stats.spin ?? 3, focus: raw.stats.focus ?? 3 };
   s.statPoints = raw.statPoints ?? 0;
@@ -152,6 +170,8 @@ export function migrate(raw) {
   if (raw.grip && s.unlocked.grips.includes(raw.grip)) s.grip = raw.grip;
   if (raw.racket && s.unlocked.rackets.includes(raw.racket)) s.racket = raw.racket;
   ensureStory(s);
+  ensureRetries(s);
+  s.cycle = Math.max(1, Math.floor(raw.cycle ?? 1));
   return s; // 진행 중이던 주차는 새 시즌으로 초기화 (스탯/포인트/장비 유지)
 }
 
@@ -291,6 +311,16 @@ function finishSeason(state) {
     league: prevLeague, rank, champion: iWon, championName: state.teams[champion].name,
     promoted: false, nextLeague: prevLeague, unlocked: { grips: [], rackets: [] }, bonus: 0, ending: false,
   };
+  // 시즌 목표 달성 여부 (시즌 시작 화면의 목표와 같은 기준) + 연속 실패(재도전) 횟수
+  const lastLeague = LEAGUES.indexOf(prevLeague) === LEAGUES.length - 1;
+  summary.goals = [
+    { id: 'top4', label: '정규 시즌 상위 4위', met: rank <= 4 },
+    { id: 'title', label: lastLeague ? '세계대회 우승' : '토너먼트 우승 (승격)', met: iWon },
+  ];
+  const retries = ensureRetries(state);
+  if (iWon) delete retries[prevLeague]; else retries[prevLeague] = (retries[prevLeague] ?? 0) + 1;
+  summary.cycleOffer = lastLeague && iWon; // 세계대회 우승: 2회차 시작을 고를 수 있다 (기본 흐름은 그대로 세계대회 계속)
+  summary.retryCount = retries[prevLeague] ?? 0; // 같은 리그를 다시 도전하는 횟수 (우승이면 0)
   if (iWon) {
     summary.bonus = CHAMPION_BONUS;
     state.statPoints += CHAMPION_BONUS;
@@ -312,6 +342,16 @@ export function startNextSeason(state) {
   state.season += 1;
   state.endingPending = false;
   return startSeason(state, next);
+}
+
+/** 2회차 시작: 아마추어부터 다시 (스탯·장비·포인트·해금 유지, 라이벌 변주). 세계대회 우승 직후에만 */
+export function startCycle(state) {
+  if (state.phase !== 'seasonEnd' || !state.summary?.cycleOffer) throw new Error('세계대회 우승 직후에만 2회차를 시작할 수 있음');
+  state.cycle = ensureCycle(state) + 1;
+  state.season += 1;
+  state.endingPending = false;
+  state.retries = {};
+  return startSeason(state, 'amateur');
 }
 
 /** 대진표 표시용 뷰모델 (선수 이름 해석) */
@@ -344,7 +384,7 @@ export function seasonGoals(state) {
   const idx = LEAGUES.indexOf(state.league);
   const last = idx === LEAGUES.length - 1;
   const next = last ? null : LEAGUE_NAMES[LEAGUES[idx + 1]];
-  const rival = RIVALS[state.league];
+  const rival = rivalFor(state);
   const unlock = UNLOCKS[state.league];
   const names = [...unlock.grips.map((g) => GRIPS[g].name), ...unlock.rackets.map((r) => RACKETS[r].name)];
   const goals = [
@@ -352,8 +392,10 @@ export function seasonGoals(state) {
     { icon: '🏆', label: '연말 토너먼트', text: last ? '세계대회 우승으로 정상에 서기' : `우승하면 ${next} 승격` },
     { icon: '🎁', label: '우승 보상', text: `보너스 포인트 +${CHAMPION_BONUS}${names.length ? ` · 해금: ${names.join(', ')}` : ''}` },
   ];
+  const retry = ensureRetries(state)[state.league] ?? 0;
+  if (retry > 0) goals.push({ icon: '🔁', label: '재도전', text: `지난 시즌은 목표에 닿지 못했어요 — 훈련으로 감각을 다듬고 ${retry + 1}번째 도전!` });
   return {
-    title: LEAGUE_NAMES[state.league], subtitle: `${state.season}시즌 시작`, goals,
+    title: LEAGUE_NAMES[state.league], subtitle: `${state.season}시즌${(state.cycle ?? 1) >= 2 ? ` · ${state.cycle}회차` : ''}${retry > 0 ? ` · ${retry + 1}번째 도전` : ' 시작'}`, goals,
     rival: rival ? { name: rival.name, nickname: rival.nickname, line: rival.blurb } : null, // 소개 한 줄 (대사는 라이벌전 직전 카드에서 처음 나온다)
   };
 }

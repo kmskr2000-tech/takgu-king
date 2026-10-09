@@ -1,12 +1,12 @@
-import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791436882';
-import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791436882';
-import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791436882';
-import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791436882';
-import { packShot, mirrorShot } from '../net/protocol.js?v=1791436882';
+import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791523471';
+import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791523471';
+import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791523471';
+import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791523471';
+import { packShot, mirrorShot } from '../net/protocol.js?v=1791523471';
 import {
   SIDES, STATES, GRADES, MIN_REACTION_S, createMatch, createShot, createSpecialShot, flightOf, buildTiming, judgeTap, judgeNoTap,
   classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide, courseZone, predictZone, PERFECT_RATIO,
-} from '../core/index.js?v=1791436882';
+} from '../core/index.js?v=1791523471';
 
 /** 난수 배율 래퍼: createShot 의 실수 난수(signed)만 k 배. k=1 이면 기존과 비트 동일 */
 export const scaledRng = (rng, k) => (k === 1 ? rng : { next: rng.next, signed: () => rng.signed() * k });
@@ -54,7 +54,7 @@ export function createMatchController({
   c.matchup = (type) => matchupFor(type); // 누른 종류 기준 상성 (테스트·UI)
   c.lane = 'center'; // 간단 조작: 코스 마커 (코트 탭으로 정함, 버튼 스윙이 이 코스로 나간다)
   // 구질 위장(상위 리그): 타구 직후 잠깐 공 색·종류 칩을 중립으로 보여 읽기 단서를 늦춘다. 판정·상성은 진짜 스핀 기준
-  c.disguiseS = useMatchup && simple ? DISGUISE_S[oppParams?.league] ?? 0 : 0;
+  c.disguiseS = useMatchup && simple ? oppParams?.disguiseS ?? DISGUISE_S[oppParams?.league] ?? 0 : 0; // 2회차 라이벌은 변주된 위장 길이(oppParams.disguiseS)
   c.ballNeutral = (now) => (!!remote && !!c.flight && c.flight.dir > 0) || c.spinHidden(now); // 멀티: 상대 공은 구질 색 없이 중립(필살기 이펙트만 따로 표시)
   c.spinHidden = (now) => c.disguiseS > 0 && !!c.flight && c.flight.dir > 0 && now - c.t0 < c.disguiseS;
   c.stats = stats;

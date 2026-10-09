@@ -346,3 +346,22 @@ button:not(.shot-btn):not(:disabled):active, button:not(.shot-btn).pressed:not(:
 @keyframes rrmove { from { transform: translateY(var(--dy, 0px)); } to { transform: none; } }
 @keyframes rrglow { 0%, 100% { filter: none; } 40% { filter: brightness(1.7); } }
 @media (prefers-reduced-motion: reduce) { .recap.animate .rg, .recap.animate .rr { animation: none; } }
+
+/* 경기 요약 카드 (결과 화면) */
+.summary { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; text-align: left; }
+.summary h3 { margin: 6px 0 0; font-size: .9rem; color: #ffd24a; }
+.sum-grades { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 0; font-size: .85rem; font-weight: 800; }
+.sum-grades .g-perfect { color: #ffd24a; } .sum-grades .g-good { color: #7dff8a; } .sum-grades .g-bad { color: #ffa03a; } .sum-grades .g-miss { color: #ff5a4a; }
+.sum-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.sum-cell { display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; border-radius: 6px; background: var(--panel); }
+.sum-cell span { font-size: .75rem; color: #9fb3c8; } .sum-cell b { font-size: 1.05rem; } .sum-cell small { font-size: .7rem; color: #7d8ea3; }
+.sum-cell em { font-style: normal; font-size: .75rem; font-weight: 900; color: #ffd24a; }
+.sum-cell.new { outline: 1px solid #ffd24a; }
+
+/* 훈련 모드 · 시즌 목표 결과 */
+.train-left { font-weight: 800; } .train-left .dot { color: #6b7a8c; margin-right: 2px; } .train-left .dot.on { color: #ffd24a; }
+.train-rules { text-align: left; font-size: .88rem; color: #9fb3c8; padding-left: 18px; }
+.season-goals-result { list-style: none; margin: 8px 0; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 4px; }
+.season-goals-result li { padding: 5px 8px; border-radius: 6px; background: var(--panel); font-weight: 700; }
+.season-goals-result li.met { color: #7dff8a; } .season-goals-result li.unmet { color: #ff8a7a; }
+.retry-note { font-size: .88rem; color: #ffd24a; }

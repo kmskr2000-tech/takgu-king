@@ -1,14 +1,16 @@
-import { h } from './dom.js?v=1791436882';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791436882';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791436882';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791436882';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791436882';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791436882';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791436882';
+import { h } from './dom.js?v=1791523471';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791523471';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791523471';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791523471';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791523471';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791523471';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791523471';
 import {
-  LEAGUE_NAMES, RIVALS, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791436882';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791436882';
+  LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
+} from '../game/season.js?v=1791523471';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791523471';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791523471';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791523471';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -129,10 +131,10 @@ export function rulesScreen({ onBack, mode = 'simple' }) {
   };
 }
 
-export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, onSeasonEnd }) {
+export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, onSeasonEnd, onTrain = null }) {
   const table = standings(state);
   const nm = nextMatch(state);
-  const rival = nm?.opp?.rival ? RIVALS[state.league] : null;
+  const rival = nm?.opp?.rival ? rivalFor(state) : null;
   const header = state.phase === 'tournament' ? '연말 토너먼트' : state.phase === 'seasonEnd' ? '시즌 종료' : `${state.week}주차 / 9`;
   const eff = effectiveStats(state);
   let nextLine;
@@ -140,7 +142,7 @@ export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, o
   else if (!nm) nextLine = '토너먼트 탈락 — 결과를 기다리는 중';
   else nextLine = [h('strong', {}, state.phase === 'tournament' ? '토너먼트 상대: ' : '다음 경기: '), nm.opp.name, rival ? ` (${rival.nickname}) — “${rival.line}”` : ''];
   return h('section', { class: 'screen home' },
-    h('header', {}, h('h2', {}, `${LEAGUE_NAMES[state.league]} ${state.season}시즌`), h('span', { class: 'week' }, header)),
+    h('header', {}, h('h2', {}, `${LEAGUE_NAMES[state.league]} ${state.season}시즌${(state.cycle ?? 1) >= 2 ? ` · ${state.cycle}회차` : ''}`), h('span', { class: 'week' }, header)),
     h('table', { class: 'standings' },
       h('thead', {}, h('tr', {}, ['순위', '선수', '승점', '승', '패'].map((t) => h('th', {}, t)))),
       h('tbody', {}, table.map((t) => h('tr', { class: t.me ? 'me' : '' },
@@ -153,6 +155,7 @@ export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, o
     state.phase === 'seasonEnd' && btn('시즌 결과 보기', onSeasonEnd, 'primary'),
     nm && btn(state.phase === 'tournament' ? '토너먼트 경기 시작' : '경기 시작', onPlay, 'primary'),
     btn('스탯 투자', onStats),
+    onTrain && btn('훈련 모드', onTrain),
     btn('토너먼트 대진표', onBracket),
     btn('타이틀', onTitle));
 }
@@ -196,7 +199,7 @@ export function equipScreen({ state, onChange, onStart, onBack }) {
     btn('돌아가기', onBack));
 }
 
-export function seasonResultScreen({ summary, onNext, story = null }) {
+export function seasonResultScreen({ summary, onNext, story = null, onTrain = null, trainLeft = 0, onCycle = null }) {
   const unlockedNames = [
     ...summary.unlocked.grips.map((g) => GRIPS[g].name),
     ...summary.unlocked.rackets.map((r) => RACKETS[r].name),
@@ -206,21 +209,41 @@ export function seasonResultScreen({ summary, onNext, story = null }) {
     h('p', {}, `${LEAGUE_NAMES[summary.league]} 정규 ${summary.rank}위`),
     h('p', {}, `우승자: ${summary.championName}`),
     summary.champion && h('p', { class: 'pts' }, `우승 보너스 +${summary.bonus}pt`),
+    summary.goals && h('ul', { class: 'season-goals-result', 'aria-label': '시즌 목표 결과' }, ...summary.goals.map((g) => h('li', { class: g.met ? 'met' : 'unmet' }, `${g.met ? '✔' : '✘'} ${g.label}`))),
     summary.promoted && h('p', { class: 'win' }, `${LEAGUE_NAMES[summary.nextLeague]}로 승격!`),
     story && h('div', { class: 'story-beat' }, h('b', {}, story.title), ...story.text.split('\n').map((t) => h('p', {}, t))),
     !summary.champion && h('p', { class: 'quote' }, `“${CATCHPHRASE}” — ${PROTAGONIST.name}. 같은 리그에서 다음 시즌!`),
+    !summary.champion && h('p', { class: 'retry-note' }, `목표에 닿지 못했어요 — ${LEAGUE_NAMES[summary.league]} ${(summary.retryCount ?? 1) + 1}번째 도전. 훈련 모드로 감각을 다듬고 다시 가요!`),
+    !summary.champion && onTrain && btn(`훈련하러 가기 (오늘 남은 ${trainLeft}회)`, onTrain),
     unlockedNames.length > 0 && h('p', {}, `해금: ${unlockedNames.join(', ')}`),
-    btn(summary.ending ? '엔딩 보기' : '다음 시즌', onNext, 'primary'));
+    btn(summary.ending ? '엔딩 보기' : summary.cycleOffer && onCycle ? '세계대회 계속 (다음 시즌)' : '다음 시즌', onNext, 'primary'),
+    summary.cycleOffer && !summary.ending && onCycle && btn('2회차 시작 (아마추어부터, 스탯·장비 유지)', onCycle));
 }
 
-export function endingScreen({ onNext, story = null }) {
+/** 훈련 모드 화면: 오늘 남은 도전 횟수와 규칙 */
+export function trainingScreen({ state, status, onStart, onBack }) {
+  const dots = Array.from({ length: status.limit }, (_, i) => h('span', { class: `dot${i < status.left ? ' on' : ''}`, 'aria-hidden': 'true' }, i < status.left ? '●' : '○'));
+  return h('section', { class: 'screen training' },
+    h('h2', {}, '훈련 모드'),
+    h('p', {}, `${LEAGUE_NAMES[state.league]} 중위권 선수와 연습 경기`),
+    h('p', { class: 'train-left' }, ...dots, ` 오늘 남은 도전 ${status.left}/${status.limit}`),
+    h('ul', { class: 'train-rules' },
+      h('li', {}, '순위·시즌 일정·개인 기록에는 반영되지 않아요'),
+      h('li', {}, `이기면 포인트 +${TRAIN_WIN_POINTS} (하루 ${status.limit}회까지)`),
+      h('li', {}, '시작하면 도전 1회가 사용돼요. 중간에 나가도 돌려주지 않아요')),
+    status.left > 0 ? btn('훈련 시작', onStart, 'primary') : h('p', { class: 'quote' }, '오늘 도전을 모두 썼어요. 내일 다시 올 수 있어요!'),
+    btn('돌아가기', onBack, status.left > 0 ? '' : 'primary'));
+}
+
+export function endingScreen({ onNext, story = null, onCycle = null }) {
   return h('section', { class: 'screen ending' },
     h('h1', { class: 'logo' }, '탁구왕 등극!'),
     h('p', { class: 'sub' }, '지고, 다시 일어서고, 끝내 정상에 올랐다.'),
     story && h('div', { class: 'story-beat' }, ...story.text.split('\n').map((t) => h('p', {}, t))),
     h('p', { class: 'quote' }, '“지면 다시.” 그 한마디가 탁구왕을 만들었다.'),
-    h('p', {}, '이후에도 무한 시즌으로 계속 도전할 수 있습니다.'),
-    btn('계속하기', onNext, 'primary'));
+    h('p', {}, '세계대회에서 계속 도전하거나, 라이벌이 달라진 모습으로 돌아오는 2회차를 시작할 수 있습니다.'),
+    btn('세계대회 계속', onNext, 'primary'),
+    onCycle && btn('2회차 시작 (아마추어부터, 스탯·장비 유지)', onCycle));
 }
 
 export function statsScreen({ state, onInvest, onBack }) {
@@ -269,11 +292,32 @@ export function recapPanel(recap, { animate = true } = {}) {
     h('h3', {}, '순위 변동'), h('div', { class: 'recap-table', role: 'table', 'aria-label': '순위표' }, ...rows));
 }
 
+/** 경기 요약 카드: 판정 분포 + 카운터·최장 랠리·필살기, 개인 최고와 신기록 배지 */
+export function summaryPanel(summary, records = null, broken = []) {
+  const pct = (v) => (v == null ? '–' : `${Math.round(v * 100)}%`);
+  const isNew = (id) => broken.includes(id);
+  const best = (txt) => (records ? h('small', {}, txt) : ''); // 훈련 경기 등 기록 비반영 경기는 최고 기록 줄 없음
+  const cell = (id, label, value, bestText) => h('div', { class: `sum-cell${isNew(id) ? ' new' : ''}` },
+    h('span', {}, label), h('b', {}, value), isNew(id) ? h('em', {}, '신기록!') : best(bestText));
+  return h('div', { class: 'summary', role: 'group', 'aria-label': '경기 요약' },
+    h('h3', {}, '경기 요약'),
+    h('p', { class: 'sum-grades' },
+      h('span', { class: 'g-perfect' }, `PERFECT ${summary.perfect}`), h('span', { class: 'g-good' }, `GOOD ${summary.good}`),
+      h('span', { class: 'g-bad' }, `BAD ${summary.bad}`), h('span', { class: 'g-miss' }, `MISS ${summary.miss}`)),
+    h('div', { class: 'sum-grid' },
+      cell('perfectRate', RECORD_LABELS.perfectRate, pct(summary.perfectRate), summary.taps >= MIN_TAPS_FOR_RATE ? `최고 ${pct(records?.bestPerfectRate)}` : `최고 ${pct(records?.bestPerfectRate)} (${MIN_TAPS_FOR_RATE}타 이상만 갱신)`),
+      cell('rally', RECORD_LABELS.rally, `${summary.longestRally}회`, `최고 ${records?.bestRally ?? 0}회`),
+      cell('counters', RECORD_LABELS.counters, `${summary.counters}회`, `최고 ${records?.bestCounters ?? 0}회`),
+      cell('specials', RECORD_LABELS.specials, `${summary.specials}회`, `최고 ${records?.bestSpecials ?? 0}회`)));
+}
+
 export function resultScreen({ result, onNext, reward = null, animate = true }) {
   return h('section', { class: 'screen result' },
     h('h2', {}, result.won ? '승리!' : result.forfeit ? '기권패' : '패배…'),
     h('p', { class: 'score' }, `${result.score.me} : ${result.score.opp}`),
     h('p', {}, `획득 포인트 +${result.gained}`),
+    result.training && h('p', { class: 'quote' }, '훈련 경기 — 순위·개인 기록에는 반영되지 않아요'),
+    result.summary && summaryPanel(result.summary, result.records ?? null, result.broken ?? []),
     result.recap && recapPanel(result.recap, { animate }),
     result.rewarded && h('p', { class: 'win' }, `보상 지급! 포인트 +${result.gained} 추가`),
     result.story && storyBubbles(result.story.lines), // 라이벌전: 상대의 승리/패배 대사 (진 경우 주인공의 "…다시." 까지)

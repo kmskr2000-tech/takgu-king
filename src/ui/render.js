@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite,
-} from './sprites.js?v=1791436882';
-import { createEffects } from './effects.js?v=1791436882';
-import { createRng } from '../core/rng.js?v=1791436882';
+} from './sprites.js?v=1791523471';
+import { createEffects } from './effects.js?v=1791523471';
+import { createRng } from '../core/rng.js?v=1791523471';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -66,6 +66,8 @@ export function swingFrame(sinceHit) {
 /** 깊이에 따른 정수 도트 배율 (선수/공 스프라이트) */
 export const spriteScale = (k, mult = 2) => Math.max(1, Math.round(k * mult));
 
+import { tailRects, stripeRects, bounceRects, spinKind, BOUNCE_FX_S } from './ballfx.js?v=1791523471';
+
 export function createRenderer(canvas, { rng, options } = {}) {
   // 설정(이펙트/흔들림/가이드)은 프레임마다 읽는다 → 토글 즉시 반영
   const opt = () => ({ effects: true, shake: true, guide: true, ...(options?.() ?? {}) });
@@ -74,6 +76,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
   const ctx = canvas.getContext('2d');
   if (ctx) ctx.imageSmoothingEnabled = false;
   const trail = [];
+  let prevZ = 0; let bounceAt = null; // 바운드 연출 상태 (drawBall)
   const fx = createEffects(rng);
   const st = {
     reachFar: false, specialNow: false, pops: [], controlMode: 'advanced', meTarget: 50, meK: 3, lean: 0, lastAct: null, hint: null, swing: { me: null, opp: null }, meX: 50, oppX: 50, lastNow: null, lastGrade: 'GOOD', look: 'opp', shake: 0, lane: 'center',
@@ -334,12 +337,24 @@ export function createRenderer(canvas, { rng, options } = {}) {
       trail.forEach((q, i) => { ctx.fillStyle = cols[(i + Math.floor(now0 * 20)) % 3]; ctx.fillRect(q.x - 1, q.y - 1, q.s + 2, q.s + 2); });
       ctx.fillStyle = 'rgba(233,179,255,0.35)'; ctx.fillRect(bx - 5 * sc, by - 5 * sc, 10 * sc, 10 * sc);
       if (opt().effects) fx.ember(bx, by, sc);
-    } else if (spin !== 0) {
+    } else if (spinKind(spin) !== 'normal') { // 구질 단서: 색(C.top/C.back) + 색 없이도 보이는 꼬리 모양(ballfx.js). 위장·멀티는 spin 0 이라 일반 취급
       ctx.fillStyle = spin > 0 ? C.top : C.back;
-      trail.forEach((q, i) => { if (i < trail.length - 1) { const w = i > 3 ? q.s + 1 : q.s; ctx.fillRect(q.x, q.y, w, w); } });
+      for (const r of tailRects(spin, trail)) ctx.fillRect(r.x, r.y, r.w, r.h);
+    }
+    // 바운드 연출: 공이 바닥에 닿는 순간 구질별 선 (탑스핀=앞으로 뻗는 속도선, 커트=납작하게 깔림)
+    if (!special && prevZ > 1 && (ball.z ?? 0) <= 1 && spinKind(spin) !== 'normal') bounceAt = { t: now0, x: bx, y: Math.round(g0.y), spin, sc, dir: trail.length > 1 && trail[trail.length - 1].y < trail[trail.length - 2].y ? -1 : 1 };
+    prevZ = ball.z ?? 0;
+    if (bounceAt && !special) {
+      ctx.fillStyle = bounceAt.spin > 0 ? C.top : C.back;
+      for (const r of bounceRects(bounceAt.spin, now0 - bounceAt.t, bounceAt.x, bounceAt.y, bounceAt.sc, bounceAt.dir)) ctx.fillRect(r.x, r.y, r.w, r.h);
+      if (now0 - bounceAt.t > BOUNCE_FX_S) bounceAt = null;
     }
     R(ctx, bx - 2 * sc, Math.round(g0.y), 5 * sc, Math.max(1, sc), C.shadow); // 지면 그림자
     drawSprite(ctx, BALL, special ? ballPalette(0) : ballPalette(spin), bx - Math.floor((5 * sc) / 2), by - Math.floor((5 * sc) / 2), { scale: sc });
+    if (!special) { // 공 안의 회전 점: 탑스핀=빠르게 두 점, 커트=반대로 천천히 한 점
+      ctx.fillStyle = '#1a1a1a';
+      for (const r of stripeRects(spin, now0, bx, by, sc)) ctx.fillRect(r.x, r.y, r.w, r.h);
+    }
     if (special) { ctx.fillStyle = '#ffffff'; ctx.fillRect(bx - 1, by - 1, 3 * sc, 3 * sc); }
   }
 

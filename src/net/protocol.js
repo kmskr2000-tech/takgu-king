@@ -5,7 +5,7 @@
 //  - 샷을 친 쪽이 샷의 초기 상태(공 위치·속도·스핀)와 판정 결과, "발사 시각(호스트 시계)" 을 보낸다. 받는 쪽은 좌표를 미러링(내 쪽/상대 쪽 뒤집기)해
 //    같은 물리(simulateFlight)를 돌리므로 두 화면의 공이 같다. 득점·서브 교대는 양쪽이 같은 상태기계(createMatch)에 같은 순서로 먹여 같게 나온다.
 //  - 공정성: 친 쪽은 공을 DELAY 만큼 늦게 발사(스윙·소리는 즉시)해, 받는 쪽이 공을 "미리" 볼 시간을 번다. DELAY ≈ 편도 지연 + 여유.
-import { SIDES } from '../core/constants.js?v=1791436882';
+import { SIDES } from '../core/constants.js?v=1791523471';
 
 export const MSG = {
   HELLO: 'hello',   // G→H {name}

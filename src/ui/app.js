@@ -1,43 +1,45 @@
-import { h } from './dom.js?v=1791436882';
+import { h } from './dom.js?v=1791523471';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen, rivalCardScreen, storyBeatScreen, storyIntroScreen,
-  multiScreen, netResultScreen,
-} from './screens.js?v=1791436882';
-import { createNetSession } from '../net/session.js?v=1791436882';
-import { createNetClock } from '../net/clock.js?v=1791436882';
-import { FirebaseRoom } from '../net/fireroom.js?v=1791436882';
+  multiScreen, netResultScreen, trainingScreen,
+} from './screens.js?v=1791523471';
+import { createNetSession } from '../net/session.js?v=1791523471';
+import { createNetClock } from '../net/clock.js?v=1791523471';
+import { FirebaseRoom } from '../net/fireroom.js?v=1791523471';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791436882';
-import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791436882';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791436882';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791436882';
-import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791436882';
-import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791436882';
-import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791436882';
-import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791436882';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791436882';
-import { oppProfile } from '../game/oppProfile.js?v=1791436882';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791436882';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791436882';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791436882';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791436882';
-import { createAudio } from './audio.js?v=1791436882';
-import { createBgm } from './bgm.js?v=1791436882';
-import { createHaptics, react } from './feedback.js?v=1791436882';
-import { installPressFeedback } from './pressfx.js?v=1791436882';
-import { planLiveRound, createLiveTicker } from '../game/liveRound.js?v=1791436882';
-import { snapshotBefore, buildRecap } from '../game/recap.js?v=1791436882';
-import { createRenderer } from './render.js?v=1791436882';
-import { createMatchController } from '../game/matchController.js?v=1791436882';
+} from './intro.js?v=1791523471';
+import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791523471';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791523471';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791523471';
+import { createGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791523471';
+import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791523471';
+import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791523471';
+import { applyGameLevel, gameLevelOf } from '../game/gamelevel.js?v=1791523471';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791523471';
+import { oppProfile } from '../game/oppProfile.js?v=1791523471';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791523471';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791523471';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791523471';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791523471';
+import { createAudio } from './audio.js?v=1791523471';
+import { createBgm } from './bgm.js?v=1791523471';
+import { createHaptics, react } from './feedback.js?v=1791523471';
+import { installPressFeedback } from './pressfx.js?v=1791523471';
+import { planLiveRound, createLiveTicker } from '../game/liveRound.js?v=1791523471';
+import { snapshotBefore, buildRecap } from '../game/recap.js?v=1791523471';
+import { createMatchTally, createRecordsStore } from '../game/records.js?v=1791523471';
+import { createTrainingStore, trainingParams, trainingReward, TRAIN_OPPONENT } from '../game/training.js?v=1791523471';
+import { createRenderer } from './render.js?v=1791523471';
+import { createMatchController } from '../game/matchController.js?v=1791523471';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, migrate, startNextSeason,
-  applyRegularResult, applyTournamentResult, seasonGoals,
-} from '../game/season.js?v=1791436882';
-import { createStore } from '../game/store.js?v=1791436882';
-import { createRng } from '../core/index.js?v=1791436882';
-import { applyIosTopGap } from './iosTopGap.js?v=1791436882';
+  applyRegularResult, applyTournamentResult, seasonGoals, startCycle,
+} from '../game/season.js?v=1791523471';
+import { createStore } from '../game/store.js?v=1791523471';
+import { createRng } from '../core/index.js?v=1791523471';
+import { applyIosTopGap } from './iosTopGap.js?v=1791523471';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -72,6 +74,8 @@ export function createApp(root, deps = {}) {
   const tutorialStore = deps.tutorialStore ?? createTutorialStore(store.storage ?? globalThis.localStorage);
   const tipsStore = deps.tipsStore ?? createTipsStore(store.storage ?? globalThis.localStorage);
   const storyOn = () => deps.story !== false; // 스토리 컷(라이벌 대사·시즌 비트). 테스트는 끌 수 있다
+  const recordsStore = deps.recordsStore ?? createRecordsStore(store.storage ?? globalThis.localStorage); // 개인 기록: 시즌 저장과 별도 키 (새로 시작해도 유지, 저장 데이터 삭제로 지워짐)
+  const trainingStore = deps.trainingStore ?? createTrainingStore(store.storage ?? globalThis.localStorage); // 훈련 하루 한도 (저장 삭제·새로 시작으로 리셋되지 않는다)
   const guideStore = deps.guideStore ?? createGuideStore(store.storage ?? globalThis.localStorage);
   const reducedMotion = deps.reducedMotion ?? (() => !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
   let state = migrate(store.load());
@@ -177,7 +181,7 @@ export function createApp(root, deps = {}) {
         onToggle: (k) => { settings.cycle(k); audio.unlock(); bgm.sync(); api.showSettings(); },
         onReset: () => {
           if (!confirmFn('저장된 시즌 데이터가 모두 삭제됩니다. 설정은 유지됩니다. 삭제할까요?')) return;
-          store.clear(); resetGuides(); state = null; api.showTitle();
+          store.clear(); recordsStore.clear(); resetGuides(); state = null; api.showTitle();
         },
         onBack: () => api.showTitle(),
       }));
@@ -187,7 +191,7 @@ export function createApp(root, deps = {}) {
       loop = null;
       const story = storyOn() ? introBeat(state) : null; // 이 리그에서 처음일 때만 도입 컷
       mount(seasonIntroScreen({ intro: seasonGoals(state), onStart: () => api.showHome(), story }).el);
-      if (story) { markBeat(state, 'intro'); persist(); }
+      if (story) { markBeat(state, story.id); persist(); }
     },
     showHome() {
       loop = null; bgm.play('title');
@@ -198,6 +202,7 @@ export function createApp(root, deps = {}) {
         onPlay: () => api.showEquip(),
         onStats: () => api.showStats(),
         onBracket: () => api.showBracket(),
+        onTrain: () => api.showTraining(),
         onTitle: () => ads.runBreak('titleReturn', () => api.showTitle()), // 광고 훅: 홈 → 타이틀
         onSeasonEnd: () => api.showSeasonResult(),
       }));
@@ -206,6 +211,15 @@ export function createApp(root, deps = {}) {
       mount(statsScreen({
         state,
         onInvest: (k) => { if (state.statPoints > 0) { state.stats[k] += 1; state.statPoints -= 1; persist(); } api.showStats(); },
+        onBack: () => api.showHome(),
+      }));
+    },
+    /** 훈련 모드: 시즌 밖 연습 경기 (하루 도전 한도) */
+    showTraining() {
+      loop = null; bgm.play('title');
+      mount(trainingScreen({
+        state, status: trainingStore.status(),
+        onStart: () => api.startMatch({ training: true }),
         onBack: () => api.showHome(),
       }));
     },
@@ -237,11 +251,11 @@ export function createApp(root, deps = {}) {
       ads.prepare('doublePoints'); // 광고 훅: 보상형(결과 화면에서 포인트 2배) 미리 준비
       let animated = false; // 순위 변동 연출은 처음 한 번만 (보상 광고 준비로 다시 그릴 때 반복 방지)
       const render = (res) => {
-        const offer = !res.rewarded && !res.forfeit && ads.canOfferReward('doublePoints');
+        const offer = !res.rewarded && !res.forfeit && !res.training && ads.canOfferReward('doublePoints'); // 훈련 경기는 보상형 광고 없음
         mount(resultScreen({
           result: res, animate: !animated,
           // 광고 훅: 경기 종료 후 — '계속'을 누르는 자연스러운 끊김 (광고가 없으면 즉시 진행)
-          onNext: () => ads.runBreak('afterMatch', () => (state.phase === 'seasonEnd' ? api.showSeasonResult() : api.showHome())),
+          onNext: () => (res.training ? api.showTraining() : ads.runBreak('afterMatch', () => (state.phase === 'seasonEnd' ? api.showSeasonResult() : api.showHome()))),
           reward: offer ? {
             label: `광고 보고 포인트 2배 (+${res.gained})`,
             onClick: async () => {
@@ -252,7 +266,7 @@ export function createApp(root, deps = {}) {
         }));
         animated = true;
         // 보상 광고는 준비가 늦게 끝날 수 있어 잠시 뒤 한 번 더 확인
-        if (!offer && !res.rewarded && !res.forfeit) later(() => { if (resultToken === token && ads.canOfferReward('doublePoints')) render(res); }, 1200);
+        if (!offer && !res.rewarded && !res.forfeit && !res.training) later(() => { if (resultToken === token && ads.canOfferReward('doublePoints')) render(res); }, 1200);
       };
       render(result);
     },
@@ -271,21 +285,24 @@ export function createApp(root, deps = {}) {
       const story = storyOn() && summary.champion && !summary.ending ? clearBeat(state, summary.league) : null; // 우승 직후 스토리 컷 (세계대회 우승은 엔딩 화면이 맡는다)
       if (story) { markBeat(state, 'clear', summary.league); persist(); }
       mount(seasonResultScreen({
-        summary, story,
+        summary, story, trainLeft: trainingStore.status().left, onTrain: () => api.showTraining(),
+        onCycle: () => ads.runBreak('seasonEnd', () => { startCycle(state); persist(); api.showSeasonIntro(); }), // 세계대회 우승 후 2회차 (선택)
         // 광고 훅: 시즌 종료 후 — 다음 시즌으로 넘어가는 끊김
         onNext: () => ads.runBreak('seasonEnd', () => {
           if (summary.ending && state.endingPending) {
             state.endingPending = false; persist();
             if (storyOn()) markBeat(state, 'clear', summary.league);
-            mount(endingScreen({ story: storyOn() ? beatOf('world', 'clear') : null, onNext: () => { startNextSeason(state); persist(); api.showSeasonIntro(); } }));
+            mount(endingScreen({ story: storyOn() ? beatOf('world', 'clear') : null, onNext: () => { startNextSeason(state); persist(); api.showSeasonIntro(); }, onCycle: () => { startCycle(state); persist(); api.showSeasonIntro(); } }));
           } else { startNextSeason(state); persist(); api.showSeasonIntro(); }
         }),
       }));
     },
     /** opts.tutorial: 코치와 하는 체험형 튜토리얼 (기록·포인트·광고·포기 페널티 없음) */
     startMatch(opts = {}) {
+      const train = !!opts.training && !opts.tutorial && !!state; // 훈련 모드: 시즌 밖 연습 경기
+      if (train && !trainingStore.consume()) { api.showTraining(); return; } // 도전 횟수는 시작할 때 차감 (나가기로 환불 없음)
       const tut = opts.tutorial ? (opts.tutInstance ?? createTutorial({ mode: settings.get().controls })) : null;
-      const nm = tut ? { opp: { name: '코치', style: 'balanced', rival: false }, stage: 'tutorial' } : nextMatch(state);
+      const nm = tut ? { opp: { name: '코치', style: 'balanced', rival: false }, stage: 'tutorial' } : train ? { opp: TRAIN_OPPONENT, stage: 'training' } : nextMatch(state);
       if (!nm) { api.showHome(); return; }
       const { opp, stage } = nm;
       const startedAt = nowFn(); // 포기 판정은 실시간 기준
@@ -297,7 +314,7 @@ export function createApp(root, deps = {}) {
       const guide = createFirstGuide({ store: guideStore, mode: settings.get().controls, enabled: !tut && deps.firstGuide !== false && settings.get().tips });
       const canvas = h('canvas', { class: 'court' });
       // 리그전 속보: 정규 리그 본 경기에서만. 다른 경기 결과는 시작 때 정해 두고(preset) 경기 시계에 맞춰 보여준 뒤 순위표에 그대로 반영한다
-      const live = !tut && stage === 'regular' && deps.liveTicker !== false ? planLiveRound(state, createRng(deps.seed != null ? (deps.seed ^ 0x5bd1e995) >>> 0 : (Date.now() ^ 0x9e3779b1) >>> 0)) : null;
+      const live = !tut && !train && stage === 'regular' && deps.liveTicker !== false ? planLiveRound(state, createRng(deps.seed != null ? (deps.seed ^ 0x5bd1e995) >>> 0 : (Date.now() ^ 0x9e3779b1) >>> 0)) : null;
       const liveTicker = live?.games.length ? createLiveTicker(live.games) : null;
       // 내 경기 결과 반영 + (정규 리그면) 경기 후 상황 정리판 데이터: 다른 경기 결과·순위 변동
       const applyMine = (won, score, rng) => {
@@ -306,16 +323,18 @@ export function createApp(root, deps = {}) {
         const r = applyRegularResult(state, { won, score }, rng, live?.preset);
         return { ...r, recap: buildRecap(state, snap, round) };
       };
+      const tally = tut ? null : createMatchTally(); // 경기 요약 집계 (튜토리얼 제외). 기권은 기록 반영 안 함
       const view = matchScreen({
         ticker: !!liveTicker,
         oppName: opp.name,
         oppTags: oppProfile(opp, { tutorial: !!tut }).tags,
         canvas,
-        quitLabel: tut ? '나가기' : '포기',
+        quitLabel: tut || train ? '나가기' : '포기',
         // 간단 조작: 샷 버튼을 누르는 순간 = 스윙 (샷 종류는 상대 공을 보고 매번 새로 정한다)
         onSwing: (k) => { if (view.guideOpen) return; audio.unlock(); tipper.acted(); if (ctl.swing(clock(), k)) view.flashShot(k); },
         onQuit: () => {
           if (tut) { loop = null; api.showTitle(); return; } // 튜토리얼은 언제든 페널티 없이 나감
+          if (train) { loop = null; api.showTraining(); return; } // 훈련도 페널티 없음 (차감된 도전 횟수는 돌려주지 않는다)
           const ctl2 = api.controller;
           const elapsed = nowFn() - startedAt - clock.pausedFor(); // 안내로 멈춰 있던 시간은 빼고 센다
           if (!ctl2 || ctl2.phase === 'over' || elapsed < FORFEIT_AFTER) { loop = null; api.showHome(); return; } // 2분 이내: 기록 없이 취소
@@ -339,12 +358,13 @@ export function createApp(root, deps = {}) {
       const seed = deps.seed ?? ((Date.now() & 0xffffffff) >>> 0); // deps.seed: QA 정지 화면용 고정 시드
       const ctl = createMatchController({
         stats: tut ? TUTORIAL_STATS : effectiveStats(state),
-        oppParams: tut ? TRAINER_PARAMS : applyGameLevel(aiParamsFor(state, opp), settings.get().gameLevel), // 경기 시작 시점의 게임 난이도 (경기 중 고정)
+        oppParams: tut ? TRAINER_PARAMS : applyGameLevel(train ? trainingParams(state.league, state.cycle ?? 1) : aiParamsFor(state, opp), settings.get().gameLevel), // 경기 시작 시점의 게임 난이도 (경기 중 고정)
         rng: createRng(seed),
         difficulty: tut ? 'tutorial' : settings.get().difficulty, // 경기 시작 시점의 난이도 (경기 중 고정)
         controlMode: mode, useMatchup: !tut, // 튜토리얼은 상성 없이 기본기부터
         courtWidth: canvas.clientWidth || 300,
         onEvent: (e) => {
+          tally?.handle(e);
           renderer.notify(e, clock());
           react(e, { audio, haptics });
           if (e.type === 'grade' || e.type === 'point') clock.slow(1); // 첫 공 안내 뒤 슬로모션은 내가 치는 순간 끝
@@ -372,6 +392,13 @@ export function createApp(root, deps = {}) {
             if (e.type === 'end' && !tut.completed) later(() => { if (loop === token) api.startMatch({ ...opts, tutInstance: tut }); }, 1200); // 경기가 끝나 버리면 같은 진행으로 새 경기
             return;
           }
+          if (e.type === 'end' && train) { // 훈련 경기: 시즌·순위·기록에 반영하지 않고 소액 포인트만 (승리 시)
+            const won = e.winner === 'me'; const gained = trainingReward(won);
+            state.statPoints += gained; persist();
+            const summary = tally.summary();
+            later(() => { if (loop === token) api.showResult({ won, score: e.score, gained, training: true, summary }); }, 800);
+            return;
+          }
           if (e.type === 'end') {
             const won = e.winner === 'me';
             const br = state.bracket?.final; const isFinal = stage === 'tournament' && !!br && br.winner === null && (br.a === 0 || br.b === 0); // 리그를 가르는 결승인가
@@ -380,7 +407,8 @@ export function createApp(root, deps = {}) {
             const rng = createRng((Date.now() ^ (state.week * 7919)) >>> 0);
             const { gained, recap } = applyMine(won, e.score, rng);
             persist(); ads.noteMatchPlayed();
-            later(() => { if (loop === token) api.showResult({ won, score: e.score, gained, story, recap }); }, 800);
+            const summary = tally.summary(); const { records, broken } = recordsStore.apply(summary, { won });
+            later(() => { if (loop === token) api.showResult({ won, score: e.score, gained, story, recap, summary, records, broken }); }, 800);
           }
         },
       });
