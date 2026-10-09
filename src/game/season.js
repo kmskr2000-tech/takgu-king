@@ -1,9 +1,9 @@
-import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick, RIVAL_CYCLE } from '../core/index.js?v=1791530886';
-import { RIVAL_STORY, ensureStory, rivalStory } from './story.js?v=1791530886';
-import { statCurve } from './statcurve.js?v=1791530886';
-import { ensureTally, emptyTally, buildReview } from './review.js?v=1791530886';
-import { ensureEvents } from './events.js?v=1791530886';
-import { ensurePerks, grantPerks, registerUnlocks, CHAMPION_PERKS } from './perks.js?v=1791530886';
+import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick, RIVAL_CYCLE } from '../core/index.js?v=1791531091';
+import { RIVAL_STORY, ensureStory, rivalStory } from './story.js?v=1791531091';
+import { statCurve } from './statcurve.js?v=1791531091';
+import { ensureTally, emptyTally, buildReview } from './review.js?v=1791531091';
+import { ensureEvents } from './events.js?v=1791531091';
+import { ensurePerks, grantPerks, registerUnlocks, CHAMPION_PERKS } from './perks.js?v=1791531091';
 
 export const SAVE_VERSION = 2;
 export const WIN_PT = 3;
@@ -332,7 +332,7 @@ function finishSeason(state) {
   const iWon = champion === 0;
   const prevLeague = state.league;
   const summary = {
-    league: prevLeague, rank, champion: iWon, championName: state.teams[champion].name,
+    league: prevLeague, season: state.season, rank, champion: iWon, championName: state.teams[champion].name,
     promoted: false, nextLeague: prevLeague, unlocked: { grips: [], rackets: [] }, ending: false,
   };
   // 시즌 목표 달성 여부 (시즌 시작 화면의 목표와 같은 기준) + 연속 실패(재도전) 횟수

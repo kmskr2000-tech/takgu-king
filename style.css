@@ -479,3 +479,14 @@ svg.radar { box-shadow: 0 4px 0 var(--ink), 0 0 0 2px var(--frame-lo); }
 .screen.cup .match-slot.mine, .screen.bracket .match-slot.mine { border-color: var(--cta); background: var(--navy-2); padding: 9px 10px; }
 .event-choice { border-bottom-width: 6px; box-shadow: 0 3px 0 var(--ink); }
 .event-line { box-shadow: 0 3px 0 var(--ink); }
+
+/* polish 2차: 결과 · 이벤트 · 대진표 다듬기 */
+.screen.result h2.res-win { color: var(--ok); text-shadow: 0 3px 0 #1a6a3a, 0 5px 0 var(--ink); }
+.screen.result h2.res-lose { color: var(--bad); text-shadow: 0 3px 0 #7a2a22, 0 5px 0 var(--ink); }
+.screen.result p.gain { margin: 0; padding: 8px 12px; border: 2px dashed rgba(255,210,74,.5); border-radius: 8px; background: rgba(255,210,74,.08); color: var(--accent); font-weight: 800; text-align: center; }
+.screen.result .score { text-align: center; }
+.screen.event, .screen.event-result { min-height: calc(100dvh - 48px); justify-content: center; }
+.event-result .event-head { font-size: 1.8rem; text-shadow: 0 3px 0 var(--ink); }
+.match-slot { text-wrap: balance; }
+.review-season { letter-spacing: 3px; text-shadow: 0 2px 0 var(--ink); }
+.screen.season-result { gap: 10px; }

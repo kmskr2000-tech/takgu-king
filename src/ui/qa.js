@@ -1,13 +1,13 @@
 // QA 직접 링크(#qa-match / #qa-tutorial / #qa-home / #qa-season-intro / #qa-result): 레이아웃 점검용으로 "정지 화면"을 만든다.
 // 안전: 실제 저장소(localStorage)를 절대 읽거나 쓰지 않는다 — 메모리 저장소 + 고정 시드 + 수동 시계. 인트로·소리 없음.
-import { createApp } from './app.js?v=1791530886';
-import { createStore } from '../game/store.js?v=1791530886';
-import { newGame, applyRegularResult, applyTournamentResult } from '../game/season.js?v=1791530886';
-import { createRng } from '../core/index.js?v=1791530886';
-import { pendingEvent } from '../game/events.js?v=1791530886';
-import { cupOffer, startCup } from '../game/cup.js?v=1791530886';
-import { addMatchToTally } from '../game/review.js?v=1791530886';
-import { describePoint } from '../game/pointReason.js?v=1791530886';
+import { createApp } from './app.js?v=1791531091';
+import { createStore } from '../game/store.js?v=1791531091';
+import { newGame, applyRegularResult, applyTournamentResult } from '../game/season.js?v=1791531091';
+import { createRng } from '../core/index.js?v=1791531091';
+import { pendingEvent } from '../game/events.js?v=1791531091';
+import { cupOffer, startCup } from '../game/cup.js?v=1791531091';
+import { addMatchToTally } from '../game/review.js?v=1791531091';
+import { describePoint } from '../game/pointReason.js?v=1791531091';
 
 export const QA_ROUTES = Object.freeze(['match', 'tutorial', 'home', 'season-intro', 'result']);
 /** 디자인 점검용 추가 화면 (QA_ROUTES 계약은 그대로): 장비·특전, 이벤트, 컵, 시즌 결산(레이더·특전), 스탯, 대진표, 설정, 훈련 */

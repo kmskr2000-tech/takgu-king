@@ -1,19 +1,19 @@
-import { h } from './dom.js?v=1791530886';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791530886';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791530886';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791530886';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791530886';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791530886';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791530886';
+import { h } from './dom.js?v=1791531091';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791531091';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791531091';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791531091';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791531091';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791531091';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791531091';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791530886';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791530886';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791530886';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791530886';
-import { reviewPanel } from './careerScreens.js?v=1791530886';
-import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791530886';
-import { RELEGATION_RANK, RELEGATION_STRIKES } from '../game/season.js?v=1791530886';
+} from '../game/season.js?v=1791531091';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791531091';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791531091';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791531091';
+import { reviewPanel } from './careerScreens.js?v=1791531091';
+import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791531091';
+import { RELEGATION_RANK, RELEGATION_STRIKES } from '../game/season.js?v=1791531091';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -232,7 +232,7 @@ export function seasonResultScreen({ summary, onNext, story = null, onTrain = nu
       h('p', { class: 'win' }, summary.perks.first ? `트로피 획득! 칭호「${summary.perks.title}」` : `트로피 ${summary.perks.count}개째!`),
       summary.perks.first && h('p', {}, `스킨「${summary.perks.skin}」 해금 — 경기 전 장비 화면에서 고를 수 있어요`)),
     summary.goals && h('ul', { class: 'season-goals-result', 'aria-label': '시즌 목표 결과' }, ...summary.goals.map((g) => h('li', { class: g.met ? 'met' : 'unmet' }, `${g.met ? '✔' : '✘'} ${g.label}`))),
-    summary.review && reviewPanel(summary.review),
+    summary.review && reviewPanel(summary.review, { season: summary.season }),
     summary.promoted && h('p', { class: 'win' }, `${LEAGUE_NAMES[summary.nextLeague]}로 승격!`),
     summary.relegated && h('p', { class: 'lose relegated' }, `${LEAGUE_NAMES[summary.nextLeague]}로 강등… 거기서 다시 올라와요!`),
     summary.relegationRisk && h('p', { class: 'lose relegation-risk' }, `하위권(${RELEGATION_RANK}위 이하) 위험! ${RELEGATION_STRIKES}시즌 연속 목표에 못 닿고 하위권이면 한 단계 강등돼요.`),
@@ -338,9 +338,9 @@ export function summaryPanel(summary, records = null, broken = []) {
 
 export function resultScreen({ result, onNext, reward = null, animate = true }) {
   return h('section', { class: 'screen result' },
-    h('h2', {}, result.won ? '승리!' : result.forfeit ? '기권패' : '패배…'),
+    h('h2', { class: result.won ? 'res-win' : 'res-lose' }, result.won ? '승리!' : result.forfeit ? '기권패' : '패배…'),
     h('p', { class: 'score' }, `${result.score.me} : ${result.score.opp}`),
-    h('p', {}, `획득 포인트 +${result.gained}`),
+    h('p', { class: 'gain' }, `획득 포인트 +${result.gained}`),
     result.training && h('p', { class: 'quote' }, '훈련 경기 — 순위·개인 기록에는 반영되지 않아요'),
     result.summary && summaryPanel(result.summary, result.records ?? null, result.broken ?? []),
     result.recap && recapPanel(result.recap, { animate }),

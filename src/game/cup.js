@@ -2,8 +2,8 @@
 //  - 슬롯 2개(3~6주차, 7~9주차 창). 참가는 선택. 한 번 시작한 컵은 끝까지(경기 3번이 최대).
 //  - 정규 시즌(주차·순위표·로그·승급·재도전 횟수)에는 아무 영향이 없다. 보상은 연말 토너먼트보다 작다: 승리마다 +1, 우승 +1 더.
 //  - 모든 난수는 별도 시드 흐름(시즌·슬롯·회차로 결정) — 정규 시즌/경기 난수를 소모하지 않는다. 상대 선수는 자기 리그의 AI 설정으로 싸운다.
-import { LEAGUES, makeAiParams, createRng, simulateQuick } from '../core/index.js?v=1791530886';
-import { buildTeams, LEAGUE_NAMES } from './season.js?v=1791530886';
+import { LEAGUES, makeAiParams, createRng, simulateQuick } from '../core/index.js?v=1791531091';
+import { buildTeams, LEAGUE_NAMES } from './season.js?v=1791531091';
 
 export const CUP_SLOTS = Object.freeze([{ id: 0, from: 3, to: 6 }, { id: 1, from: 7, to: 9 }]);
 export const CUP_WIN_POINTS = 1;

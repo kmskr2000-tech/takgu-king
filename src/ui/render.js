@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite, palettesFor,
-} from './sprites.js?v=1791530886';
-import { createEffects } from './effects.js?v=1791530886';
-import { createRng } from '../core/rng.js?v=1791530886';
+} from './sprites.js?v=1791531091';
+import { createEffects } from './effects.js?v=1791531091';
+import { createRng } from '../core/rng.js?v=1791531091';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -66,7 +66,7 @@ export function swingFrame(sinceHit) {
 /** 깊이에 따른 정수 도트 배율 (선수/공 스프라이트) */
 export const spriteScale = (k, mult = 2) => Math.max(1, Math.round(k * mult));
 
-import { tailRects, stripeRects, bounceRects, spinKind, BOUNCE_FX_S } from './ballfx.js?v=1791530886';
+import { tailRects, stripeRects, bounceRects, spinKind, BOUNCE_FX_S } from './ballfx.js?v=1791531091';
 
 export function createRenderer(canvas, { rng, options } = {}) {
   // 설정(이펙트/흔들림/가이드)은 프레임마다 읽는다 → 토글 즉시 반영
