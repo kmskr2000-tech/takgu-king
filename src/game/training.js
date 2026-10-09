@@ -2,7 +2,7 @@
 //  - 하루 도전 한도: 날짜(기기 현지 날짜)별로 TRAIN_DAILY_LIMIT 회. 경기 시작 때 차감하므로 나가기로 환불받을 수 없다.
 //  - 보상은 소액(승리 +1 포인트, 하루 최대 +3 = 한 시즌 포인트의 10% 안팎). 개인 기록·리그 순위에는 반영하지 않는다.
 //  - 상대: 지금 리그의 중위권 선수(게임 난이도 설정 적용).
-import { makeAiParams } from '../core/index.js?v=1791531091';
+import { makeAiParams } from '../core/index.js?v=1791531836';
 
 export const TRAIN_DAILY_LIMIT = 3;
 export const TRAIN_WIN_POINTS = 1;
