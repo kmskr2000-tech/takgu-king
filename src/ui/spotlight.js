@@ -35,22 +35,25 @@ export function startTour(root, steps, { onDone = () => {} } = {}) {
   const el = h_('div', { class: 'tour', role: 'dialog', 'aria-live': 'polite' }, hole, card);
   let i = 0; let done = false;
   const target = () => findTourTarget(root, list[i].id);
+  const place = () => { el.className = placeSpotlight({ hole, card, target: target() }) ? 'tour' : 'tour nohole'; };
   const show = () => {
-    const t = target(); t?.scrollIntoView?.({ block: 'center', behavior: 'instant' });
+    // 글을 가장 먼저 채운다: 아래 스크롤 호출이 실패해도 설명은 항상 보이게
     stepEl.textContent = `${i + 1}/${list.length}`; textEl.textContent = list[i].text; next.textContent = i === list.length - 1 ? '끝' : '다음';
-    el.className = placeSpotlight({ hole, card, target: t }) ? 'tour' : 'tour nohole';
+    try { target()?.scrollIntoView?.({ block: 'center' }); } catch { /* 일부 브라우저는 옵션을 못 읽음 */ }
+    place();
   };
   const finish = (skipped) => {
     if (done) return; done = true;
-    globalThis.removeEventListener?.('resize', show); globalThis.removeEventListener?.('scroll', show, true);
-    if (el.parent) el.parent.removeChild(el);
+    globalThis.removeEventListener?.('resize', place); globalThis.removeEventListener?.('scroll', place, true);
+    (el.parentNode ?? el.parent)?.removeChild(el); // 브라우저 DOM 은 parentNode (parent 만 보면 오버레이가 안 닫힌다)
+    el.remove?.();
     onDone(skipped);
   };
   next.addEventListener('click', () => { if (++i < list.length) show(); else finish(false); });
   skip.addEventListener('click', () => finish(true));
   root.appendChild(el);
   show();
-  globalThis.addEventListener?.('resize', show); globalThis.addEventListener?.('scroll', show, true);
+  globalThis.addEventListener?.('resize', place); globalThis.addEventListener?.('scroll', place, true);
   return { el, finish };
 }
 

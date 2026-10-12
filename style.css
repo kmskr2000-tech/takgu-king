@@ -527,3 +527,9 @@ svg.radar { width: 100%; max-width: 300px; height: auto; background: var(--s1); 
 .guide.on { background: transparent; }
 .guide-card { z-index: 2; }
 .guide-card[data-pos="low"] { align-self: flex-end; }
+
+.back-top { position: sticky; top: 0; z-index: 20; align-self: flex-start; min-height: 40px; padding: 6px 14px; background: rgba(14,28,52,.97); }
+.back-top::before { content: "← "; }
+.bracket-note { margin: 0; font-size: .85rem; opacity: .8; }
+.match-slot.me { border-color: var(--accent, #ffd23f); }
+.tour-text { min-height: 1.4em; color: #fff; white-space: pre-line; }
