@@ -1,8 +1,8 @@
 // 새 게임 시작 전 도민구 소개 컷신: 도트 컷 5장 + 자막(나레이션·독백·오순자의 대사). 컷은 (컷 번호, 컷 안 시간 u)만 받는 순수 함수라 결정적이고 테스트 가능하다.
 // 흐름: 새벽 탁구장 벽치기 → 10년 후보 인생 → 물류센터 야간 알바 → 오순자의 대회 권유 → "…다시." (출처: files/스토리라인.md §1)
 // 탭 = 다음 줄(타이핑 중이면 먼저 끝까지 표시), 건너뛰기 = 전부 넘김. 핵심 그림은 안전영역(SAFE) 안, 자막은 화면 아래쪽에 겹쳐 뜨므로 그림은 y 150 위쪽에 둔다.
-import { SPRITES, PALETTES, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791806204';
-import { INTRO_W, INTRO_H, drawDigits } from './intro.js?v=1791806204';
+import { SPRITES, PALETTES, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791810365';
+import { INTRO_W, INTRO_H, drawDigits } from './intro.js?v=1791810365';
 
 export { INTRO_W, INTRO_H };
 export const CPS = 16; // 자막 타이핑 속도(글자/초)
@@ -75,26 +75,26 @@ const lerp = (a, b, k) => a + (b - a) * Math.max(0, Math.min(1, k));
 const tri = (f) => 1 - Math.abs(2 * (f - Math.floor(f)) - 1); // 0→1→0 삼각파
 
 function gymBackdrop(ctx, warm = 0) { // 새벽 체육관: 어두운 벽 + 바닥 (warm 0..1 이면 따뜻한 조명)
-  const top = warm ? ['#2a2118', '#32271b', '#3a2d1f'] : ['#05070d', '#070b16', '#0a1022'];
+  const top = warm ? ['#F7E3C0', '#F9E9CC', '#FBEFD8'] : ['#CFE8FF', '#DDF0FF', '#EAF6FF'];
   top.forEach((c, i) => rect(ctx, 0, i * 36, INTRO_W, 36, c));
-  rect(ctx, 0, 108, INTRO_W, INTRO_H - 108, warm ? '#2b2118' : '#0e1520');
-  rect(ctx, 0, 108, INTRO_W, 1, warm ? '#5a4630' : '#1e2c44');
+  rect(ctx, 0, 108, INTRO_W, INTRO_H - 108, warm ? '#D9BE8C' : '#E9D2A0');
+  rect(ctx, 0, 108, INTRO_W, 2, warm ? '#B8965F' : '#2B5FB5');
 }
 function lamp(ctx, cx, strength = 1, y0 = 0, y1 = 112) { // 천장 전등 + 빛줄기
-  rect(ctx, cx - 1, 0, 2, y0 + 6, '#3a3f66'); rect(ctx, cx - 4, y0 + 6, 8, 3, '#8b95c9');
+  rect(ctx, cx - 1, 0, 2, y0 + 6, '#8A6E4B'); rect(ctx, cx - 4, y0 + 6, 8, 3, '#F6D36B');
   for (let y = y0 + 9; y < y1; y++) {
     const half = 3 + Math.floor((y - y0) * 0.32);
     ctx.fillStyle = `rgba(255,233,168,${((y % 2 ? 0.12 : 0.05) * strength).toFixed(3)})`;
     ctx.fillRect(cx - half, y, half * 2, 1);
   }
 }
-const shadow = (ctx, x, y, w) => rect(ctx, x, y, w, 2, 'rgba(0,0,0,0.45)');
+const shadow = (ctx, x, y, w) => rect(ctx, x, y, w, 2, 'rgba(70,50,20,0.30)');
 
 function cutWall(ctx, u) { // 새벽 4시, 벽치기: 벽 ↔ 공 ↔ 도민구
   gymBackdrop(ctx); lamp(ctx, 60, 0.8);
-  rect(ctx, 12, 30, 96, 80, '#2c3147'); // 벽
-  for (let y = 30; y < 110; y += 8) { rect(ctx, 12, y, 96, 1, '#222638'); for (let x = 12 + ((y / 8) % 2) * 8; x < 108; x += 16) rect(ctx, x, y, 1, 8, '#222638'); }
-  for (let i = 0; i < 40; i++) rect(ctx, 46 + ((i * 7) % 28), 54 + ((i * 11) % 24), 2, 2, i % 3 ? '#3a4262' : '#4a5478'); // 10년 맞아 닳은 자국
+  rect(ctx, 12, 30, 96, 80, '#C9D3E6'); // 벽
+  for (let y = 30; y < 110; y += 8) { rect(ctx, 12, y, 96, 1, '#AEBAD2'); for (let x = 12 + ((y / 8) % 2) * 8; x < 108; x += 16) rect(ctx, x, y, 1, 8, '#AEBAD2'); }
+  for (let i = 0; i < 40; i++) rect(ctx, 46 + ((i * 7) % 28), 54 + ((i * 11) % 24), 2, 2, i % 3 ? '#9AA9C6' : '#8798B8'); // 10년 맞아 닳은 자국
   drawDigits(ctx, '04:12', 76, 14, '#ff5a4a', 2); // 새벽 4시 12분
   const f = (u * 2.2) % 1; const toWall = Math.floor(u * 2.2) % 2 === 0; // 벽에 맞고 돌아오는 공
   const by = Math.round(lerp(toWall ? 112 : 66, toWall ? 66 : 112, f)); const bx = Math.round(lerp(toWall ? 58 : 60, toWall ? 60 : 58, f));
@@ -122,14 +122,14 @@ function cutBench(ctx, u) { // 10년 후보 인생: 벤치에 앉은 후보 + �
 }
 
 function cutNight(ctx, u) { // 물류센터 야간 알바: 박스 쌓인 선반 + 컨베이어 + 박스 든 도민구
-  rect(ctx, 0, 0, INTRO_W, INTRO_H, '#0a0e14'); rect(ctx, 0, 112, INTRO_W, INTRO_H - 112, '#161c26'); rect(ctx, 0, 112, INTRO_W, 1, '#2a3446');
-  rect(ctx, 88, 14, 12, 12, '#dfe6ec'); rect(ctx, 91, 14, 9, 12, '#0a0e14'); // 달
+  rect(ctx, 0, 0, INTRO_W, INTRO_H, '#B9CFF0'); rect(ctx, 0, 112, INTRO_W, INTRO_H - 112, '#C9B48A'); rect(ctx, 0, 112, INTRO_W, 2, '#8F7A52');
+  rect(ctx, 88, 14, 12, 12, '#FFE9A8'); // 해
   for (let r = 0; r < 3; r++) { // 선반
-    rect(ctx, 4, 36 + r * 24, 52, 2, '#46556e');
+    rect(ctx, 4, 36 + r * 24, 52, 2, '#7C8CAA');
     for (let b = 0; b < 3; b++) { const bw = 12 + ((b + r) % 2) * 3; rect(ctx, 6 + b * 16, 36 + r * 24 - 16, bw, 16, '#a9783f'); rect(ctx, 6 + b * 16, 36 + r * 24 - 16, bw, 2, '#c99a5f'); rect(ctx, 6 + b * 16 + 5, 36 + r * 24 - 16, 2, 16, '#7a5527'); }
   }
-  rect(ctx, 8, 120, 104, 6, '#2a3446'); // 컨베이어
-  for (let i = 0; i < 14; i++) rect(ctx, 8 + ((i * 8 + Math.floor(u * 24)) % 104), 120, 2, 6, '#46556e');
+  rect(ctx, 8, 120, 104, 6, '#8793AB'); // 컨베이어
+  for (let i = 0; i < 14; i++) rect(ctx, 8 + ((i * 8 + Math.floor(u * 24)) % 104), 120, 2, 6, '#7C8CAA');
   for (let i = 0; i < 3; i++) { const bx = 8 + ((i * 36 + Math.floor(u * 20)) % 96); rect(ctx, bx, 108, 14, 12, '#a9783f'); rect(ctx, bx, 108, 14, 2, '#c99a5f'); }
   const bob = Math.round(Math.sin(u * 5) * 1);
   drawSprite(ctx, SPRITES.me[0], PALETTES.me, 70, 86 + bob, { scale: 3 }); shadow(ctx, 68, 134, 40);
@@ -139,7 +139,7 @@ function cutNight(ctx, u) { // 물류센터 야간 알바: 박스 쌓인 선반 
 
 function cutOffer(ctx, u) { // 오순자의 권유: 신청서를 내미는 오순자 + 도민구
   gymBackdrop(ctx, 1); lamp(ctx, 60, 1);
-  rect(ctx, 6, 100, 108, 22, '#1f7a4d'); rect(ctx, 6, 100, 108, 2, '#bfe3cf'); rect(ctx, 6, 122, 108, 3, '#0d4f33'); // 탁구대
+  rect(ctx, 6, 100, 108, 22, '#2A63C4'); rect(ctx, 6, 100, 108, 2, '#F2F8FF'); rect(ctx, 6, 122, 108, 3, '#1B4690'); // 탁구대
   drawSprite(ctx, SPRITES.me[0], PALETTES.me, 12, 68, { scale: 3 }); shadow(ctx, 10, 116, 40);
   drawSprite(ctx, SPRITES.opp[0], PALETTES.opp, 70, 62, { scale: 3 }); // 오순자(백발)
   rect(ctx, 78, 62, 20, 3, '#e8e8f0'); // 파마머리 볼륨
@@ -166,7 +166,7 @@ export function drawStoryIntro(ctx, t, tl = TIMELINE) {
   const tt = Math.max(0, Math.min(tl.total, t)); const ci = cutIndexAt(tt, tl); const sp = tl.spans[ci];
   DRAWERS[sp.id](ctx, tt - sp.start);
   const a = cutFade(tt, tl);
-  if (a > 0) { ctx.fillStyle = `rgba(7,12,24,${a.toFixed(3)})`; ctx.fillRect(0, 0, INTRO_W, INTRO_H); }
+  if (a > 0) { ctx.fillStyle = `rgba(255,247,232,${a.toFixed(3)})`; ctx.fillRect(0, 0, INTRO_W, INTRO_H); }
 }
 
 /**

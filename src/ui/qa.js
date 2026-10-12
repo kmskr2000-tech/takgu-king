@@ -1,17 +1,18 @@
 // QA 직접 링크(#qa-match / #qa-tutorial / #qa-home / #qa-season-intro / #qa-result): 레이아웃 점검용으로 "정지 화면"을 만든다.
 // 안전: 실제 저장소(localStorage)를 절대 읽거나 쓰지 않는다 — 메모리 저장소 + 고정 시드 + 수동 시계. 인트로·소리 없음.
-import { createApp } from './app.js?v=1791806204';
-import { createStore } from '../game/store.js?v=1791806204';
-import { newGame, applyRegularResult, applyTournamentResult } from '../game/season.js?v=1791806204';
-import { createRng } from '../core/index.js?v=1791806204';
-import { pendingEvent } from '../game/events.js?v=1791806204';
-import { cupOffer, startCup } from '../game/cup.js?v=1791806204';
-import { addMatchToTally } from '../game/review.js?v=1791806204';
-import { describePoint } from '../game/pointReason.js?v=1791806204';
+import { createApp } from './app.js?v=1791810365';
+import { createStore } from '../game/store.js?v=1791810365';
+import { newGame, applyRegularResult, applyTournamentResult } from '../game/season.js?v=1791810365';
+import { createRng } from '../core/index.js?v=1791810365';
+import { pendingEvent } from '../game/events.js?v=1791810365';
+import { cupOffer, startCup } from '../game/cup.js?v=1791810365';
+import { addMatchToTally } from '../game/review.js?v=1791810365';
+import { describePoint } from '../game/pointReason.js?v=1791810365';
+import { rivalCardScreen, storyBeatScreen } from './screens.js?v=1791810365';
 
 export const QA_ROUTES = Object.freeze(['match', 'tutorial', 'home', 'season-intro', 'result']);
 /** 디자인 점검용 추가 화면 (QA_ROUTES 계약은 그대로): 장비·특전, 이벤트, 컵, 시즌 결산(레이더·특전), 스탯, 대진표, 설정, 훈련 */
-export const QA_EXTRA_ROUTES = Object.freeze(['title', 'equip', 'event', 'cup', 'season-result', 'stats', 'bracket', 'settings', 'training']);
+export const QA_EXTRA_ROUTES = Object.freeze(['title', 'multi-nick', 'multi', 'multi-friends', 'rival-card', 'story-beat', 'equip', 'event', 'cup', 'season-result', 'stats', 'bracket', 'settings', 'training']);
 
 function memoryStorage() {
   const d = {};
@@ -47,9 +48,20 @@ export function mountQa(root, route, { seed = 12345 } = {}) {
     ctl.setLane(270); step(2);
     app.matchView?.setPoint(describePoint({ winner: 'opp', reason: 'miss', myShotType: null }, { reason: 'late' }));
     app.matchView?.flashScore('opp'); step(1);
+  } else if (route === 'intro' || route === 'story-intro') { // 애니메이션 화면(QA_EXTRA_ROUTES 계약 밖): 몇 초 진행한 모습
+    if (route === 'intro') app.showIntro(); else app.showStoryIntro(() => {});
+    step(150);
   } else if (QA_EXTRA_ROUTES.includes(route)) {
     const st = app.state; const W = { won: true, score: { me: 11, opp: 4 } };
     if (route === 'title') app.showTitle();
+    else if (route === 'multi-nick') app.showMultiplayer();
+    else if (route === 'multi' || route === 'multi-friends') {
+      storage.setItem('tabgu-king-nick-locked-v1', JSON.stringify({ nick: '나성의현자', uid: 'qa' })); // 닉네임이 잠긴 상태로 시작
+      app.showMultiplayer();
+      if (route === 'multi-friends') { const b = root.querySelectorAll?.('button') ?? []; for (const x of b) if (x.textContent === '친구랑 하기') x.click(); }
+    }
+    else if (route === 'rival-card') root.appendChild(rivalCardScreen({ rival: { name: '오순자', nickname: '동네 탁구 여왕', age: 72, role: '아마추어 리그 · 클럽 회장', blurb: '30년 구력의 커트 장인. 느리지만 정확하다.' }, lines: [{ who: '오순자', text: '젊은이, 공은 눈으로 치는 게 아니라네.' }, { who: '도민구', text: '…해 보죠.', me: true }], first: true, onStart() {}, record: '상대 전적 0승 0패' }));
+    else if (route === 'story-beat') root.appendChild(storyBeatScreen({ beat: { leagueTitle: '아마추어 리그', label: '중반전', title: '흔들리는 날', text: '연패가 이어졌다.\n그래도 라켓을 놓을 수는 없었다.', quote: '…다시.' }, onNext() {} }));
     else if (route === 'equip') { st.trophies = { amateur: 1, third: 1 }; st.title = 'third'; st.skin = 'amateur'; st.unlocked = { grips: ['shake', 'pen'], rackets: ['basic', 'smasher'] }; st.statPoints = 7; app.showEquip(); }
     else if (route === 'event') { st.week = 4; app.showEvent(pendingEvent(st)); }
     else if (route === 'cup') { st.week = 3; startCup(st, cupOffer(st).slot); app.showCup(); }

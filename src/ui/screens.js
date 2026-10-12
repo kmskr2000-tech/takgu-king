@@ -1,20 +1,20 @@
-import { h } from './dom.js?v=1791806204';
-import { placeSpotlight } from './spotlight.js?v=1791806204';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791806204';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791806204';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791806204';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791806204';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791806204';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791806204';
+import { h } from './dom.js?v=1791810365';
+import { placeSpotlight } from './spotlight.js?v=1791810365';
+import { ICON_PADDLE, ICON_PALETTE, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791810365';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791810365';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791810365';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791810365';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791810365';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791810365';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791806204';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791806204';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791806204';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791806204';
-import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791806204';
-import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791806204';
-import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791806204';
+} from '../game/season.js?v=1791810365';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791810365';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791810365';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791810365';
+import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791810365';
+import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791810365';
+import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791810365';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -45,6 +45,30 @@ function titleBackground() {
   const c = cv.getContext?.('2d');
   if (c) { c.imageSmoothingEnabled = false; drawTitleBackground(c); }
   return h('div', { class: 'title-bg', 'aria-hidden': 'true' }, cv);
+}
+
+
+/** 멀티 대전 배너: 빨강·파랑 라켓이 마주 보고 가운데 VS, 아래 공 (도트, 장식이라 스크린리더에서 숨김) */
+const VS_W = 120; const VS_H = 52;
+const VS_LETTERS = { V: ['x...x', 'x...x', 'x...x', '.x.x.', '..x..'], S: ['.xxxx', 'x....', '.xxx.', '....x', 'xxxx.'] };
+const RACKET = ICON_PADDLE.map((row, j) => (j >= 10 ? row.slice(0, 11) + '.'.repeat(row.length - 11) : row)); // 라켓만 (스프라이트에 붙어 있는 작은 공은 뺀다)
+function versusBanner() {
+  const cv = h('canvas', { class: 'versus', width: VS_W, height: VS_H, 'aria-hidden': 'true' });
+  cv.width = VS_W; cv.height = VS_H;
+  const c = cv.getContext?.('2d');
+  if (c) {
+    c.imageSmoothingEnabled = false;
+    drawSprite(c, RACKET, ICON_PALETTE, 2, 1, { scale: 3 });                                                 // 내 라켓(빨강)
+    drawSprite(c, RACKET, { ...ICON_PALETTE, r: '#2a6fd8' }, VS_W - 50, 1, { scale: 3, flipX: true });         // 상대 라켓(파랑)
+    drawSprite(c, BALL, BALL_PALETTE, 57, 38, { scale: 2 });                                                 // 공
+    [['V', 41], ['S', 62]].forEach(([ch, x0]) => {                                                           // VS: 갈색 그림자 + 금색
+      for (const [dx, dy, color] of [[1, 2, '#8A5A00'], [0, 0, '#FFC93C']]) {
+        c.fillStyle = color;
+        VS_LETTERS[ch].forEach((row, j) => [...row].forEach((cell, i) => { if (cell === 'x') c.fillRect(x0 + i * 3 + dx, 10 + j * 3 + dy, 3, 3); }));
+      }
+    });
+  }
+  return cv;
 }
 
 /** 인트로 화면: 전체 화면 캔버스 + 타이핑 자막 + 건너뛰기. 화면 어디든 탭하면 건너뜀 */
@@ -85,19 +109,19 @@ export function titleScreen({ hasSave, onContinue, onNew, onTutorial = null, onM
     icon,
     pixelLogo(),
     h('p', { class: 'sub' }, '지면 다시. 한 점씩, 한 경기씩.'),
-    btn('새로 시작', onNew, 'primary'),
-    // 이어하기는 항상 새로 시작 바로 아래. 저장된 시즌이 없으면 비활성
-    h('button', {
-      class: `btn${hasSave ? ' primary' : ''}`, type: 'button', disabled: hasSave ? null : true,
-      'aria-disabled': hasSave ? null : 'true', onclick: hasSave ? onContinue : null,
-    }, '이어하기'),
-    onTutorial && btn('튜토리얼', onTutorial),
-    onMulti && btn('멀티플레이', onMulti),
-    // 게임 난이도(보통/어려움/매우 어려움): 누를 때마다 다음 단계. 상대 AI 배율(리그 난이도에 곱)
-    level && onLevel && h('button', { class: 'btn level', type: 'button', 'aria-label': `게임 난이도 ${level.label}`, onclick: onLevel },
-      h('span', { class: 'sname' }, '게임 난이도'), h('span', { class: 'sstate' }, `${level.label} ▸`)),
-    btn('설정', onSettings),
-    btn('룰 설명', onRules));
+    // 흰색 둥근 카드 패널: 새로 시작(금색) → 이어하기(흰색+주황 테두리, 바로 아래) → 나머지 메뉴
+    h('div', { class: 'title-card' },
+      btn('새로 시작', onNew, 'primary'),
+      // 이어하기는 항상 새로 시작 바로 아래. 저장된 시즌이 없으면 비활성(점선 회색)
+      h('button', {
+        class: `btn${hasSave ? ' continue' : ''}`, type: 'button', disabled: hasSave ? null : true,
+        'aria-disabled': hasSave ? null : 'true', onclick: hasSave ? onContinue : null,
+      }, '이어하기'),
+      (onTutorial || onMulti) && h('div', { class: 'title-row' }, onTutorial && btn('튜토리얼', onTutorial), onMulti && btn('멀티플레이', onMulti)),
+      // 게임 난이도(보통/어려움/매우 어려움): 누를 때마다 다음 단계. 상대 AI 배율(리그 난이도에 곱)
+      level && onLevel && h('button', { class: 'btn level', type: 'button', 'aria-label': `게임 난이도 ${level.label}`, onclick: onLevel },
+        h('span', { class: 'sname' }, '게임 난이도'), h('span', { class: 'sstate' }, `${level.label} ▸`)),
+      h('div', { class: 'title-row' }, btn('설정', onSettings), btn('룰 설명', onRules))));
 }
 
 export function settingsScreen({ defs, values, onToggle, onReset, onBack }) {
@@ -596,8 +620,9 @@ export function multiScreen({ onSetNick = () => {}, onHost, onPick = () => {}, o
   // ---- 메인: 빠른 대전 / 친구랑 하기 ----
   const hubBox = h('div', { class: 'net-hub' },
     nickLabel,
-    btn('⚡ 빠른 대전', () => onQuick(), 'primary quick-btn'), h('p', { class: 'hint' }, '랜덤 상대와 바로 한 판'),
-    btn('👥 친구랑 하기', () => { api.showHome('friends'); onFriends(); }, 'friends-btn'), h('p', { class: 'hint' }, '방을 만들거나, 친구가 만든 방에 들어가요 (비밀번호 가능)'));
+    // 카드형: 안쪽 버튼이 카드 전체를 덮어 어디를 눌러도 선택된다 (버튼 글자는 제목만, 설명·아이콘은 카드 안의 별도 요소)
+    h('div', { class: 'mode-card quick' }, h('span', { class: 'mc-ico', 'aria-hidden': 'true' }, '⚡'), btn('빠른 대전', () => onQuick(), 'card-btn'), h('small', {}, '랜덤 상대와 바로 한 판')),
+    h('div', { class: 'mode-card friends' }, h('span', { class: 'mc-ico', 'aria-hidden': 'true' }, '👥'), btn('친구랑 하기', () => { api.showHome('friends'); onFriends(); }, 'card-btn'), h('small', {}, '방을 만들거나 친구 방에 들어가요 · 비밀번호 가능')));
   // ---- 친구랑 하기 ----
   const titleInput = input('title-input', { maxlength: '20', placeholder: '방 제목 (예: 금요일 탁구)', 'aria-label': '방 제목' });
   const pwInput = input('pw-input', { maxlength: '12', placeholder: '비밀번호 (선택, 4~12자)', 'aria-label': '방 비밀번호 (비워 두면 누구나 입장)' });
@@ -621,6 +646,7 @@ export function multiScreen({ onSetNick = () => {}, onHost, onPick = () => {}, o
   const el = h('section', { class: 'screen multi' },
     h('h2', {}, '멀티플레이'),
     h('p', { class: 'quote' }, '실시간 1:1 탁구 대전'),
+    versusBanner(),
     status, nickBox, hubBox, friendsBox, waiting, busy, backBtn);
   const show = (node, on) => { node.className = `${node.className.replace(/\s*\bhidden\b/g, '')}${on ? '' : ' hidden'}`; };
   let locked = nick; let home = nick ? 'hub' : 'nick'; let mode = home;

@@ -541,3 +541,170 @@ svg.radar { width: 100%; max-width: 300px; height: auto; background: var(--s1); 
 .multi .pw-prompt .join-pw-label { flex: 1 1 100%; font-weight: 800; }
 .multi .pw-prompt .btn { flex: 0 0 auto; }
 .multi .room-item.locked { border-color: #ffd24a; }
+
+/* ===== 라이트 테마 (2026-10-13) — 전체 화면 밝은 톤. 크림 배경·흰 카드·진한 남색 글자·금색 버튼·도트 느낌의 2px 테두리와 하드 섀도 =====
+   토큰만 바꿔서 위의 '미니멀 프리미엄 레이어'(var(--bg) 등)가 그대로 밝아지고, 아래에서 하드코딩 색이 남은 컴포넌트(경기 HUD·샷 바·컷신·안내 카드)를 덮어쓴다.
+   버튼 마우스오버 전용 규칙 금지(deploy.test), 누름 효과는 pressfx 의 scale+brightness 를 그대로 둔다. */
+:root {
+  --bg:#FFF7E8; --panel:#FFFFFF; --text:#1E2A38; --accent:#FFC93C; --dim:#4A5868;
+  --s1:#FFFFFF; --s2:#F3EADB; --line:rgba(30,42,56,.18); --line-hi:rgba(30,42,56,.45);
+  --tx:#1E2A38; --tx2:#4A5868; --tx3:#5E6B7A;
+  --gold:#8A5A00; --gold-ink:#1E2A38; --ok:#1B7F47; --bad:#C2321F;
+  --ink:#1E2A38; --fill-gold:#FFC93C; --blue:#1A63C7; --orange:#C25A00; --hard:0 3px 0 rgba(30,42,56,.28);
+}
+html, body { background: var(--bg); color: var(--text); }
+body:has(.screen.multi) { background-color: var(--bg); background-image: radial-gradient(rgba(138,90,0,.16) 1px, transparent 1.6px); background-size: 12px 12px; }
+.btn:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+/* 버튼 체계: 기본(흰 면·진한 테두리) / primary(금색) / 비활성(점선) / danger */
+.btn, .screen:not(.match) .btn { background: #fff; color: var(--ink); border: 2px solid var(--ink); border-radius: 10px; box-shadow: var(--hard); font-weight: 700; }
+.btn.primary, .screen:not(.match) .btn.primary { background: var(--fill-gold); color: var(--ink); border-color: #8A5A00; font-weight: 800; }
+.btn:disabled, .screen:not(.match) .btn:disabled, .screen.title .btn:disabled { opacity: 1; background: #ECE6DA; color: #6E6759; border: 2px dashed #B9B0A0; box-shadow: none; }
+.screen:not(.match) .btn.primary:disabled { background: #ECE6DA; color: #6E6759; border-color: #B9B0A0; }
+.btn.danger, .screen:not(.match) .btn.danger { background: #fff; color: var(--bad); border-color: var(--bad); }
+.btn.recommend { border-color: var(--blue); color: var(--blue); }
+.btn.setting.on { border-color: var(--ok); } .btn.setting .sstate { color: var(--tx2); } .btn.setting.on .sstate { color: var(--ok); }
+.btn.setting.enum small, .btn.setting small { color: var(--tx2); }
+.screen:not(.match) .btn.event-alert { background: #FFF1C9; border-color: #8A5A00; color: var(--ink); }
+.screen:not(.match) .btn.equip.primary, .screen:not(.match) .btn.perk.primary { background: #FFF1C9; border-color: #8A5A00; color: var(--ink); }
+.btn.equip small.unlock { color: var(--gold); } .btn.equip:disabled small.unlock { color: #5E574A; }
+.back-top { background: var(--bg); color: var(--ink); }
+
+/* 글자·카드 */
+.screen:not(.match):not(.title):not(.intro):not(.rival-card):not(.season-intro):not(.ending):not(.story-beat-screen) h2 { color: var(--ink); font-weight: 800; }
+.logo, .sub { color: var(--ink); } .quote { color: var(--tx2); } .win { color: var(--gold); }
+.chip, .chip.pts { color: var(--ink); } .chip.pts { color: var(--gold); }
+.stat-row, .rule-card, .recap-games .rg, .recap-table, .sum-cell, .season-goals-result li, .match-slot, .event-line, .perks, .growth, .legacy, .build-strip, .perks-got, .review-tiles .tile, table.standings, .screen.home .next, svg.radar, .draft-card, .legacy-item, .event-choice { background: #fff; border-color: var(--line-hi); }
+.stat-row, .recap-table, .sum-cell, .match-slot, .event-line, .perks, .growth, .legacy, .perks-got, .review-tiles .tile, .screen.home .next, .draft-card, .legacy-item, .event-choice { box-shadow: 0 2px 0 rgba(30,42,56,.14); }
+.standings tr.me { background: #FFF1C9; color: var(--ink); font-weight: 800; }
+.standings tr.top td:first-child { border-left: 3px solid var(--ok); } .standings tr.drop td:first-child { border-left: 3px solid var(--bad); }
+.standings th, .standings td { border-bottom-color: var(--line); }
+.rule-card h3, .recap h3, .summary h3, .coach-head, .event-choice .odds, .draft-card b { color: var(--gold); }
+.rule-card p, .recap-games .rg b.w { color: var(--ink); } .rule-chip { color: var(--ink); } .rule-chip b { filter: brightness(.7); }
+.rule-canvas, .coach-diagram { background: #E9F3FF; border: 2px solid var(--ink); }
+.recap-games .rg b { color: var(--tx2); } .recap-games .rg em, .sum-cell em { color: var(--gold); }
+.recap-games .rg.mine { border-color: var(--blue); } .recap-games .rg.mine.win small { color: var(--ok); } .recap-games .rg.mine.lose small { color: var(--bad); }
+.recap-table .rr.me, .recap-table .rr.me.up, .recap-table .rr.me.down { background: #FFF1C9; } .recap-table .rr.me > * { color: var(--ink); }
+.recap-table .rr.up { background: rgba(27,127,71,.12); } .recap-table .rr.down { background: rgba(194,50,31,.10); }
+.recap-table .rr.up .mv, .recap-table .rr.me.up { color: var(--ok); } .recap-table .rr.down .mv, .recap-table .rr.me.down { color: var(--bad); } .recap-table .rr .mv { color: var(--tx3); }
+.sum-cell span, .sum-cell small { color: var(--tx2); } .sum-cell.new { outline: 2px solid var(--fill-gold); }
+.sum-grades .g-perfect { color: #8A5A00; } .sum-grades .g-good { color: var(--ok); } .sum-grades .g-bad { color: #B4530A; } .sum-grades .g-miss { color: var(--bad); }
+.train-left .dot { color: #B9B0A0; } .train-left .dot.on { color: #D99A00; } .train-rules { color: var(--tx2); }
+.season-goals-result li.met { color: var(--ok); } .season-goals-result li.unmet { color: var(--bad); } .retry-note { color: var(--gold); }
+.result .score { font-weight: 800; color: var(--ink); }
+.match-slot .win { color: var(--ok); }
+.radar-ring { stroke: rgba(30,42,56,.18); } .radar-axis { stroke: rgba(30,42,56,.12); } .radar-shape { fill: rgba(255,201,60,.35); stroke: #8A5A00; } .radar-prev { stroke: rgba(30,42,56,.5); } .radar-label { fill: var(--tx2); }
+.build-slot { border-color: var(--line-hi); } .build-slot.on { background: #FFF1C9; border-color: #8A5A00; } .gauge-bar b { color: var(--tx3); background: #fff; }
+.legacy-item.can { border-color: #8A5A00; } .legacy-item.can em { color: var(--gold); }
+.draft-card small, .draft-card .dc-desc { color: var(--tx2); }
+
+/* 타이틀(B안): 낮 경기장 배경 + 흰색 둥근 카드 패널 안에 메뉴. 새로 시작=금색, 이어하기=흰색+주황 테두리 */
+.title-bg { background: #8FCBF7; }
+.title-bg::after { background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 55%, rgba(255,247,232,.55) 100%); }
+.title .sub { color: var(--ink); font-weight: 800; text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff, 0 -1px 0 #fff; }
+.screen.title { gap: 6px; }
+canvas.icon { width: 56px; height: 56px; margin-top: 12px; }
+.title-card { display: grid; gap: 10px; margin-top: 4px; padding: 16px 14px 14px; background: #fff; border: 3px solid #8A5A00; border-radius: 22px; box-shadow: 0 5px 0 rgba(90,58,28,.45), inset 0 0 0 2px #FFE7A6; }
+.title .title-card .btn { background: #fff; box-shadow: var(--hard); }
+.title .title-card .btn.primary { min-height: 58px; font-size: 1.15rem; background: var(--fill-gold); border-color: #8A5A00; }
+.title .title-card .btn.continue { min-height: 52px; font-size: 1.05rem; background: #fff; color: #B34A00; border: 3px solid #E8741A; font-weight: 800; }
+.title .title-card .btn:disabled { background: #ECE6DA; color: #6E6759; border: 2px dashed #B9B0A0; box-shadow: none; }
+.title-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.title-row .btn { min-height: 46px; padding: 8px; font-size: .95rem; }
+.screen.title .btn.level, .title .btn.level { display: flex; justify-content: center; align-items: center; gap: 8px; min-height: 44px; background: #F3EADB; }
+.screen.title .btn.level .sstate, .title .btn.level .sstate { color: var(--gold); }
+
+/* 멀티플레이: 크림 + 도트 패턴 배경, 도트 VS 배너, 카드형 버튼 */
+.multi h2 { text-align: center; font-size: 28px; font-weight: 900; letter-spacing: -.5px; }
+.multi .quote { text-align: center; margin: 0; color: var(--tx2); }
+.multi canvas.versus { display: block; width: min(100%, 340px); aspect-ratio: 120 / 52; margin: 0 auto; image-rendering: pixelated; padding: 8px; background: #FBE7C2; border: 3px solid #8A5A00; border-radius: 12px; box-shadow: var(--hard); }
+.multi .nick-badge { justify-self: center; padding: 8px 18px; border: 2px solid var(--ink); border-radius: 999px; background: #fff; color: var(--ink); font-weight: 800; box-shadow: 0 2px 0 rgba(30,42,56,.2); }
+.multi .net-hub, .multi .net-nick, .multi .net-friends, .multi .net-wait, .multi .net-busy { display: grid; gap: 12px; }
+.multi .mode-card { position: relative; display: grid; grid-template-columns: 44px 1fr; column-gap: 12px; row-gap: 2px; align-items: center; padding: 16px; border: 3px solid var(--ink); border-radius: 16px; box-shadow: 0 4px 0 rgba(30,42,56,.35); }
+.multi .mode-card.quick { background: linear-gradient(#FFD65A, #FFC93C); border-color: #8A5A00; }
+.multi .mode-card.friends { background: #F4F9FF; border-color: var(--blue); }
+.multi .mode-card .mc-ico { grid-row: 1 / 3; font-size: 2.1rem; text-align: center; line-height: 1; }
+.multi .mode-card .card-btn { background: transparent; border: 0; box-shadow: none; padding: 0; min-height: 0; text-align: left; font-size: 1.3rem; font-weight: 900; color: var(--ink); }
+.multi .mode-card.friends .card-btn { color: #0E4A9C; }
+.multi .mode-card .card-btn::after { content: ''; position: absolute; inset: 0; border-radius: 13px; }
+.multi .mode-card small { grid-column: 2; color: #3B4756; font-size: .88rem; line-height: 1.35; font-weight: 600; }
+.multi .net-nick, .multi .net-friends > .join-row, .multi .net-friends > .room-list, .multi .net-wait, .multi .net-busy { padding: 14px; border: 2px solid var(--ink); border-radius: 14px; background: #fff; box-shadow: 0 3px 0 rgba(30,42,56,.2); }
+.multi .net-friends > .room-list { max-height: 44vh; }
+.multi .hint { color: var(--tx2); margin: 0; font-size: .9rem; } .multi .hint.warn { color: #8A5A00; background: #FFF1C9; border-radius: 8px; padding: 8px 10px; font-weight: 700; } .multi .hint.err { color: var(--bad); }
+.multi .net-status { color: var(--tx2); font-weight: 700; } .multi .net-status.err { color: var(--bad); background: #FDE8E5; border-radius: 8px; padding: 8px 10px; }
+.multi .net-status:empty { display: none; }
+.multi .room-head { color: var(--ink); }
+.multi .room-item { background: #fff; border: 2px solid var(--ink); color: var(--ink); box-shadow: 0 2px 0 rgba(30,42,56,.2); }
+.multi .room-item.locked { border-left: 8px solid #E8A200; }
+.multi .room-item .room-go { color: #fff; background: var(--blue); border-radius: 999px; padding: 4px 12px; font-size: .85rem; }
+.multi .room-host, .multi .room-host { color: var(--tx2); opacity: 1; }
+.multi .pw-prompt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px; border: 2px solid #8A5A00; border-radius: 10px; background: #FFF1C9; }
+.multi .pw-prompt .join-pw-label { flex: 1 1 100%; font-weight: 800; color: var(--ink); } .multi .pw-prompt .btn { flex: 0 0 auto; }
+.title-input, .nick-input, .pw-input, .multi .pw-input, .multi .join-pw { font: 700 1rem system-ui, sans-serif; padding: 10px; border-radius: 10px; border: 2px solid var(--ink); background: #fff; color: var(--ink); min-width: 0; }
+.multi .join-row { flex-wrap: wrap; } .multi .join-row .title-input { flex: 1 1 100%; } .multi .pw-input, .multi .join-pw { flex: 1 1 0; }
+.room-name { background: #FFF1C9; color: var(--ink); border: 2px solid #8A5A00; }
+.room-code { background: #FFF1C9; color: var(--ink); text-shadow: none; } .code-input { background: #fff; color: var(--ink); border-color: var(--ink); }
+
+/* ---- 경기 화면(밝은 코트): HUD 패널은 크림 카드 + 진한 글자, 판정/배너 글자는 흰 외곽선 없이도 읽히도록 진한 색 ---- */
+.screen.match > div.match-stage:not(#x) { background: #BFE0FA; } .screen.match canvas.court { background: #BFE0FA; }
+.hud { color: var(--ink); text-shadow: none; }
+.hud .scoreboard .panel { background: #FFF7E8; color: var(--ink); border: 2px solid var(--ink); box-shadow: 0 2px 0 rgba(30,42,56,.35); text-shadow: none; }
+.hud .scoreboard .panel.opp { border-color: #C2321F; } .hud .scoreboard .panel.me { border-color: #1A63C7; }
+.hud .scoreboard .panel.opp .who { color: #C2321F; } .hud .scoreboard .panel.me .who { color: #1A63C7; }
+.hud .scoreboard .srv { color: #B07A00; } .hud .scoreboard .plus { color: #B07A00; text-shadow: 0 1px 0 #fff; }
+.hud .scoreboard .panel.scored { background: #FFE08A; border-color: #8A5A00; }
+.hud .scoreboard .vs { color: var(--ink); opacity: .8; }
+.hud .opp-name, .screen.match .hud .opp-name { color: var(--ink); text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff, 0 -1px 0 #fff; }
+.hud .opp-name { background: rgba(255,247,232,.92); border: 2px solid var(--ink); } .screen.match .hud .opp-name { background: none; border: 0; }
+.screen.match .hud .opp-info { text-shadow: none; }
+.hud .opp-tag { border-color: var(--ink); }
+.btn.quit, .screen.match .hud .btn.quit { background: #FFF7E8; color: var(--ink); border: 2px solid var(--ink); box-shadow: 0 2px 0 rgba(30,42,56,.35); }
+.hud .incoming.topspin { color: #C2321F; } .hud .incoming.cut { color: #1A63C7; } .hud .incoming.normal { color: #3B4756; }
+.hud .lane-chip { color: #8A5A00; }
+.hud .judge { text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff, 0 -1px 0 #fff; }
+.hud .judge.perfect { color: #C27A00; text-shadow: 0 0 6px rgba(255,255,255,.95), 0 2px 0 #fff; }
+.hud .judge.good { color: #178A44; text-shadow: 0 0 5px rgba(255,255,255,.95), 0 2px 0 #fff; }
+.hud .judge.bad { color: #C25A00; text-shadow: 0 0 5px rgba(255,255,255,.95), 0 2px 0 #fff; }
+.hud .judge.miss { color: #C2321F; text-shadow: 0 0 5px rgba(255,255,255,.95), 0 2px 0 #fff; }
+.serve-banner { color: #fff; text-shadow: 2px 0 var(--ink), -2px 0 var(--ink), 0 2px var(--ink), 0 -2px var(--ink), 3px 3px 0 var(--ink); }
+.serve-banner.me { color: #FFC93C; }
+.serve-badge.me { background: #FFC93C; color: var(--ink); border-color: var(--ink); } .serve-badge.opp { background: #fff; color: var(--ink); border-color: var(--ink); }
+.point-banner { color: var(--ink); background: rgba(255,247,232,.96); border-color: var(--ink); box-shadow: 0 4px 0 rgba(30,42,56,.35); }
+.point-banner.win { border-color: var(--ok); } .point-banner.lose { border-color: var(--bad); }
+.point-banner.win b { color: var(--ok); } .point-banner.lose b { color: var(--bad); } .point-banner small { color: var(--gold); }
+.rps { background: rgba(255,247,232,.92); border: 2px solid var(--ink); text-shadow: none; } .rps .arrow { color: var(--ink); }
+.tip { color: var(--ink); background: #FFF7E8; border: 2px solid #8A5A00; box-shadow: 0 2px 0 rgba(30,42,56,.25); }
+.coach.on { background: #FFF7E8; border: 2px solid #8A5A00; } .coach.done { border-color: var(--ok); } .coach-text { color: var(--ink); } .coach-goals { color: var(--tx2); } .coach-feedback { color: var(--gold); }
+.ticker { background: #fff; border: 2px solid var(--ink); color: var(--ink); } .ticker .tk-sc { color: var(--ink); background: #FFE08A; } .ticker .tk-a.hot, .ticker .tk-b.hot { color: var(--ok); }
+.ticker .tk-tag { color: var(--gold); } .ticker.done .tk-tag { color: var(--tx2); } .ticker .tk-idx { color: var(--tx3); }
+.shot-btn { background: #fff; color: var(--ink); border: 3px solid var(--c, var(--ink)); box-shadow: 0 3px 0 rgba(30,42,56,.35); }
+.shot-btn b { color: var(--ink); } .shot-btn em { color: #8A5A00; } .shot-btn small { color: var(--tx2); }
+.shot-btn.press { background: var(--c); box-shadow: 0 0 0 2px var(--ink) inset; } .shot-btn.press b, .shot-btn.press small, .shot-btn.press em { color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,.45); }
+.screen.match { color: var(--ink); }
+
+/* 안내 카드·가이드 투어: 밝은 카드 (화면을 어둡게 가리는 오버레이/하이라이트 구멍 자체는 기능이라 그대로) */
+.guide-card, .tour-card { background: #FFF7E8; color: var(--ink); border: 3px solid #8A5A00; box-shadow: 0 4px 0 rgba(30,42,56,.4); }
+.guide-card .g-step, .tour-step { color: var(--gold); } .tour-text { color: var(--ink); }
+.guide-card .g-skip, .tour-skip { color: var(--tx2); }
+
+/* 컷신(시즌 시작·라이벌 카드·스토리 컷·말풍선): 하늘~크림 그라데이션 배경 + 흰 카드 */
+.season-intro, .rival-card, .story-beat-screen, .ending, .season-result { color: var(--ink); }
+body:has(.season-intro), body:has(.rival-card), body:has(.story-beat-screen), body:has(.ending) { background: linear-gradient(#CFE8FF, #FFF7E8 70%); background-attachment: fixed; }
+.season-intro .si-title small, .rival-card .rc-tag, .story-beat-screen .sb-tag { color: #8A5A00; text-shadow: none; }
+.season-intro .si-title h2, .rival-card h2, .story-beat-screen h2 { color: var(--ink); text-shadow: 0 2px 0 #fff, 2px 2px 0 rgba(138,90,0,.35); }
+.season-intro .si-head { color: var(--tx2); }
+.season-intro .goal { background: #fff; border: 2px solid var(--ink); box-shadow: 0 3px 0 rgba(30,42,56,.25); } .season-intro .goal b { color: var(--gold); } .season-intro .goal span { color: var(--ink); }
+.season-intro .goal-rival, .rival-card .rc-nick { color: var(--bad); }
+.rival-card .rc-role, .rival-card .rc-blurb { color: var(--tx2); }
+.bubble { background: #fff; border: 2px solid var(--ink); color: var(--ink); box-shadow: 0 2px 0 rgba(30,42,56,.2); } .bubble b { color: var(--gold); }
+.bubble.me { background: #FFF1C9; border-color: #8A5A00; }
+.season-intro .si-story { background: #FFF1C9; border: 2px solid #8A5A00; } .season-intro .si-story small { color: var(--gold); } .season-intro .si-story p { color: var(--ink); }
+.story-beat-screen .sb-text, .story-beat p { color: var(--ink); }
+.intro-caption, .story-intro .intro-caption { color: var(--ink); text-shadow: 0 2px 0 #fff, 2px 0 #fff, -2px 0 #fff, 0 -2px #fff, 2px 2px #fff, -2px -2px #fff, 2px -2px #fff, -2px 2px #fff; }
+.story-intro .intro-caption.m { color: #6B4A00; } .story-intro .intro-caption.s { color: var(--ink); } .story-intro .intro-caption.n { color: #33415A; }
+.intro-who { color: #8A5A00; text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff; }
+.intro { background: #CFE8FF; } .intro-hint { color: #4A5868; text-shadow: 0 1px 0 #fff; }
+.intro-skip { color: var(--ink); background: rgba(255,247,232,.92); border: 2px solid var(--ink); }
+
+.multi .mode-card .mc-ico { display: grid; place-items: center; width: 46px; height: 46px; border: 2px solid var(--ink); border-radius: 50%; background: #fff; font-size: 1.5rem; box-shadow: 0 2px 0 rgba(30,42,56,.25); }
+.screen.rival-card, .screen.story-beat-screen { margin-top: 12px; padding: 22px 18px 18px; background: #fff; border: 3px solid #8A5A00; border-radius: 22px; box-shadow: 0 5px 0 rgba(90,58,28,.4), inset 0 0 0 2px #FFE7A6; }

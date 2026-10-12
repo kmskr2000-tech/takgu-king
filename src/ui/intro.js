@@ -1,8 +1,8 @@
 // 인트로: "지면 다시" 4장면 (패배 → 다짐 → 랠리 → 로고). 장면은 시간 t(초)만 받는 순수 함수라 결정적이고 테스트 가능하다.
 // 화면비에 따라 캔버스가 cover 로 잘리므로 핵심 콘텐츠는 안전영역 x 14~106, y 22~192 안에 둔다.
 export const SAFE = Object.freeze({ x0: 14, x1: 106, y0: 22, y1: 192 });
-import { SPRITES, PALETTES, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791806204';
-import { drawLogo, layoutLogo, LOGO_H } from './logo.js?v=1791806204';
+import { SPRITES, PALETTES, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791810365';
+import { drawLogo, layoutLogo, LOGO_H } from './logo.js?v=1791810365';
 
 export const INTRO_W = 120;
 export const INTRO_H = 214;
@@ -62,18 +62,18 @@ const rect = (ctx, x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, 
 const lerp = (a, b, k) => a + (b - a) * Math.max(0, Math.min(1, k));
 const ease = (k) => k * k * (3 - 2 * k);
 
-function backdrop(ctx, light) { // light 0..1: 밤하늘 계단 그라데이션 + 바닥
-  const bands = ['#05070d', '#070b16', '#0a1022', '#0e1530', '#131a3a'];
+function backdrop(ctx, light) { // light 0..1: 낮 하늘 계단 그라데이션 + 바닥
+  const bands = ['#4F9FEA', '#62AEF0', '#77BCF4', '#8FCBF7', '#A9D8F9'];
   bands.forEach((c, i) => rect(ctx, 0, i * 30, INTRO_W, 30, c));
-  rect(ctx, 0, 150, INTRO_W, INTRO_H - 150, '#0e1520');
-  rect(ctx, 0, 150, INTRO_W, 1, '#1e2c44');
-  for (let i = 0; i < 24; i++) rect(ctx, (i * 53) % INTRO_W, (i * 37) % 70, 1, 1, i % 3 ? '#39406e' : '#8b95c9'); // 별/먼지
+  rect(ctx, 0, 150, INTRO_W, INTRO_H - 150, '#E9D2A0');
+  rect(ctx, 0, 150, INTRO_W, 3, '#2B5FB5');
+  for (let i = 0; i < 12; i++) { const cx = (i * 53) % (INTRO_W - 16); const cy = (i * 37) % 70; rect(ctx, cx, cy + 2, 12, 3, '#ffffff'); rect(ctx, cx + 3, cy, 6, 2, '#ffffff'); } // 구름
   void light;
 }
 
 function spotlight(ctx, cx, strength) { // 위에서 퍼지는 빛줄기 (스캔라인)
   if (strength <= 0) return;
-  rect(ctx, cx - 3, 0, 6, 3, '#3a3f66');
+  rect(ctx, cx - 3, 0, 6, 3, '#F6D36B');
   for (let y = 4; y < 150; y++) {
     const half = 2 + Math.floor(y * 0.28);
     ctx.fillStyle = `rgba(255,233,168,${((y % 2 ? 0.13 : 0.06) * strength).toFixed(3)})`;
@@ -83,7 +83,7 @@ function spotlight(ctx, cx, strength) { // 위에서 퍼지는 빛줄기 (스캔
 
 function crowdSilhouette(ctx, alpha) {
   if (alpha <= 0) return;
-  ctx.fillStyle = `rgba(6,9,18,${alpha.toFixed(3)})`;
+  ctx.fillStyle = `rgba(90,58,28,${alpha.toFixed(3)})`;
   for (let x = 2; x < INTRO_W; x += 9) { ctx.fillRect(x, 118, 5, 5); ctx.fillRect(x - 1, 123, 7, 8); }
   ctx.fillRect(0, 131, INTRO_W, 3);
 }
@@ -101,7 +101,7 @@ function sceneDefeat(ctx, t) {
   // 고개 숙인 선수 (뒷모습, 살짝 아래로)
   const sink = Math.min(1, t / 0.9) * 3;
   drawSprite(ctx, SPRITES.me[0], PALETTES.me, 42, 100 + Math.round(sink), { scale: 3 });
-  rect(ctx, 40, 152, 40, 2, '#05070d'); // 그림자
+  rect(ctx, 40, 152, 40, 2, 'rgba(80,60,20,0.35)'); // 그림자
 }
 
 function sceneResolve(ctx, t) {
@@ -113,7 +113,7 @@ function sceneResolve(ctx, t) {
   const frame = u < 0.6 ? 0 : u < 1.1 ? 1 : 2; // 서 있다 → 라켓을 쥔다 → 스윙
   const lift = u < 0.6 ? 2 - Math.round((u / 0.6) * 2) : 0;
   drawSprite(ctx, SPRITES.me[frame], PALETTES.me, 42, 100 + lift, { scale: 3 });
-  rect(ctx, 40, 152, 40, 2, '#05070d');
+  rect(ctx, 40, 152, 40, 2, 'rgba(80,60,20,0.35)');
   if (u >= 0.6) { // 느낌표 반짝임
     const pop = Math.floor((u - 0.6) * 12) % 2 === 0;
     rect(ctx, 86, 92, 3, 9, pop ? '#ffd24a' : '#fff6d8'); rect(ctx, 86, 103, 3, 3, pop ? '#ffd24a' : '#fff6d8');
@@ -129,9 +129,9 @@ function sceneRally(ctx, t) {
   crowdSilhouette(ctx, 0.35);
   spotlight(ctx, 20, 0.8); spotlight(ctx, 60, 1); spotlight(ctx, 100, 0.8);
   // 탁구대 (위에서 본 모습)
-  rect(ctx, 24, RALLY_TOP, 72, RALLY_BOTTOM - RALLY_TOP, '#0d4f33');
-  rect(ctx, 26, RALLY_TOP + 2, 68, RALLY_BOTTOM - RALLY_TOP - 4, '#1f7a4d');
-  rect(ctx, 60, RALLY_TOP + 2, 1, RALLY_BOTTOM - RALLY_TOP - 4, '#bfe3cf');
+  rect(ctx, 24, RALLY_TOP, 72, RALLY_BOTTOM - RALLY_TOP, '#1B4690');
+  rect(ctx, 26, RALLY_TOP + 2, 68, RALLY_BOTTOM - RALLY_TOP - 4, '#2A63C4');
+  rect(ctx, 60, RALLY_TOP + 2, 1, RALLY_BOTTOM - RALLY_TOP - 4, '#F2F8FF');
   const ny = Math.round((RALLY_TOP + RALLY_BOTTOM) / 2);
   for (let x = 22; x < 98; x += 2) rect(ctx, x, ny - 1, 2, 3, x % 4 ? '#dfe6ec' : '#9aa6b2');
   // 랠리: 타격마다 방향이 바뀌고 좌우로 오간다
@@ -189,7 +189,7 @@ export function drawIntro(ctx, t) {
   const tt = Math.max(0, Math.min(INTRO_DURATION, t));
   DRAWERS[sceneAt(tt).id](ctx, tt);
   const a = fadeAlpha(tt);
-  if (a > 0) { ctx.fillStyle = `rgba(7,12,24,${a.toFixed(3)})`; ctx.fillRect(0, 0, INTRO_W, INTRO_H); }
+  if (a > 0) { ctx.fillStyle = `rgba(255,247,232,${a.toFixed(3)})`; ctx.fillRect(0, 0, INTRO_W, INTRO_H); }
 }
 
 /** 인트로 진행 제어: update(t) 로 시간 전달, skip() 으로 건너뜀. onDone 은 정확히 1번 */

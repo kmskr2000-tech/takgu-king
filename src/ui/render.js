@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite, palettesFor,
-} from './sprites.js?v=1791806204';
-import { createEffects } from './effects.js?v=1791806204';
-import { createRng } from '../core/rng.js?v=1791806204';
+} from './sprites.js?v=1791810365';
+import { createEffects } from './effects.js?v=1791810365';
+import { createRng } from '../core/rng.js?v=1791810365';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -42,17 +42,17 @@ const POP = { // 판정 글자 연출 (색·크기·머무는 시간)
 const REACH_FAR = 0.45; // 상대 위치와 낙구 지점이 코트 폭의 이만큼 이상 벌어지면 '방향 전환' 연출 (ai.js DIRECTION_FX 의 체감 구간)
 
 const C = {
-  tableA: '#1f7a4d', tableB: '#1b7048', tableSide: '#0d4f33', tableDark: '#14573a', line: '#e8f1e8',
-  netA: '#f2f6f8', netB: '#aab6c0', post: '#2a2f36', shadow: 'rgba(0,0,0,0.32)',
+  tableA: '#2A63C4', tableB: '#2459B4', tableSide: '#1B4690', tableDark: '#1f4e9a', line: '#F2F8FF',
+  netA: '#f2f6f8', netB: '#aab6c0', post: '#2a2f36', shadow: 'rgba(60,45,20,0.28)',
   zone: 'rgba(255,220,80,0.30)', zoneEdge: '#ffd24a', perfect: 'rgba(255,120,60,0.55)', chevron: '#ffffff',
-  top: '#ff5a4a', back: '#4aa3ff', floor: '#141d2a', floorLine: '#1d2a3d', wall: '#0b0f1c',
+  top: '#ff5a4a', back: '#4aa3ff', floor: '#E9D2A0', floorLine: '#D8BC84', wall: '#8A5A2E',
 };
 // 코스 화살표(7x7 도트): 왼쪽 탭 → 왼쪽 위로, 가운데 → 정면, 오른쪽 → 오른쪽 위로
 const ARROW_UP = ['...#...', '..###..', '.#####.', '...#...', '...#...', '...#...', '...#...'];
 const ARROW_UL = ['#####..', '####...', '###....', '#.##...', '#..##..', '....##.', '.....##'];
 const ARROW_UR = ARROW_UL.map((r) => [...r].reverse().join(''));
 const WALL_Y = 112; // 뒷벽(관중석)과 바닥의 경계 (화면 y)
-const SKY = ['#05070d', '#070b16', '#0a1022', '#0e1530', '#131a3a', '#1a2350'];
+const SKY = ['#4F9FEA', '#62AEF0', '#77BCF4', '#8FCBF7', '#A9D8F9', '#C4E5FB']; // 낮 하늘
 const SHIRTS = ['#d94f4f', '#e8b83a', '#4a9de0', '#6fcf6f', '#c06be0', '#f0f0f0', '#ff8a3d'];
 
 // 프레임 규칙: 타격 직후 0.12초 = 타격 프레임(2), 이어서 0.12초 = 준비 프레임(1), 이후 대기(0)
@@ -66,7 +66,7 @@ export function swingFrame(sinceHit) {
 /** 깊이에 따른 정수 도트 배율 (선수/공 스프라이트) */
 export const spriteScale = (k, mult = 2) => Math.max(1, Math.round(k * mult));
 
-import { tailRects, stripeRects, bounceRects, spinKind, BOUNCE_FX_S } from './ballfx.js?v=1791806204';
+import { tailRects, stripeRects, bounceRects, spinKind, BOUNCE_FX_S } from './ballfx.js?v=1791810365';
 
 export function createRenderer(canvas, { rng, options } = {}) {
   // 설정(이펙트/흔들림/가이드)은 프레임마다 읽는다 → 토글 즉시 반영
@@ -90,26 +90,30 @@ export function createRenderer(canvas, { rng, options } = {}) {
     // 벽/하늘
     const bandH = Math.ceil(WALL_Y / SKY.length);
     SKY.forEach((c, i) => R(g, 0, i * bandH, VIEW_W, bandH, c));
-    for (let i = 0; i < 18; i++) R(g, Math.floor(r.next() * VIEW_W), Math.floor(r.next() * 36), 1, 1, i % 3 ? '#39406e' : '#8b95c9');
-    for (const cx of [26, 80, 134]) { // 스포트라이트
-      R(g, cx - 3, 0, 6, 3, '#3a3f66'); R(g, cx - 1, 3, 2, 1, '#ffe9a8');
+    for (let i = 0; i < 5; i++) { // 도트 구름
+      const cx = Math.floor(r.next() * (VIEW_W - 24)) + 2; const cy = 4 + Math.floor(r.next() * 38); const w = 12 + Math.floor(r.next() * 10);
+      R(g, cx, cy + 3, w, 3, '#ffffff'); R(g, cx + 3, cy, w - 7, 3, '#ffffff'); R(g, cx + 1, cy + 6, w - 3, 1, '#dcebf7');
+    }
+    for (const cx of [26, 80, 134]) { // 햇살 줄기
+      R(g, cx - 3, 0, 6, 3, '#F6D36B'); R(g, cx - 1, 3, 2, 1, '#ffe9a8');
       for (let y = 4; y < WALL_Y; y++) { const half = 2 + Math.floor(y * 0.34); R(g, cx - half, y, half * 2, 1, y % 2 ? 'rgba(255,233,168,0.10)' : 'rgba(255,233,168,0.05)'); }
     }
     // 관중 (뒤 → 앞: 점점 크고 밝게)
     R(g, 0, 62, VIEW_W, WALL_Y - 62, C.wall);
+    for (let y = 62; y < WALL_Y; y += 4) R(g, 0, y, VIEW_W, 1, y % 8 ? '#9C6A38' : '#7A4E26'); // 나무 널빤지
     [{ y: 66, step: 8, head: 3, body: 4, a: 0.55 }, { y: 80, step: 10, head: 4, body: 5, a: 0.75 }, { y: 95, step: 13, head: 5, body: 6, a: 1 }].forEach((row, ri) => {
       for (let x = (ri * 3) % row.step - 2; x < VIEW_W + row.step; x += row.step) {
         const px = x + Math.floor(r.signed() * 1.5);
         const sh = SHIRTS[Math.floor(r.next() * SHIRTS.length)];
         R(g, px - 1, row.y + row.head, row.body + 2, row.body, sh);
         R(g, px, row.y, row.head, row.head, '#e0a97a'); R(g, px, row.y, row.head, Math.max(1, row.head >> 1), '#3a2a1a');
-        R(g, px - 1, row.y + row.head, row.body + 2, row.body, `rgba(5,8,16,${(1 - row.a).toFixed(2)})`); // 먼 줄은 어둡게
+        R(g, px - 1, row.y + row.head, row.body + 2, row.body, `rgba(90,58,28,${((1 - row.a) * 0.4).toFixed(2)})`); // 먼 줄은 살짝 흐리게
       }
-      R(g, 0, row.y + row.head + row.body, VIEW_W, 2, '#141a2c');
+      R(g, 0, row.y + row.head + row.body, VIEW_W, 2, '#5A3A1C');
     });
     // 바닥 + 원근선
     R(g, 0, WALL_Y, VIEW_W, VIEW_H - WALL_Y, C.floor);
-    R(g, 0, WALL_Y, VIEW_W, 1, '#2a3a52');
+    R(g, 0, WALL_Y, VIEW_W, 3, '#2B5FB5'); // 관중석 아래 파란 띠
     for (let i = -9; i <= 9; i++) {
       const xb = CAM.CX + i * 34;
       for (let row = WALL_Y + 2; row < VIEW_H; row += 2) {
@@ -120,7 +124,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
     const top = Math.round(groundY(0)); const bot = Math.round(groundY(200));
     R(g, 0, bot + 1, VIEW_W, 0, C.shadow);
     for (let row = top; row <= bot; row++) { // 그림자
-      const hw = halfWidthAtRow(row); R(g, Math.round(CAM.CX - hw + 4), row + 3, Math.round(hw * 2), 1, 'rgba(0,0,0,0.28)');
+      const hw = halfWidthAtRow(row); R(g, Math.round(CAM.CX - hw + 4), row + 3, Math.round(hw * 2), 1, 'rgba(100,70,20,0.30)');
     }
     for (let row = top; row <= bot; row++) {
       const hw = halfWidthAtRow(row); const x0 = Math.round(CAM.CX - hw); const w = Math.round(hw * 2);
@@ -129,10 +133,10 @@ export function createRenderer(canvas, { rng, options } = {}) {
     }
     const hwTop = Math.round(halfWidthAtRow(top)); const hwBot = Math.round(halfWidthAtRow(bot));
     R(g, CAM.CX - hwTop, top, hwTop * 2, 1, C.line); R(g, CAM.CX - hwBot, bot, hwBot * 2, 1, C.line); // 끝선
-    R(g, CAM.CX, top, 1, bot - top, '#7fb89a'); // 중앙선
+    R(g, CAM.CX, top, 1, bot - top, '#C9DDF7'); // 중앙선
     // 가까운 쪽 옆면(두께)과 다리
-    R(g, CAM.CX - hwBot, bot + 1, hwBot * 2, 6, C.tableSide); R(g, CAM.CX - hwBot, bot + 7, hwBot * 2, 1, '#0a3a26');
-    R(g, CAM.CX - hwBot + 6, bot + 8, 6, 22, '#0a0e16'); R(g, CAM.CX + hwBot - 12, bot + 8, 6, 22, '#0a0e16');
+    R(g, CAM.CX - hwBot, bot + 1, hwBot * 2, 6, C.tableSide); R(g, CAM.CX - hwBot, bot + 7, hwBot * 2, 1, '#143a78');
+    R(g, CAM.CX - hwBot + 6, bot + 8, 6, 22, '#2a3550'); R(g, CAM.CX + hwBot - 12, bot + 8, 6, 22, '#2a3550');
     // 네트
     const dN = depth(100); const kN = CAM.KX / dN; const nBase = Math.round(groundY(100)); const nTop = Math.round(nBase - 20 * kN * CAM.ZK);
     const hwN = Math.round(50 * kN);
