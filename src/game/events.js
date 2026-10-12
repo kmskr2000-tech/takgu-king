@@ -2,7 +2,7 @@
 //  - 효과는 스탯 포인트만 (경기·AI·판정 불변). 확정형 = 확률형 성공 보상의 절반(항상 받음), 확률형 실패 = 포인트 1 손실(0 아래로는 안 내려감).
 //  - 어떤 이벤트가 나올지는 시즌·주차로 정해진다(난수 소모 없음). 성공 여부만 굴리며, 호출 쪽이 따로 만든 난수를 넘긴다 — 시즌·경기 난수 흐름과 분리.
 //  - 선택은 state.events.history 에 기록된다(화면 하단 '커리어 모드는 선택이 기록됩니다').
-import { eventLuck, openEventDraft } from './roguelike.js?v=1791815980';
+import { eventLuck, openEventDraft } from './roguelike.js?v=1791816443';
 
 export const EVENT_WEEKS = Object.freeze([4, 7]); // 이 주차가 되면(= 직전 경기 후) 이벤트 발생
 export const FAIL_LOSS = 1;

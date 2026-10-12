@@ -1,20 +1,20 @@
-import { h } from './dom.js?v=1791815980';
-import { placeSpotlight } from './spotlight.js?v=1791815980';
-import { ICON_PADDLE, ICON_PALETTE, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791815980';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791815980';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791815980';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791815980';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791815980';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791815980';
+import { h } from './dom.js?v=1791816443';
+import { placeSpotlight } from './spotlight.js?v=1791816443';
+import { ICON_PADDLE, ICON_PALETTE, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791816443';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791816443';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791816443';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791816443';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791816443';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791816443';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791815980';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791815980';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791815980';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791815980';
-import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791815980';
-import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791815980';
-import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791815980';
+} from '../game/season.js?v=1791816443';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791816443';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791816443';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791816443';
+import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791816443';
+import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791816443';
+import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791816443';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },

@@ -1,6 +1,6 @@
 :root { --bg:#0f1722; --panel:#1b2a3a; --text:#eef3f7; --accent:#ffd24a; --dim:#8da2b5; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin:0; height:100%; overscroll-behavior:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; background:var(--bg); color:var(--text); font-family: system-ui, "Malgun Gothic", sans-serif; touch-action: manipulation; }
+html, body { margin:0; height:100%; overscroll-behavior:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; background:var(--bg); color:var(--text); font-family: system-ui, "Malgun Gothic", sans-serif; touch-action: manipulation; word-break: keep-all; overflow-wrap: break-word; /* 한글 단어 중간 줄바꿈 방지 ("역습"→"역/습" 같은 끊김) */ }
 #app { max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
 .screen { display:flex; flex-direction:column; gap:12px; }
 .logo { font-size: 2.2rem; text-align:center; color:var(--accent); margin: 48px 0 0; text-shadow: 3px 3px 0 #000; }
