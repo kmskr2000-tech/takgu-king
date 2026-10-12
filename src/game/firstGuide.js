@@ -7,23 +7,23 @@ export const GUIDE_TRIGGERS = Object.freeze(['serve', 'incoming']);
 export const GUIDE_PAGES = Object.freeze({
   simple: {
     serve: [
-      { id: 'serve', title: '서브하기', text: '화면 맨 아래 [일반][탑스핀][커트] 버튼 중 하나를 누르면 서브해요.\n버튼을 누르는 순간이 곧 스윙이에요!' },
-      { id: 'course', title: '코스 정하기', text: '코트의 왼쪽·가운데·오른쪽을 탭하면 공이 갈 코스가 바뀌어요.\n샷을 치기 전에 미리 정해 두세요.' },
+      { id: 'serve', target: 'shotbar', title: '서브', text: '[일반][탑스핀][커트] 중 하나를 누르면\n서브! 누르는 순간이 스윙이에요.' },
+      { id: 'course', target: 'court', title: '코스', text: '코트를 탭해 공이 갈\n왼쪽·가운데·오른쪽을 정해요.' },
     ],
     incoming: [
-      { id: 'bands', title: '띠에 맞춰 누르기', text: '공이 튕기면 이렇게 띠가 나타나요.\n공이 띠 안에 있을 때 버튼을 누르세요!\n빨강 = 탑스핀(이르게) · 노랑 = 일반 · 파랑 = 커트(늦게)' },
-      { id: 'perfect', title: 'PERFECT 노리기', text: '띠 한가운데의 밝은 줄에 맞추면 PERFECT!\n더 강하고 정확한 샷이 나가고 진동도 크게 와요.' },
-      { id: 'pick', title: '공을 보고 고르기', text: '상대 공 종류가 화면에 떠요. 상성: 탑스핀 > 커트 > 일반 > 탑스핀.\n이기는 버튼은 반짝여요.\n그리고 상대가 서 있는 자리의 반대쪽 코스로 보내면 받기 어려워요!' },
+      { id: 'bands', target: 'court', title: '띠', text: '공이 띠 안에 있을 때 버튼!\n빨강 탑스핀 · 노랑 일반 · 파랑 커트' },
+      { id: 'perfect', target: 'court', title: 'PERFECT', text: '띠 한가운데 줄에 맞추면\n더 강하고 정확해요.' },
+      { id: 'pick', target: 'incoming', title: '상성', text: '탑스핀 > 커트 > 일반 > 탑스핀\n이기는 버튼이 반짝여요.' },
     ],
   },
   advanced: {
     serve: [
-      { id: 'serve', title: '서브하기', text: '화면을 탭하면 서브해요.\n탭하는 위치(왼쪽·가운데·오른쪽)가 공이 갈 코스예요.' },
+      { id: 'serve', target: 'court', title: '서브', text: '화면을 탭하면 서브!\n탭한 자리가 코스예요.' },
     ],
     incoming: [
-      { id: 'bands', title: '띠에 맞춰 탭하기', text: '공이 튕기면 이렇게 노란 띠가 나타나요.\n공이 띠 안에 있을 때 화면을 탭하세요!' },
-      { id: 'perfect', title: 'PERFECT 노리기', text: '띠 한가운데 붉은 줄에 맞추면 PERFECT!\n더 강하고 정확한 샷이 나가고 진동도 크게 와요.' },
-      { id: 'swipe', title: '쓸어서 스핀·파워', text: '탭하자마자 위로 쓸면 탑스핀, 아래로 쓸면 커트, 길게 쓸수록 강한 샷이에요.\n상대가 서 있는 자리의 반대쪽을 탭하면 받기 어려워요!' },
+      { id: 'bands', target: 'court', title: '띠', text: '공이 띠 안에 있을 때 탭!' },
+      { id: 'perfect', target: 'court', title: 'PERFECT', text: '띠 한가운데 줄에 맞추면\n더 강하고 정확해요.' },
+      { id: 'swipe', target: 'court', title: '쓸기', text: '탭 직후 위로 쓸면 탑스핀,\n아래로 커트, 길수록 강해요.' },
     ],
   },
 });

@@ -1,19 +1,20 @@
-import { h } from './dom.js?v=1791784926';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791784926';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791784926';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791784926';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791784926';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791784926';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791784926';
+import { h } from './dom.js?v=1791787700';
+import { placeSpotlight } from './spotlight.js?v=1791787700';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791787700';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791787700';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791787700';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791787700';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791787700';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791787700';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791784926';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791784926';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791784926';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791784926';
-import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791784926';
-import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791784926';
-import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791784926';
+} from '../game/season.js?v=1791787700';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791787700';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791787700';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791787700';
+import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791787700';
+import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791787700';
+import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791787700';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -24,6 +25,7 @@ const STAT_INFO = {
 /** 적용 스탯(곡선 적용 후)은 소수가 될 수 있다: 정수면 그대로, 아니면 소수 한 자리 */
 const fmt = (v) => String(Math.round(v * 10) / 10);
 
+const tourTag = (el, id) => { el.setAttribute('data-tour', id); return el; }; // 가이드 투어가 가리킬 요소
 const btn = (text, onclick, cls = '') => h('button', { class: `btn ${cls}`.trim(), onclick, type: 'button' }, text);
 
 /** 도트 로고: 캔버스에 직접 그린 글자. 스크린리더/검색용 텍스트는 숨겨서 함께 둔다 */
@@ -147,13 +149,13 @@ export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, o
   return h('section', { class: 'screen home' },
     titleName(state) && h('p', { class: 'title-badge' }, `「${titleName(state)}」`),
     h('header', {}, h('h2', {}, `${LEAGUE_NAMES[state.league]} ${state.season}시즌${(state.cycle ?? 1) >= 2 ? ` · ${state.cycle}회차` : ''}`), h('span', { class: 'week' }, header)),
-    h('table', { class: 'standings' },
+    h('table', { class: 'standings', 'data-tour': 'table' },
       h('thead', {}, h('tr', {}, ['순위', '선수', '승점', '승', '패'].map((t) => h('th', {}, t)))),
       h('tbody', {}, table.map((t) => h('tr', { class: [t.me ? 'me' : '', t.rank <= 4 ? 'top' : ''].filter(Boolean).join(' ') },
         h('td', {}, t.rank), h('td', {}, t.name), h('td', {}, t.points), h('td', {}, t.wins), h('td', {}, t.losses))))),
-    h('div', { class: 'next' }, nextLine),
+    h('div', { class: 'next', 'data-tour': 'next' }, nextLine),
     state.phase === 'regular' && buildStrip(state),
-    h('div', { class: 'mystats' },
+    h('div', { class: 'mystats', 'data-tour': 'stats' },
       Object.entries(STAT_INFO).map(([k, v]) => h('span', { class: 'chip' },
         `${v.label} ${state.stats[k]}${fmt(eff[k]) !== String(state.stats[k]) ? ` (${fmt(eff[k])})` : ''}`)),
       h('span', { class: 'chip pts' }, `포인트 ${state.statPoints}`),
@@ -162,14 +164,14 @@ export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, o
     onDraft && btn('🃏 특성 드래프트 (고르기)', onDraft, 'primary draft-alert'),
     onEvent && btn(eventLabel, onEvent, 'primary event-alert'),
     state.phase === 'seasonEnd' && btn('시즌 결과 보기', onSeasonEnd, 'primary'),
-    nm && btn(state.phase === 'tournament' ? '토너먼트 경기 시작' : '경기 시작', onPlay, 'primary'),
+    nm && tourTag(btn(state.phase === 'tournament' ? '토너먼트 경기 시작' : '경기 시작', onPlay, 'primary'), 'play'),
     h('div', { class: 'actions' },
-      btn('스탯 투자', onStats),
-      onEquip && btn('장비·특전', onEquip),
-      onTrain && btn('훈련 모드', onTrain),
+      tourTag(btn('스탯 투자', onStats), 'invest'),
+      onEquip && tourTag(btn('장비·특전', onEquip), 'equip'),
+      onTrain && tourTag(btn('훈련 모드', onTrain), 'train'),
       onCup && btn(cupLabel, onCup),
-      btn('토너먼트 대진표', onBracket),
-      onHelp && btn('❓ 메뉴 설명', onHelp),
+      tourTag(btn('토너먼트 대진표', onBracket), 'bracket'),
+      onHelp && btn('❓ 가이드 투어', onHelp),
       btn('타이틀', onTitle)));
 }
 
@@ -410,7 +412,9 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
   let guideNext = null; let guideSkip = null;
   const gNext = h('button', { class: 'btn primary g-next', type: 'button', onclick: () => guideNext?.() }, '다음');
   const gSkip = h('button', { class: 'btn g-skip', type: 'button', onclick: () => guideSkip?.() }, '안내 건너뛰기');
-  const guide = h('div', { class: 'guide', role: 'dialog', 'aria-live': 'assertive' }, h('div', { class: 'guide-card' }, gStep, gTitle, gText, gNext, gSkip));
+  const gHole = h('div', { class: 'spot-hole off' }); const gCard = h('div', { class: 'guide-card', 'data-pos': 'high' }, gStep, gTitle, gText, gNext, gSkip);
+  const guide = h('div', { class: 'guide', role: 'dialog', 'aria-live': 'assertive' }, gHole, gCard);
+  const guideTargets = { shotbar: bar, court: canvas, incoming }; // 안내가 가리킬 수 있는 요소
   // 리그전 속보 한 줄: 같은 라운드 다른 경기 스코어가 '오순자 2-1 김탁구' 식으로 흘러간다. 득점하면 그 경기로 넘어가 득점한 쪽이 반짝
   const tkA = h('b', { class: 'tk-a' }, ''); const tkS = h('em', { class: 'tk-sc' }, ''); const tkB = h('b', { class: 'tk-b' }, '');
   const tkTag = h('small', { class: 'tk-tag' }, ''); const tkIdx = h('small', { class: 'tk-idx' }, '');
@@ -449,9 +453,10 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
       tickerEl.className = `ticker${v.done ? ' done' : ''}${v.flash && !v.done ? ' goal' : ''}`;
     },
     /** 첫 경기 안내 한 페이지: { step: '1/3', title, text, last, onNext, onSkip }. 멈춘 동안 화면을 덮는다 */
-    showGuide({ step, title, text, last = false, onNext, onSkip }) {
+    showGuide({ step, title, text, last = false, target = null, onNext, onSkip }) {
       gStep.textContent = step; gTitle.textContent = title; gText.textContent = text; gNext.textContent = last ? '시작!' : '다음';
       guideNext = onNext; guideSkip = onSkip; guide.className = 'guide on';
+      placeSpotlight({ hole: gHole, card: gCard, target: guideTargets[target] ?? null }); // 가리킬 대상에 하이라이트 박스
     },
     hideGuide() { guide.className = 'guide'; guideNext = null; guideSkip = null; },
     get guideOpen() { return guide.className.includes('on'); },
@@ -623,48 +628,4 @@ export function netResultScreen({ won, score, peerName, onAgain, onExit }) {
       if (status === 'gone' || status === 'wait') again.setAttribute('disabled', ''); else again.removeAttribute?.('disabled');
     },
   };
-}
-
-/** 조작 방식별 기본 조작 + 상성 요약 (새 플레이어 안내·메뉴 설명 공용) */
-export function basicsList(mode) {
-  const simple = mode !== 'advanced';
-  return [
-    simple ? '공이 튕기면 띠가 나타나요. 공이 띠 안에 있을 때 아래 [일반][탑스핀][커트] 버튼을 누르면 쳐요. 띠 한가운데는 PERFECT!'
-      : '공이 튕기면 띠가 나타나요. 공이 띠 안에 있을 때 화면을 탭하면 쳐요. 띠 한가운데는 PERFECT!',
-    simple ? '코트의 왼쪽·가운데·오른쪽을 탭하면 공이 갈 코스가 정해져요. 상대가 없는 쪽이 유리해요.'
-      : '탭하는 위치가 코스예요(왼쪽·가운데·오른쪽). 탭하자마자 위로 쓸면 탑스핀, 아래로 쓸면 커트, 길게 쓸수록 강해요.',
-    '상성(카운터): 탑스핀 > 커트 > 일반 > 탑스핀. 상대 공 종류를 보고 이기는 구질로 받으면 샷이 안정되고 상대가 흔들려요.',
-  ];
-}
-
-/** 새로 시작 직후: 기본 조작·상성 요약 + 튜토리얼 권유. 튜토리얼은 건너뛰어도 되고 타이틀에서 언제든 다시 할 수 있다 */
-export function newbieOfferScreen({ onTutorial, onSkip, mode }) {
-  return h('section', { class: 'screen newbie-offer' },
-    h('h2', {}, '처음 오셨나요?'),
-    h('p', { class: 'quote' }, '탁구왕이 되려면 이 세 가지만 알면 돼요.'),
-    h('ol', { class: 'basics' }, ...basicsList(mode).map((t) => h('li', {}, t))),
-    h('p', {}, '코치와 직접 쳐 보는 튜토리얼(약 3분)을 추천해요. 기록·포인트에는 영향이 없어요.'),
-    btn('튜토리얼 해보기 (추천)', onTutorial, 'primary'),
-    btn('건너뛰고 시작', onSkip));
-}
-
-/** 홈 메뉴 설명: 홈 화면의 각 항목이 무엇인지. 첫 홈에서 한 번 자동으로 열리고, 홈의 "메뉴 설명"으로 다시 볼 수 있다 */
-export const MENU_GUIDE_ITEMS = Object.freeze([
-  ['순위표', '9주 동안 리그 9경기를 치른 정규 시즌 순위예요. 상위 4위 안이면 연말 토너먼트에 올라가요.'],
-  ['경기 시작', '다음 상대와 한 판. 이기면 3pt, 져도 1pt를 받아요. 연말 토너먼트에서 우승하면 다음 리그로 승격!'],
-  ['스탯 투자', '경기로 모은 포인트로 스피드·파워·컨트롤·스핀·체력·정신을 올려요. 많이 올릴수록 효과는 조금씩 줄어요.'],
-  ['장비·특전', '라켓·그립과 우승으로 얻은 칭호·스킨을 골라요.'],
-  ['훈련 모드', '시즌 기록에 영향 없는 연습 경기예요. 이기면 소액의 포인트를 줘요(하루 횟수 제한).'],
-  ['월간 컵', '정규 시즌과 별개로 열리는 짧은 토너먼트예요. 참가 신청이 뜰 때만 보여요.'],
-  ['토너먼트 대진표', '연말 토너먼트 대진과 결과를 확인해요.'],
-  ['🃏 특성 드래프트 / 📣 이벤트', '경기를 치르면 시즌 동안만 쓰는 특성 3장 중 1장을 고를 수 있어요. 이벤트는 4·7주차에 열려요.'],
-  ['계승 포인트', '시즌이 끝나면 쌓여서 영구 보너스를 사요. 다음 도전이 조금씩 쉬워져요.'],
-]);
-export function menuGuideScreen({ onClose, mode }) {
-  return h('section', { class: 'screen menu-guide' },
-    h('h2', {}, '메뉴 설명'),
-    h('dl', {}, ...MENU_GUIDE_ITEMS.flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])),
-    h('h3', {}, '기본 조작 · 상성'),
-    h('ol', { class: 'basics' }, ...basicsList(mode).map((t) => h('li', {}, t))),
-    btn('알겠어요', onClose, 'primary'));
 }

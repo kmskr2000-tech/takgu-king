@@ -1,10 +1,10 @@
-import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick, RIVAL_CYCLE } from '../core/index.js?v=1791784926';
-import { RIVAL_STORY, ensureStory, rivalStory } from './story.js?v=1791784926';
-import { statCurve } from './statcurve.js?v=1791784926';
-import { ensureTally, emptyTally, buildReview } from './review.js?v=1791784926';
-import { ensureEvents } from './events.js?v=1791784926';
-import { ensurePerks, grantPerks, registerUnlocks, CHAMPION_PERKS } from './perks.js?v=1791784926';
-import { ensureRogue, emptyRogue, statBonus, awardBonusPoints, checkDraft, openRetryDraft, recordRival, settleSeason, resetSeasonBuild } from './roguelike.js?v=1791784926';
+import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick, RIVAL_CYCLE } from '../core/index.js?v=1791787700';
+import { RIVAL_STORY, ensureStory, rivalStory } from './story.js?v=1791787700';
+import { statCurve } from './statcurve.js?v=1791787700';
+import { ensureTally, emptyTally, buildReview } from './review.js?v=1791787700';
+import { ensureEvents } from './events.js?v=1791787700';
+import { ensurePerks, grantPerks, registerUnlocks, CHAMPION_PERKS } from './perks.js?v=1791787700';
+import { ensureRogue, emptyRogue, statBonus, awardBonusPoints, checkDraft, openRetryDraft, recordRival, settleSeason, resetSeasonBuild } from './roguelike.js?v=1791787700';
 
 export const SAVE_VERSION = 2;
 export const WIN_PT = 3;
