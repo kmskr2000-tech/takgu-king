@@ -1,5 +1,5 @@
 // 메모리 방: 테스트·QA 용 전송 계층. FirebaseRoom 과 같은 인터페이스, 지연을 시뮬레이션한다.
-import { nickKey, decideClaim } from './nicks.js?v=1791816443';
+import { nickKey, decideClaim } from './nicks.js?v=1791844910';
 const registry = new Map();
 const nickRegistry = new Map(); // 닉네임 선점 레코드 (FirebaseRoom 의 NICK 노드와 같은 규칙)
 let seq = 0; let createdSeq = 0;

@@ -3,7 +3,7 @@
 //  - B 시즌 빌드(시즌 한정): 정규 시즌 2·4·6승째 3택1 드래프트. 12종 특성, 시즌이 끝나면 소멸.
 //  - 라이벌 전적 / 성장 줄기(훈련 방향 3단계 → 프로젝트): 양념. 기존 스탯 투자·훈련 모드를 그대로 쓴다.
 //  모든 효과는 state.rogue 한 곳에서 파생된다. 경기·AI 난수 흐름은 건드리지 않는다(드래프트 후보는 시즌·승수로 정해지는 결정적 난수).
-import { ballSpeedClass } from './controls.js?v=1791816443';
+import { ballSpeedClass } from './controls.js?v=1791844910';
 
 export const STAT_KEYS = Object.freeze(['power', 'spin', 'focus']);
 export const DRAFT_AT = Object.freeze([2, 4, 6]); // 정규 시즌 N번째 경기를 마친 뒤 (승패 무관, 2026-10-12 설계 변경: 승수 → 경기 수)
@@ -13,7 +13,7 @@ export const LEGACY_PTS = Object.freeze({ champion: 3, qualified: 2, other: 1 })
 
 // ---- A: 계승 보너스 ----
 export const LEGACY_BONUSES = Object.freeze([
-  { id: 'freereroll', name: '든든한 보험', cost: 1, desc: '시즌마다 특성 드래프트 리롤 1회 무료' }, // 1pt 아이템: 첫 실패 시즌(1pt)에도 살 수 있다 (게임성 리뷰 #6)
+  { id: 'freereroll', name: '든든한 보험', cost: 1, desc: '시즌마다 특성 다시 뽑기 1회 무료' }, // 1pt 아이템: 첫 실패 시즌(1pt)에도 살 수 있다 (게임성 리뷰 #6)
   { id: 'basics', name: '단단한 기본기', cost: 2, desc: '파워 +2', stat: { power: 2 } },
   { id: 'spinsense', name: '회전의 이해', cost: 2, desc: '스핀 +2', stat: { spin: 2 } },
   { id: 'composure', name: '침착함', cost: 2, desc: '집중 +2', stat: { focus: 2 } },

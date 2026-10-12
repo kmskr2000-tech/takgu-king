@@ -1,20 +1,20 @@
-import { h } from './dom.js?v=1791816443';
-import { placeSpotlight } from './spotlight.js?v=1791816443';
-import { ICON_PADDLE, ICON_PALETTE, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791816443';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791816443';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791816443';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791816443';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791816443';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791816443';
+import { h } from './dom.js?v=1791844910';
+import { placeSpotlight } from './spotlight.js?v=1791844910';
+import { ICON_PADDLE, ICON_PALETTE, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791844910';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791844910';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791844910';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791844910';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791844910';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791844910';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791816443';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791816443';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791816443';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791816443';
-import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791816443';
-import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791816443';
-import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791816443';
+} from '../game/season.js?v=1791844910';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791844910';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791844910';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791844910';
+import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791844910';
+import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791844910';
+import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791844910';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -186,7 +186,7 @@ export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, o
       h('span', { class: 'chip pts' }, `포인트 ${state.statPoints}`),
       ensureRogue(state).points > 0 && h('span', { class: 'chip legacy-chip' }, `계승 ${ensureRogue(state).points}pt`)),
     onRevenge && btn('🔥 라이벌 설욕전 (이기면 +4pt·계승 +1pt)', onRevenge, 'primary revenge-alert'),
-    onDraft && btn('🃏 특성 드래프트 (고르기)', onDraft, 'primary draft-alert'),
+    onDraft && btn('🃏 특성 뽑기 (고르기)', onDraft, 'primary draft-alert'),
     onEvent && btn(eventLabel, onEvent, 'primary event-alert'),
     state.phase === 'seasonEnd' && btn('시즌 결과 보기', onSeasonEnd, 'primary'),
     nm && tourTag(btn(state.phase === 'tournament' ? '토너먼트 경기 시작' : '경기 시작', onPlay, 'primary'), 'play'),
@@ -317,7 +317,7 @@ export function statsScreen({ state, onInvest, onBack, onBuy = null }) {
       h('div', {}, h('strong', {}, `${v.label} ${state.stats[k]}`), h('small', {}, v.desc),
         h('small', { class: 'eff' }, `적용 ${fmt(statCurve(state.stats[k]))} · +1 효율 ${Math.round(statEfficiency(state.stats[k]) * 100)}%`)),
       h('button', { class: 'btn', type: 'button', disabled: state.statPoints < 1 ? true : null, onclick: () => onInvest(k) }, '+1'))),
-    lowStats.length > 0 && h('p', { class: 'eff-warn', role: 'note' }, `${lowStats.map((k) => STAT_INFO[k].label).join('·')}은(는) 투자 효율이 ${Math.round(LOW_EFFICIENCY * 100)}% 아래예요. 포인트는 특성 드래프트 다시 뽑기(2~4pt)나 아래 계승 보너스에도 쓸 수 있어요.`),
+    lowStats.length > 0 && h('p', { class: 'eff-warn', role: 'note' }, `${lowStats.map((k) => STAT_INFO[k].label).join('·')}은(는) 투자 효율이 ${Math.round(LOW_EFFICIENCY * 100)}% 아래예요. 포인트는 특성 다시 뽑기(2~4pt)나 아래 계승 보너스에도 쓸 수 있어요.`),
     growth,
     onBuy && legacyPanel({ legacy: null, state, onBuy })); // 계승 보너스는 시즌 결산뿐 아니라 여기서도 살 수 있다 (게임성 리뷰 #14)
 }
