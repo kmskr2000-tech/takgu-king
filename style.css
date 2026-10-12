@@ -272,7 +272,7 @@ html:has(.screen.match), body:has(.screen.match) { overflow: hidden; overscroll-
 /* ===== 경기 화면 상단 (2026-10-07 재설계 2차) =====
    맨 위 --strip 은 불투명 칸(iOS 흐림 띠 회피). 코트 그림은 그 아래 화면 폭 가득, 위쪽 조명(하늘) 영역만 잘린다.
    상대 이름·배지는 좌상단, 점수판·포기는 우상단 — 둘 다 조명 그림 위에 얹는다(관중·선수는 가리지 않음). 판정·공 종류는 그 바로 아래 가운데. */
-.screen.match .hud { position: absolute; top: var(--strip); left: 0; right: 0; height: auto; z-index: 20; display: flex; align-items: flex-start; gap: 6px; padding: 4px 8px 0; background: none; text-align: left; pointer-events: none; }
+.screen.match .hud { position: absolute; top: var(--strip); left: 0; right: 0; height: auto; z-index: 20; display: flex; align-items: flex-start; gap: 6px; padding: 8px 8px 0; background: none; text-align: left; pointer-events: none; }
 .screen.match .hud-top { display: contents; }
 .screen.match .hud .opp-info { order: 1; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 0; background: none; text-shadow: 0 1px 3px #000, 0 0 6px #000; }
 .screen.match .hud .opp-name { background: none; padding: 0; font-size: 1.05rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

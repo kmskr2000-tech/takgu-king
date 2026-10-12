@@ -1,20 +1,20 @@
-import { h } from './dom.js?v=1791810365';
-import { placeSpotlight } from './spotlight.js?v=1791810365';
-import { ICON_PADDLE, ICON_PALETTE, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791810365';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791810365';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791810365';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791810365';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791810365';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791810365';
+import { h } from './dom.js?v=1791815980';
+import { placeSpotlight } from './spotlight.js?v=1791815980';
+import { ICON_PADDLE, ICON_PALETTE, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791815980';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791815980';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791815980';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791815980';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791815980';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791815980';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791810365';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791810365';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791810365';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791810365';
-import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791810365';
-import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791810365';
-import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791810365';
+} from '../game/season.js?v=1791815980';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791815980';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791815980';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791815980';
+import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791815980';
+import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791815980';
+import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791815980';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -520,6 +520,9 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
       flashes += 1;
       banner.textContent = side === 'me' ? (mode === 'simple' ? '내 서브!  샷 버튼을 눌러요' : '내 서브!  화면을 탭하세요') : '상대 서브';
       banner.className = `serve-banner show ${side} f${flashes % 2}`;
+      // 동작 줄이기 환경에서는 CSS 애니메이션이 꺼져 배너가 영원히 남는다 → 타임아웃으로 확실히 숨긴다
+      clearTimeout(banner._hideT);
+      banner._hideT = setTimeout(() => { banner.className = 'serve-banner'; }, 1700);
     },
     setScore(me, opp, server) {
       meScore.textContent = String(me); oppScore.textContent = String(opp);

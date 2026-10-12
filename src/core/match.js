@@ -1,5 +1,5 @@
-import { SIDES, STATES, WIN_SCORE, DEUCE_AT, GRADES } from './constants.js?v=1791810365';
-import { flightOf } from './shot.js?v=1791810365';
+import { SIDES, STATES, WIN_SCORE, DEUCE_AT, GRADES } from './constants.js?v=1791815980';
+import { flightOf } from './shot.js?v=1791815980';
 
 export const otherSide = (s) => (s === SIDES.ME ? SIDES.OPP : SIDES.ME);
 
