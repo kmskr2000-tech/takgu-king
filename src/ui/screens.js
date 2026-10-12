@@ -1,20 +1,20 @@
-import { h } from './dom.js?v=1791797039';
-import { placeSpotlight } from './spotlight.js?v=1791797039';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791797039';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791797039';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791797039';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791797039';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791797039';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791797039';
+import { h } from './dom.js?v=1791802746';
+import { placeSpotlight } from './spotlight.js?v=1791802746';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791802746';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791802746';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791802746';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791802746';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791802746';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791802746';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791797039';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791797039';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791797039';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791797039';
-import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791797039';
-import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791797039';
-import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791797039';
+} from '../game/season.js?v=1791802746';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791802746';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791802746';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791802746';
+import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791802746';
+import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791802746';
+import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791802746';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -577,19 +577,29 @@ export function storyBeatScreen({ beat, onNext }) {
  * 멀티플레이 로비. mode: 'menu'(방 만들기 / 로비 목록) · 'hosting'(내 방 제목을 보여주고 기다림) · 'joining'(연결 중) · 'syncing'(시계 맞추는 중)
  * 화면은 한 번 만들고 setMode 로 바꾼다 (입력 중인 닉네임·제목이 사라지지 않게).
  */
-export function multiScreen({ onHost, onPick = () => {}, onRefresh = () => {}, onCancel, onBack, nick = '' }) {
+export function multiScreen({ onHost, onPick = () => {}, onQuick = () => {}, onRefresh = () => {}, onCancel, onBack, nick = '' }) {
   const status = h('p', { class: 'net-status', 'aria-live': 'polite' }, '');
   const nickInput = h('input', { class: 'nick-input', type: 'text', maxlength: '12', placeholder: '닉네임', autocomplete: 'off', spellcheck: 'false', 'aria-label': '닉네임', value: nick });
   const titleInput = h('input', { class: 'title-input', type: 'text', maxlength: '20', placeholder: '방 제목 (예: 금요일 탁구)', autocomplete: 'off', spellcheck: 'false', 'aria-label': '방 제목' });
+  const pwInput = h('input', { class: 'pw-input', type: 'text', maxlength: '12', placeholder: '비밀번호 (선택, 4~12자)', autocomplete: 'off', spellcheck: 'false', 'aria-label': '방 비밀번호 (비워 두면 누구나 입장)' });
   const roomList = h('div', { class: 'room-list', 'aria-live': 'polite' });
+  // 비밀번호 방을 누르면 나오는 입력칸
+  const joinPw = h('input', { class: 'pw-input join-pw', type: 'text', maxlength: '12', placeholder: '비밀번호', autocomplete: 'off', spellcheck: 'false', 'aria-label': '입장 비밀번호' });
+  const joinLabel = h('span', { class: 'join-pw-label' }, '');
+  let pendingCode = null;
+  const pwPrompt = h('div', { class: 'pw-prompt hidden' }, joinLabel, joinPw,
+    btn('입장', () => { if (pendingCode) onPick(pendingCode, getNick(), String(joinPw.value ?? '').trim()); }, 'primary'),
+    btn('취소', () => { pendingCode = null; joinPw.value = ''; pwPrompt.className = 'pw-prompt hidden'; }));
   const getNick = () => String(nickInput.value ?? '').trim();
   const menu = h('div', { class: 'net-menu' },
     h('div', { class: 'nick-row' }, h('span', {}, '내 닉네임'), nickInput),
-    h('div', { class: 'join-row' }, titleInput, btn('방 만들기', () => onHost(String(titleInput.value ?? '').trim(), getNick()), 'primary')),
-    h('div', { class: 'room-head' }, h('span', {}, '열린 방'), btn('새로고침', onRefresh)),
-    roomList);
+    btn('⚡ 빠른 대전 (랜덤 상대)', () => onQuick(getNick()), 'primary quick-btn'),
+    h('div', { class: 'join-row' }, titleInput, pwInput, btn('방 만들기', () => onHost(String(titleInput.value ?? '').trim(), getNick(), String(pwInput.value ?? '').trim()), 'primary')),
+    h('div', { class: 'room-head' }, h('span', {}, '친구 방'), btn('새로고침', onRefresh)),
+    pwPrompt, roomList);
   const roomName = h('div', { class: 'room-name', 'aria-label': '내 방' }, '');
-  const waiting = h('div', { class: 'net-wait' }, h('p', { class: 'hint' }, '친구가 목록에서 이 방을 누르면 시작해요'), roomName, btn('취소', onCancel));
+  const lockNote = h('p', { class: 'hint lock-note' }, '🔒 비밀번호 방이에요. 친구에게 비밀번호를 알려 주세요.');
+  const waiting = h('div', { class: 'net-wait' }, h('p', { class: 'hint wait-hint' }, '친구가 목록에서 이 방을 누르면 시작해요'), roomName, lockNote, btn('취소', onCancel));
   const busy = h('div', { class: 'net-busy' }, btn('취소', onCancel));
   const el = h('section', { class: 'screen multi' },
     h('h2', {}, '멀티플레이'),
@@ -598,21 +608,30 @@ export function multiScreen({ onHost, onPick = () => {}, onRefresh = () => {}, o
   const show = (node, on) => { node.className = `${node.className.replace(/\s*\bhidden\b/g, '')}${on ? '' : ' hidden'}`; };
   let mode = 'menu';
   const api = {
-    el, nickInput, titleInput, getNick,
+    el, nickInput, titleInput, pwInput, getNick,
     /** rooms: [{code,title,host}] 또는 null(불러오는 중) */
     setRooms(rooms, failed = false) {
       roomList.textContent = '';
       if (failed) { roomList.appendChild(h('p', { class: 'hint err' }, '방 목록을 불러오지 못했어요. 새로고침을 눌러 주세요.')); return; }
       if (rooms == null) { roomList.appendChild(h('p', { class: 'hint' }, '방 목록 불러오는 중…')); return; }
       if (!rooms.length) { roomList.appendChild(h('p', { class: 'hint' }, '열린 방이 없어요. 방을 만들어 보세요!')); return; }
-      for (const r of rooms) roomList.appendChild(h('button', { class: 'room-item', type: 'button', onclick: () => onPick(r.code, getNick()) }, h('span', { class: 'room-title' }, r.title, h('small', { class: 'room-host' }, ` · ${r.host ?? '방장'}`)), h('span', { class: 'room-go' }, '입장')));
+      for (const r of rooms) {
+        roomList.appendChild(h('button', { class: `room-item${r.lock ? ' locked' : ''}`, type: 'button', 'data-lock': r.lock ? '1' : '0',
+          onclick: () => {
+            if (!r.lock) { onPick(r.code, getNick(), ''); return; }
+            pendingCode = r.code; joinLabel.textContent = `🔒 ${r.title}`; joinPw.value = ''; pwPrompt.className = 'pw-prompt';
+          } },
+        h('span', { class: 'room-title' }, r.lock ? '🔒 ' : '', r.title, h('small', { class: 'room-host' }, ` · ${r.host ?? '방장'}`)), h('span', { class: 'room-go' }, '입장')));
+      }
     },
     get mode() { return mode; },
-    setMode(m, { title = '', message = '' } = {}) {
+    setMode(m, { title = '', message = '', locked = false } = {}) {
       mode = m;
-      show(menu, m === 'menu'); show(waiting, m === 'hosting'); show(busy, m === 'joining' || m === 'syncing');
+      if (m !== 'menu') { pendingCode = null; pwPrompt.className = 'pw-prompt hidden'; }
+      show(menu, m === 'menu'); show(waiting, m === 'hosting'); show(busy, m === 'joining' || m === 'syncing' || m === 'matching');
+      show(lockNote, m === 'hosting' && locked);
       roomName.textContent = title;
-      status.textContent = message || (m === 'hosting' ? '상대를 기다리는 중…' : m === 'joining' ? '방에 연결하는 중…' : m === 'syncing' ? '시계를 맞추는 중…' : '');
+      status.textContent = message || (m === 'hosting' ? '상대를 기다리는 중…' : m === 'joining' ? '방에 연결하는 중…' : m === 'syncing' ? '시계를 맞추는 중…' : m === 'matching' ? '랜덤 상대를 찾는 중…' : '');
       status.className = `net-status${message && m === 'menu' ? ' err' : ''}`;
     },
   };

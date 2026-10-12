@@ -533,3 +533,11 @@ svg.radar { width: 100%; max-width: 300px; height: auto; background: var(--s1); 
 .bracket-note { margin: 0; font-size: .85rem; opacity: .8; }
 .match-slot.me { border-color: var(--accent, #ffd23f); }
 .tour-text { min-height: 1.4em; color: #fff; white-space: pre-line; }
+.multi .join-row { flex-wrap: wrap; }
+.multi .join-row .title-input { flex: 1 1 100%; }
+.multi .pw-input, .multi .join-pw { flex: 1 1 0; min-width: 0; font: 700 1rem system-ui, sans-serif; padding: 10px; border-radius: 10px; border: 2px solid #2c4057; background: #101b28; color: #fff; }
+.multi .quick-btn { width: 100%; }
+.multi .pw-prompt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px; border: 2px solid var(--accent, #ffd23f); border-radius: 10px; background: rgba(14,28,52,.97); }
+.multi .pw-prompt .join-pw-label { flex: 1 1 100%; font-weight: 800; }
+.multi .pw-prompt .btn { flex: 0 0 auto; }
+.multi .room-item.locked { border-color: #ffd24a; }

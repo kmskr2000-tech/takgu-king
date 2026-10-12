@@ -16,7 +16,8 @@
 //       gc: {pushId: candidate}       <- guest ICE candidates
 //       hc: {pushId: candidate}       <- host ICE candidates
 
-import { parseMsg } from './protocol.js?v=1791797039';
+import { parseMsg } from './protocol.js?v=1791802746';
+import { cleanNick as cleanNickShared, nickKey, decideClaim, passwordProof } from './nicks.js?v=1791802746';
 
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no confusing 0/O/1/I
 const ROOMS_PATH = 'pkmspl-rooms';
@@ -32,7 +33,8 @@ export const HEARTBEAT_MS = 20000;
 export const STALE_MS = 60000; // hb 가 이 시간 넘게 멈춘 방은 죽은 방 → 목록에서 빼고 지운다
 export const TITLE_MAX = 20;
 export const NICK_MAX = 12;
-export const cleanNick = (t) => String(t ?? '').replace(/\s+/g, ' ').trim().slice(0, NICK_MAX);
+export const cleanNick = cleanNickShared;
+export const NICK_PATH = `${ROOMS_PATH}/${ROOM_KEY_PREFIX}NICK`; // 닉네임 선점 레코드: NICK/{nickKey} = {uid,nick,claimed,seen}
 export const cleanTitle = (t) => String(t ?? '').replace(/\s+/g, ' ').trim().slice(0, TITLE_MAX) || '탁구 한판';
 const lobbyRoomPath = (code) => `${ROOMS_PATH}/${LOBBY_KEY}/rooms/${code}`;
 /** 목록 가공(순수): 죽은 방은 stale 로 분리, 산 방은 최신순 */
@@ -41,7 +43,7 @@ export function pickLobby(rooms, now) {
   for (const [code, r] of Object.entries(rooms || {})) {
     if (!r || typeof r !== 'object') { stale.push(code); continue; }
     if (now - (Number(r.hb) || Number(r.created) || 0) > STALE_MS) stale.push(code);
-    else live.push({ code, title: cleanTitle(r.title), host: cleanNick(r.host) || '방장', created: Number(r.created) || 0 });
+    else live.push({ code, title: cleanTitle(r.title), host: cleanNick(r.host) || '방장', created: Number(r.created) || 0, lock: r.lock === true, quick: r.quick === true, uid: typeof r.uid === 'string' ? r.uid : '' });
   }
   live.sort((a, b) => b.created - a.created);
   return { live, stale };
@@ -82,6 +84,7 @@ async function getDb() {
       const app = appMod.initializeApp(cfg);
       _db = dbMod.getDatabase(app);
       _db._mod = dbMod; // stash for reuse
+      _db._app = app;
       return _db;
     })();
   }
@@ -89,6 +92,17 @@ async function getDb() {
 }
 
 function dbMod(db) { return db._mod; }
+
+/** Firebase 익명 로그인 → uid. 콘솔에서 익명 로그인이 꺼져 있거나 실패하면 던진다 (호출 쪽이 기기 ID 로 대체) */
+export async function anonymousUid() {
+  const db = await getDb();
+  if (!db._app) throw new Error('no-app');
+  const authMod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+  const auth = authMod.getAuth(db._app);
+  if (auth.currentUser) return auth.currentUser.uid;
+  const cred = await authMod.signInAnonymously(auth);
+  return cred.user.uid;
+}
 
 function makePC() {
   return new RTCPeerConnection({ iceServers: ICE_SERVERS });
@@ -108,6 +122,8 @@ export class FirebaseRoom {
     this._joinToken = null;
     this._dbRefs = []; // {ref, cb} to detach on close
     this._hb = null; // 로비 heartbeat 타이머
+    this.password = '';
+    this._handled = new Set();
   }
 
   async _removeLobby() {
@@ -127,6 +143,26 @@ export class FirebaseRoom {
       m.remove(m.ref(this._db, roomPath(code))).catch(() => {});
     }
     return live;
+  }
+
+  /** 닉네임 선점: 먼저 등록한 uid 가 임자. 'ok' | 'taken' */
+  async claimNick(nick, uid) {
+    this._db = await getDb();
+    const m = dbMod(this._db);
+    const res = await m.runTransaction(m.ref(this._db, `${NICK_PATH}/${nickKey(nick)}`), (cur) => {
+      const d = decideClaim(cur, { uid, nick, now: Date.now() });
+      return d.ok ? d.value : undefined; // undefined = 트랜잭션 중단(이미 남의 닉네임)
+    });
+    return res.committed ? 'ok' : 'taken';
+  }
+
+  /** 내가 잡았던 닉네임 반납 (내 것일 때만 지운다) */
+  async releaseNick(nick, uid) {
+    try {
+      this._db = await getDb();
+      const m = dbMod(this._db);
+      await m.runTransaction(m.ref(this._db, `${NICK_PATH}/${nickKey(nick)}`), (cur) => (cur && cur.uid === uid ? null : undefined));
+    } catch { /* 반납 실패는 무시: 90일 뒤 만료 */ }
   }
 
   _track(ref, cb) {
@@ -158,8 +194,9 @@ export class FirebaseRoom {
   // ---------- host ----------
 
   /** Host: create a room, return the 6-char code. */
-  async hostCreate(title = '', nick = '') {
+  async hostCreate(title = '', nick = '', { password = '', quick = false, uid = '' } = {}) {
     this.isHost = true;
+    this.password = String(password || ''); // 메모리에만 둔다 (DB 에는 올리지 않음)
     this._db = await getDb();
     const m = dbMod(this._db);
     for (let i = 0; i < 4; i++) {
@@ -173,7 +210,7 @@ export class FirebaseRoom {
       try {
         const lref = m.ref(this._db, lobbyRoomPath(code));
         const now = Date.now();
-        await m.set(lref, { title: cleanTitle(title), host: cleanNick(nick), created: now, hb: now });
+        await m.set(lref, { title: cleanTitle(title), host: cleanNick(nick), created: now, hb: now, lock: !!this.password, quick: !!quick, uid: String(uid || '') });
         try { m.onDisconnect?.(lref).remove(); m.onDisconnect?.(roomRef).remove(); } catch {}
         this._hb = setInterval(() => { m.set(m.ref(this._db, `${lobbyRoomPath(code)}/hb`), Date.now()).catch(() => {}); }, HEARTBEAT_MS);
       } catch {}
@@ -193,9 +230,24 @@ export class FirebaseRoom {
       const hs = child.val() || {};
       // Skip if we already handle this guest, or no offer yet, or already answered.
       if (this.peers.some((p) => p.guestId === guestId)) return;
-      if (!hs.offer || hs.answer) return;
-      this._acceptGuest(guestId, hs.offer).catch(() => {});
+      if (!hs.offer || hs.answer || hs.reject) return;
+      if (this._handled.has(guestId)) return;
+      this._handled.add(guestId); // 비동기 검사 중에 같은 손님이 또 보여도 한 번만 처리
+      this._gateGuest(guestId, hs).catch(() => {});
     });
+  }
+
+  /** 비밀번호 방이면 손님의 증명을 확인하고, 틀리면 거절 표시를 남긴다 */
+  async _gateGuest(guestId, hs) {
+    if (this.password) {
+      const want = await passwordProof(this.code, guestId, this.password);
+      if (hs.proof !== want) {
+        const m = dbMod(this._db);
+        await m.set(m.ref(this._db, `${ROOMS_PATH}/${ROOM_KEY_PREFIX}${this.code}/handshakes/${guestId}/reject`), 'bad-password');
+        return;
+      }
+    }
+    await this._acceptGuest(guestId, hs.offer);
   }
 
   async _acceptGuest(guestId, offer) {
@@ -243,7 +295,7 @@ export class FirebaseRoom {
   // ---------- guest ----------
 
   /** Guest: join with the host's code. Resolves when the DataChannel opens. */
-  async guestJoin(code, onRetry = null) {
+  async guestJoin(code, onRetry = null, { password = '' } = {}) {
     this.isHost = false;
     const clean = String(code || '').trim().toUpperCase();
     if (!/^[A-Z2-9]{4,8}$/.test(clean)) throw new Error('bad code');
@@ -298,7 +350,18 @@ export class FirebaseRoom {
 
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
+        // 비밀번호 증명은 offer 보다 먼저: 방장은 offer 가 보이는 순간 확인을 시작한다. 비밀번호 방이 아니어도 보내 두면 방장이 무시한다
+        if (password) await m.set(m.ref(this._db, `${base}/proof`), await passwordProof(clean, guestId, password));
         await m.set(m.ref(this._db, `${base}/offer`), { type: offer.type, sdp: offer.sdp });
+
+        // 방장이 비밀번호를 거절하면 바로 알린다
+        const rejectRef = m.ref(this._db, `${base}/reject`);
+        const rejectPromise = new Promise((_, reject) => {
+          const cb = (snap) => { if (snap.exists() && this._joinToken === token) reject(new Error('bad-password')); };
+          m.onValue(rejectRef, cb);
+          this._dbRefs.push({ ref: rejectRef, cb });
+        });
+        rejectPromise.catch(() => {}); // 사용 전 거부돼도 미처리 경고가 없게
 
         // Wait for host's answer.
         const answerRef = m.ref(this._db, `${base}/answer`);
@@ -333,7 +396,7 @@ export class FirebaseRoom {
         m.onValue(hcRef, hcCb);
         this._dbRefs.push({ ref: hcRef, cb: hcCb });
 
-        await answerPromise;
+        await Promise.race([answerPromise, rejectPromise]);
         if (this._joinToken !== token) throw new Error('cancelled');
         await openPromise;
         if (this._joinToken !== token) throw new Error('cancelled');
@@ -341,7 +404,7 @@ export class FirebaseRoom {
         this.code = clean;
         return;
       } catch (e) {
-        if (e && (e.message === 'room-not-found' || e.message === 'cancelled')) {
+        if (e && (e.message === 'room-not-found' || e.message === 'cancelled' || e.message === 'bad-password')) {
           this._joinToken = null;
           throw e;
         }
