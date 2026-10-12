@@ -1,17 +1,19 @@
-import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791775159';
-import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791775159';
-import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791775159';
-import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791775159';
-import { packShot, mirrorShot } from '../net/protocol.js?v=1791775159';
-import { normalizeMods, leniencyMul, focusAdd, shotAdjust } from './roguelike.js?v=1791775159';
+import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791780382';
+import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791780382';
+import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791780382';
+import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791780382';
+import { packShot, mirrorShot } from '../net/protocol.js?v=1791780382';
+import { normalizeMods, leniencyMul, focusAdd, shotAdjust, scoreCtx } from './roguelike.js?v=1791780382';
 import {
   SIDES, STATES, GRADES, MIN_REACTION_S, createMatch, createShot, createSpecialShot, flightOf, buildTiming, judgeTap, judgeNoTap,
-  classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide, courseZone, predictZone, PERFECT_RATIO,
-} from '../core/index.js?v=1791775159';
+  classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide, courseZone, predictZone, PERFECT_RATIO, flowReadMult,
+} from '../core/index.js?v=1791780382';
 
 /** 난수 배율 래퍼: createShot 의 실수 난수(signed)만 k 배. k=1 이면 기존과 비트 동일 */
 export const scaledRng = (rng, k) => (k === 1 ? rng : { next: rng.next, signed: () => rng.signed() * k });
 
+/** 밴드가 시작되기 이 시간(초) 안쪽의 조기 입력은 즉시 실점(MISS)이 아니라 BAD 로 받아 준다 (게임성 리뷰 #12). 바깥은 그대로 MISS. AI 판정(judgeTap)은 건드리지 않는다 */
+export const EARLY_GRACE_S = 0.08;
 const OPP_SERVE_DELAY = 1.0; // 상대 서브 전 대기(초)
 const POINT_PAUSE = 1.2; // 득점 후 연출 대기(초)
 
@@ -53,11 +55,15 @@ export function createMatchController({
   const bandFor = (flight, type) => timingFor(flight, leniencyFor(type), shiftFor(type));
   // 노탭 만료: 어떤 종류를 눌러도 받아줄 수 있는 가장 늦은 밴드가 끝난 뒤
   const maxEnd = (flight) => Math.max(...SHOT_ORDER.map((k) => bandFor(flight, k).end));
+  const judgeMe = (t, timing) => {
+    const j = judgeTap(t, timing);
+    return j.grade === GRADES.MISS && t < timing.start && timing.start - t <= EARLY_GRACE_S && (!c.flight || t >= c.flight.tLand) ? { grade: GRADES.BAD, offset: (t - timing.center) / timing.halfTime, early: true } : j;
+  };
   const m = createMatch({ firstServer });
   const GAP_DIST = 45; const GAP_PERFECT = 0.7; // 코트 폭(0..100) 중 내 위치에서 45 이상 떨어진 곳 = 반대편 빈틈. PERFECT 범위 ×0.7
   const c = {
     match: m, courseHist: [], myX: 50, gap: false, phase: null, flight: null, t0: 0, timing: null,
-    pendingDown: null, pendingPoint: null, shownScore: { me: 0, opp: 0 }, awaitRemote: false, inbox: [], aiAt: null, aiPlan: null, resumeAt: 0, lastGrade: null, lastGradeMe: null, streak: 0, streakKey: null, bands: null, perfectStreak: 0, special: false,
+    pendingDown: null, flowRun: 0, pendingPoint: null, shownScore: { me: 0, opp: 0 }, awaitRemote: false, inbox: [], aiAt: null, aiPlan: null, resumeAt: 0, lastGrade: null, lastGradeMe: null, streak: 0, streakKey: null, bands: null, perfectStreak: 0, special: false,
   };
   c.matchup = (type) => matchupFor(type); // 누른 종류 기준 상성 (테스트·UI)
   c.lane = 'center'; // 간단 조작: 코스 마커 (코트 탭으로 정함, 버튼 스윙이 이 코스로 나간다)
@@ -65,6 +71,11 @@ export function createMatchController({
   c.disguiseS = useMatchup && simple ? oppParams?.disguiseS ?? DISGUISE_S[oppParams?.league] ?? 0 : 0; // 2회차 라이벌은 변주된 위장 길이(oppParams.disguiseS)
   c.ballNeutral = (now) => (!!remote && !!c.flight && c.flight.dir > 0) || c.spinHidden(now); // 멀티: 상대 공은 구질 색 없이 중립(필살기 이펙트만 따로 표시)
   c.spinHidden = (now) => c.disguiseS > 0 && !!c.flight && c.flight.dir > 0 && now - c.t0 < c.disguiseS;
+  /** 경기 중 설정 변경 (튜토리얼 '공 보고 고르기' 단계: 상성을 켜고 구질을 섞는 코치로 교체). 이미 날아가는 공에는 영향 없음 */
+  c.configure = (o = {}) => {
+    if (o.useMatchup != null) { useMatchup = !!o.useMatchup; c.disguiseS = useMatchup && simple ? oppParams?.disguiseS ?? DISGUISE_S[oppParams?.league] ?? 0 : 0; }
+    if (o.oppParams) { oppParams = o.oppParams; c.disguiseS = useMatchup && simple ? oppParams?.disguiseS ?? DISGUISE_S[oppParams?.league] ?? 0 : 0; }
+  };
   c.stats = stats;
   c.controlMode = controlMode;
   c.difficulty = difficulty;
@@ -131,7 +142,7 @@ export function createMatchController({
       const zone = courseZone(res.flight.land?.x ?? 50); const predicted = predictZone(c.courseHist);
       const pattern = predicted ? (predicted === zone ? 'hit' : 'broken') : null;
       c.courseHist.push(zone); if (c.courseHist.length > 8) c.courseHist.shift();
-      const plan = aiRespond(oppParams, rng, SIDES.OPP, res.flight, foeX, key, { streak: c.streak, oppX: c.oppX, special: !!res.flight.special, pattern, extraSigma: (opt.serve ? M.serveSigma : 1) * (c.lastMyShot !== 'cut' ? M.strikeSigma : 1) }); // 서브 마술사: 내 서브 뒤 첫 리턴만 어려워짐 / 도박사: 강타를 받는 AI 가 흔들림
+      const plan = aiRespond(oppParams, rng, SIDES.OPP, res.flight, foeX, key, { streak: c.streak, oppX: c.oppX, special: !!res.flight.special, pattern, extraSigma: (opt.serve ? M.serveSigma : 1) * (c.lastMyShot !== 'cut' ? M.strikeSigma : 1) * (c.lastMyShot === 'topspin' ? M.topSigma : 1) * M.setSigma * flowReadMult(oppParams, c.flowRun) * (m.rally && m.rally.shots <= M.firstShots ? M.firstSigma : 1) * (scoreCtx(m.score).crisis ? M.crisisSigma : 1) }); // 서브 마술사: 내 서브 뒤 첫 리턴만 어려워짐 / 도박사: 강타를 받는 AI 가 흔들림
       c.aiPlan = plan;
       c.aiAt = now + (plan.judgement.grade === GRADES.MISS ? plan.timing.end : plan.t);
     }
@@ -187,7 +198,7 @@ export function createMatchController({
       return true;
     }
     if (c.phase !== 'flight' || !c.timing || c.pendingDown) return false;
-    const judge = judgeTap(now - c.t0, c.bands?.[key] ?? bandFor(c.flight, key));
+    const judge = judgeMe(now - c.t0, c.bands?.[key] ?? bandFor(c.flight, key));
     const pos = c.flight.postPos(now - c.t0);
     const mu = matchupFor(key); // 판정 시점의 상성 (샷을 만들고 나면 flight 가 바뀐다)
     c.lastGrade = judge.grade;
@@ -212,7 +223,7 @@ export function createMatchController({
       return;
     }
     if (c.phase === 'flight' && c.timing && !c.pendingDown) {
-      const judge = judgeTap(now - c.t0, c.timing);
+      const judge = judgeMe(now - c.t0, c.timing);
       const pos = c.flight.postPos(now - c.t0);
       c.lastGrade = judge.grade;
       emit({ type: 'grade', grade: judge.grade, offset: judge.offset, x: pos.x, matchup: 'even' });
@@ -254,6 +265,7 @@ export function createMatchController({
     const noTap = !c.pendingDown;
     const judge = c.pendingDown?.judge ?? judgeNoTap(c.timing);
     c.lastMatchup = gesture?.matchup ?? 'even'; // 내 샷의 상성 → 상대 반응(AI 탭 오차)에 반영
+    c.flowRun = judge.grade === GRADES.PERFECT && shot ? c.flowRun + 1 : 0; // 흐름 읽기: 내 PERFECT 연속 횟수
     c.lastGradeMe = judge.grade; // 내 타격 등급 → 상대 압박(PERFECT 일수록 AI 가 흔들린다)
     if (shot && gesture?.shotType) { // 패턴 읽기: 같은 종류를 연속으로 쓴 횟수 (AI 가 편중을 읽는다)
       c.streak = gesture.shotType === c.streakKey ? c.streak + 1 : 1; c.streakKey = gesture.shotType;

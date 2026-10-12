@@ -1,10 +1,10 @@
-import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick, RIVAL_CYCLE } from '../core/index.js?v=1791775159';
-import { RIVAL_STORY, ensureStory, rivalStory } from './story.js?v=1791775159';
-import { statCurve } from './statcurve.js?v=1791775159';
-import { ensureTally, emptyTally, buildReview } from './review.js?v=1791775159';
-import { ensureEvents } from './events.js?v=1791775159';
-import { ensurePerks, grantPerks, registerUnlocks, CHAMPION_PERKS } from './perks.js?v=1791775159';
-import { ensureRogue, emptyRogue, statBonus, awardBonusPoints, checkDraft, recordRival, settleSeason, resetSeasonBuild } from './roguelike.js?v=1791775159';
+import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick, RIVAL_CYCLE } from '../core/index.js?v=1791780382';
+import { RIVAL_STORY, ensureStory, rivalStory } from './story.js?v=1791780382';
+import { statCurve } from './statcurve.js?v=1791780382';
+import { ensureTally, emptyTally, buildReview } from './review.js?v=1791780382';
+import { ensureEvents } from './events.js?v=1791780382';
+import { ensurePerks, grantPerks, registerUnlocks, CHAMPION_PERKS } from './perks.js?v=1791780382';
+import { ensureRogue, emptyRogue, statBonus, awardBonusPoints, checkDraft, openRetryDraft, recordRival, settleSeason, resetSeasonBuild } from './roguelike.js?v=1791780382';
 
 export const SAVE_VERSION = 2;
 export const WIN_PT = 3;
@@ -99,15 +99,39 @@ export function roundRobin(n = 10) {
   return rounds;
 }
 
-export function buildTeams(league, cycle = 1) {
+const TIER_ORDER = { low: 0, mid: 1, high: 2, rival: 3 };
+/** 내 경기 순서를 약한 상대 → 강한 상대(하위 → 중위 → 상위 → 라이벌)로: 라운드째 재배열하므로 각 라운드는 여전히 완전한 대진이다 (게임성 리뷰 #1) */
+export function orderRoundsByTier(rounds, teams) {
+  const opp = (r) => { const pair = r.find((p) => p.includes(0)); return teams[pair[0] === 0 ? pair[1] : pair[0]]; };
+  return rounds.map((r, i) => ({ r, i, k: TIER_ORDER[opp(r).tier] ?? 1 })).sort((a, b) => a.k - b.k || a.i - b.i).map((x) => x.r);
+}
+
+/** 시즌 변주용 결정적 난수 (mulberry32) — 경기·AI 난수와 분리 */
+function variantRng(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+/** 컨디션 폭: 중위·상위급은 시즌마다 ±COND_SPAN 만큼 리턴율·정확도가 달라진다 (게임성 리뷰 #3c) — 같은 '중위'도 올해는 강하거나 약하다 */
+export const COND_SPAN = { low: 0.03, mid: 0.05, high: 0.05, rival: 0 };
+
+/**
+ * variant: 0 = 첫 도전(예전과 동일한 편성), 1 이상 = 재도전 — 라이벌 외 8명의 등급 배치를 섞고 이름을 돌려서 같은 리그 재도전이 똑같은 8경기가 되지 않게 한다 (게임성 리뷰 #11).
+ * seed: 시즌·리그로 정해지는 컨디션/셔플 시드
+ */
+export function buildTeams(league, cycle = 1, variant = 0, seed = 0) {
   const rivalIdx = 8; // 상위권 한 명을 라이벌로
   const teams = [{ id: 0, name: '나', me: true }];
-  TIER_LAYOUT.forEach((tier, i) => {
+  const rnd = variantRng(Math.imul(seed + 1, 2654435761) ^ Math.imul(variant + 7, 40503));
+  const tiers = TIER_LAYOUT.slice();
+  if (variant > 0) { const head = tiers.slice(0, rivalIdx); for (let i = head.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [head[i], head[j]] = [head[j], head[i]]; } tiers.splice(0, rivalIdx, ...head); }
+  const names = PLAYER_NAMES[league];
+  tiers.forEach((tier, i) => {
     const isRival = i === rivalIdx;
+    const cond = variant > 0 || seed > 0 ? Math.round((rnd() * 2 - 1) * (COND_SPAN[isRival ? 'rival' : tier] ?? 0) * 1000) / 1000 : 0;
     teams.push({
       id: i + 1,
-      name: isRival ? RIVALS[league].name : PLAYER_NAMES[league][i],
-      tier: isRival ? 'rival' : tier,
+      name: isRival ? RIVALS[league].name : names[variant > 0 ? (i + variant) % rivalIdx : i],
+      tier: isRival ? 'rival' : tier, cond,
       style: isRival ? (cycle >= 2 ? RIVAL_CYCLE[league]?.style ?? RIVALS[league].style : RIVALS[league].style) : 'balanced',
       rival: isRival,
     });
@@ -118,8 +142,10 @@ export function buildTeams(league, cycle = 1) {
 /** 시즌 초기화: 선수/일정/기록 리셋 (스탯·장비·포인트는 유지) */
 export function startSeason(state, league = state.league) {
   state.league = league;
-  state.teams = buildTeams(league, state.cycle ?? 1);
-  state.schedule = roundRobin(10);
+  const variant = Math.max(0, (state.retries?.[league] ?? 0)); // 같은 리그를 다시 하는 횟수(첫 도전 = 0)
+  state.teams = buildTeams(league, state.cycle ?? 1, variant, variant > 0 ? state.season * 31 + LEAGUES.indexOf(league) : 0);
+  state.revenge = variant > 0 ? { open: true } : null; // 재도전 시즌에만 열리는 라이벌 설욕전 (한 번)
+  state.schedule = orderRoundsByTier(roundRobin(10), state.teams);
   state.week = 1;
   state.phase = 'regular'; // regular | tournament | seasonEnd
   state.log = []; // { a, b, winner, sa, sb, stage }
@@ -154,7 +180,14 @@ export function newGame(league = 'amateur') {
   return startSeason(state, league);
 }
 
-export const aiParamsFor = (state, team) => makeAiParams(state.league, team.tier, team.style, state.cycle ?? 1);
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+/** 세계대회 계속(엔딩 후 같은 리그 반복) 때 시즌마다 쌓이는 상대 난이도 (게임성 리뷰 #4) */
+export const WORLD_EXTRA_STEP = 0.02; export const WORLD_EXTRA_MAX = 0.08;
+export function aiParamsFor(state, team) {
+  const p = makeAiParams(state.league, team.tier, team.style, state.cycle ?? 1);
+  const bump = (team.cond ?? 0) + (state.league === 'world' ? Math.min(WORLD_EXTRA_MAX, WORLD_EXTRA_STEP * (state.worldExtra ?? 0)) : 0);
+  return bump ? { ...p, returnRate: clamp01(p.returnRate + bump), accuracy: clamp01(p.accuracy + bump) } : p;
+}
 /** 지금 회차 기준 라이벌 소개·대사 (1회차는 RIVALS 와 동일) */
 export function rivalFor(state) {
   const r = rivalStory(state.league, state.cycle ?? 1);
@@ -176,6 +209,9 @@ function ensureExtras(state) {
   if (state.cup === undefined || (state.cup !== null && (typeof state.cup !== 'object' || !state.cup.rounds))) state.cup = null;
   if (state.radarPrev === undefined) state.radarPrev = null;
   ensureRogue(state);
+  if (state.revenge === undefined) state.revenge = null;
+  if (!Number.isFinite(state.worldExtra) || state.worldExtra < 0) state.worldExtra = 0;
+  if (!Number.isFinite(state.worldStreak) || state.worldStreak < 0) state.worldStreak = 0;
   // 강등 삭제(2026-10-12) 이전 저장: 시즌 종료 화면에서 대기 중이던 강등은 취소 — 진행도는 잃지 않는다
   if (state.summary?.relegated) { state.summary.nextLeague = state.summary.league; state.summary.relegated = false; state.summary.relegationRisk = false; }
   return state;
@@ -274,10 +310,32 @@ export function applyRegularResult(state, { won, score }, rng, preset = {}) {
   const gained = pts.total;
   state.statPoints += gained;
   if (opp.rival) recordRival(state, won);
-  const draft = won ? checkDraft(state, state.teams[0].wins) : false; // 정규 2·4·6승째: 특성 드래프트
+  const rivalPt = opp.rival && won ? rivalWinBonus(state) : 0;
+  const draft = checkDraft(state, state.week); // 정규 2·4·6번째 경기 뒤(승패 무관): 특성 드래프트
   state.week += 1;
   if (state.week > 9) startTournament(state, rng);
-  return { gained, bonus: pts.bonus, draft, phase: state.phase };
+  return { gained, bonus: pts.bonus, rivalPt, draft, phase: state.phase };
+}
+
+/** 라이벌전 승리 보상: 계승 포인트 +1 (게임성 리뷰 #9). 반환: 지급한 포인트 */
+export const RIVAL_WIN_LEGACY_PT = 1;
+function rivalWinBonus(state) { ensureRogue(state).points += RIVAL_WIN_LEGACY_PT; return RIVAL_WIN_LEGACY_PT; }
+
+// ---- 라이벌 설욕전 (재도전 시즌 한정, 게임성 리뷰 #3a·#5·#11) ----
+// 전 시즌에 목표를 못 이룬 같은 리그를 다시 할 때 열린다. 정규 시즌 일정과 별개의 한 판(승패 무관 1회): 이기면 스탯 포인트 +REVENGE_WIN_POINTS 와 라이벌전 승리 보너스, 져도 잃는 것 없음.
+export const REVENGE_WIN_POINTS = 4;
+export function revengeOffer(state) {
+  if (state.phase !== 'regular' || !state.revenge?.open) return null;
+  const rival = state.teams.find((t) => t.rival);
+  return rival ? { opp: rival, points: REVENGE_WIN_POINTS } : null;
+}
+export function applyRevengeResult(state, { won }) {
+  if (!state.revenge?.open) throw new Error('열린 설욕전이 없음');
+  state.revenge = { open: false, won: !!won };
+  const rec = recordRival(state, won);
+  let gained = 0; let rivalPt = 0;
+  if (won) { gained = REVENGE_WIN_POINTS; state.statPoints += gained; rivalPt = rivalWinBonus(state); }
+  return { gained, rivalPt, record: rec, done: true };
 }
 
 // ---- 토너먼트 ----
@@ -332,8 +390,9 @@ export function applyTournamentResult(state, { won, score }, rng) {
   const gained = pts.total;
   state.statPoints += gained;
   if (oppTeam.rival) recordRival(state, won);
+  const rivalPt = oppTeam.rival && won ? rivalWinBonus(state) : 0;
   advanceBracket(state, rng);
-  return { gained, bonus: pts.bonus, draft: false, phase: state.phase };
+  return { gained, bonus: pts.bonus, rivalPt, draft: false, phase: state.phase };
 }
 
 // ---- 시즌 종료 ----
@@ -366,6 +425,7 @@ function finishSeason(state) {
     if (idx < LEAGUES.length - 1) { summary.promoted = true; summary.nextLeague = LEAGUES[idx + 1]; }
     else if (!state.cleared) { state.cleared = true; summary.ending = true; state.endingPending = true; }
   }
+  if (prevLeague === 'world' && (state.cleared || iWon)) { state.worldStreak = iWon ? (state.worldStreak ?? 0) + 1 : 0; summary.worldStreak = state.worldStreak; } // 세계대회 연속 우승 기록
   summary.legacy = settleSeason(state, { champion: iWon, rank }); // 계승 포인트 지급 + 시즌 빌드 소멸 (A/B 연결)
   const me = state.teams[0];
   summary.review = buildReview(state, { rank, wins: me.wins, losses: me.losses }, effectiveStats(state)); // 결산: 6각 레이더·전적·순위
@@ -379,13 +439,17 @@ export function startNextSeason(state) {
   const next = state.summary.nextLeague;
   state.season += 1;
   state.endingPending = false;
-  return startSeason(state, next);
+  if (state.league === 'world' && state.cleared && !state.summary?.ending) state.worldExtra = (state.worldExtra ?? 0) + 1; // 세계대회 계속: 시즌마다 상대가 조금씩 강해진다
+  startSeason(state, next);
+  if ((ensureRetries(state)[state.league] ?? 0) > 0) openRetryDraft(state); // 재도전 시즌: 1주차 전에 드래프트 1회 선지급
+  return state;
 }
 
 /** 2회차 시작: 아마추어부터 다시 (스탯·장비·포인트·해금 유지, 라이벌 변주). 세계대회 우승 직후에만 */
 export function startCycle(state) {
   if (state.phase !== 'seasonEnd' || !state.summary?.cycleOffer) throw new Error('세계대회 우승 직후에만 2회차를 시작할 수 있음');
   state.cycle = ensureCycle(state) + 1;
+  state.worldExtra = 0; state.worldStreak = 0;
   state.season += 1;
   state.endingPending = false;
   state.retries = {};

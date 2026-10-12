@@ -33,8 +33,14 @@ const stepCourse = (how) => ({
   ],
   done: '상대가 없는 쪽으로 보내면 받기 어려워져요.',
 });
+const STEP_PICK = {
+  id: 'pick', title: '공 보고 고르기', text: '이제 상대가 구질을 섞어 쳐요! 상대 공 칩(탑스핀·커트·일반)을 보고 이기는 버튼을 눌러요. 탑스핀 공은 일반으로, 커트 공은 탑스핀으로, 일반 공은 커트로!',
+  goals: [{ key: 'counter', need: 3, label: '카운터', accept: (e) => e.type === 'return' && e.matchup === 'win' && e.kind === 'in' && e.grade !== 'MISS' }], hint: {},
+  matchup: true, // 이 단계부터 상성 적용 + 구질을 섞는 코치 (TRAINER_PICK_PARAMS)
+  done: '이기는 구질로 받으면 샷이 안정되고 상대가 흔들려요. 한 가지 샷만 반복하면 상대가 읽어요!',
+};
 const STEP_FREE = {
-  id: 'free', title: '실전 연습', text: '배운 걸 써서 3점을 먼저 따보세요! 상대가 못 받는 코스와 빠른 탑스핀을 노려요.',
+  id: 'free', title: '실전 연습', text: '배운 걸 써서 3점을 먼저 따보세요! 상대 공 종류를 보고 이기는 샷을 고르고, 상대가 못 받는 코스를 노려요.',
   goals: [{ key: 'win3', need: 3, label: '득점', accept: (e) => e.type === 'point' && e.winner === 'me' }], hint: {},
   done: '',
 };
@@ -62,7 +68,8 @@ const SIMPLE_STEPS = [
     goals: [{ key: 'cut', need: 1, label: '커트', accept: (e) => inCourt(e) && e.spin < 0 }], hint: { button: 'cut' },
     done: '커트는 느리고 높게 떠서 상대의 강한 공격을 막아요 (푸른 궤적).',
   },
-  STEP_FREE,
+  STEP_PICK,
+  { ...STEP_FREE, matchup: true },
 ];
 
 const ADVANCED_STEPS = [
@@ -161,6 +168,9 @@ export function createTutorial({ mode = 'simple' } = {}) {
 /**
  * 튜토리얼 선수 스탯 = 처음 시작하는 선수 수준(4). 간단 조작의 샷 프리셋은 이 스탯에서 성공률이 높다(탑스핀 93~97%).
  */
+/** 튜토리얼 '공 보고 고르기' 단계의 코치: 구질을 섞어 친다(탑스핀·커트·일반). 역습은 안 하고 공은 느리다 */
+export const TRAINER_PICK_PARAMS = Object.freeze({ ...{ style: 'balanced', league: 'amateur', tier: 'low', returnRate: 0.9, accuracy: 0.7, courseAim: 0, power: 0.1, counter: false }, spinUse: 0.7, variety: 0.8 });
+
 export const TUTORIAL_STATS = Object.freeze({ power: 4, spin: 4, focus: 4 });
 
 /**

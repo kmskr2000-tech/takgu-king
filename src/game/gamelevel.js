@@ -10,6 +10,15 @@ export const GAME_LEVEL_ORDER = Object.freeze(['normal', 'hard', 'expert']);
 export const DEFAULT_GAME_LEVEL = 'normal';
 export const gameLevelOf = (key) => GAME_LEVELS[key] ?? GAME_LEVELS[DEFAULT_GAME_LEVEL];
 
+/**
+ * 실제 적용 난이도 (게임성 리뷰 #4): 2회차 이상이면 사용자가 고른 난이도보다 한 단계 위로 자동 상향한다(상한: 매우 어려움). 사용자의 설정 값 자체는 바꾸지 않는다.
+ * 숙련자는 1회차에서 전 리그를 쉽게 넘기므로, 이월된 스탯으로 시작하는 회차부터 긴장을 되살린다.
+ */
+export function effectiveGameLevel(key, cycle = 1) {
+  const i = Math.max(0, GAME_LEVEL_ORDER.indexOf(key));
+  return GAME_LEVEL_ORDER[Math.min(GAME_LEVEL_ORDER.length - 1, i + (cycle >= 2 ? 1 : 0))];
+}
+
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 /** AI 파라미터에 게임 난이도 배율을 곱한 복사본. normal 은 원본과 동일(배율 1). */
 export function applyGameLevel(params, key) {

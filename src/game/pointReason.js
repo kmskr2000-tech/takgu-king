@@ -1,7 +1,7 @@
 // 득점/실점 원인 문구. point 이벤트(winner, reason) + 직전 missed 이벤트(타이밍 실수 종류) + 내 마지막 샷 종류로 만든다.
 // reason: 'miss'(받는 쪽이 못 쳤다) | 'net' | 'out'(리턴 샷의 실수) | 'serve-net' | 'serve-out'(서브 폴트)
 // 실점 원인은 언제나 "점수를 잃은 쪽의 실수"다 (winner 의 반대편).
-import { shotTypeOf } from './controls.js?v=1791775159';
+import { shotTypeOf, counterOf } from './controls.js?v=1791780382';
 
 const other = (s) => (s === 'me' ? 'opp' : 'me');
 
@@ -41,4 +41,9 @@ export function describePoint(point, missInfo = null) {
 }
 
 /** 상대 공 종류 칩 문구: 'topspin' → '상대 공: 탑스핀' */
-export const incomingLabel = (key) => (key ? `상대 공: ${shotTypeOf(key).label}` : '');
+export const incomingLabel = (key, { counter = false } = {}) => {
+  if (!key) return '';
+  const base = `상대 공: ${shotTypeOf(key).label}`;
+  const c = counter ? counterOf(key) : null;
+  return c ? `${base} → ${shotTypeOf(c).label} 유리` : base; // 학습 전엔 이기는 구질을 글자로만 알려 준다 (버튼 반짝임 없음)
+};

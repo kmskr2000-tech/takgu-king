@@ -3,16 +3,17 @@
 //  - B 시즌 빌드(시즌 한정): 정규 시즌 2·4·6승째 3택1 드래프트. 12종 특성, 시즌이 끝나면 소멸.
 //  - 라이벌 전적 / 성장 줄기(훈련 방향 3단계 → 프로젝트): 양념. 기존 스탯 투자·훈련 모드를 그대로 쓴다.
 //  모든 효과는 state.rogue 한 곳에서 파생된다. 경기·AI 난수 흐름은 건드리지 않는다(드래프트 후보는 시즌·승수로 정해지는 결정적 난수).
-import { ballSpeedClass } from './controls.js?v=1791775159';
+import { ballSpeedClass } from './controls.js?v=1791780382';
 
 export const STAT_KEYS = Object.freeze(['power', 'spin', 'focus']);
-export const DRAFT_AT = Object.freeze([2, 4, 6]); // 정규 시즌 누적 승리 수
+export const DRAFT_AT = Object.freeze([2, 4, 6]); // 정규 시즌 N번째 경기를 마친 뒤 (승패 무관, 2026-10-12 설계 변경: 승수 → 경기 수)
 export const DRAFT_CHOICES = 3;
 export const BUILD_MAX = 3;
 export const LEGACY_PTS = Object.freeze({ champion: 3, qualified: 2, other: 1 }); // 우승 / 토너먼트 진출(상위 4위) / 5위 이하 — 탈락해도 1pt
 
 // ---- A: 계승 보너스 ----
 export const LEGACY_BONUSES = Object.freeze([
+  { id: 'freereroll', name: '든든한 보험', cost: 1, desc: '시즌마다 특성 드래프트 리롤 1회 무료' }, // 1pt 아이템: 첫 실패 시즌(1pt)에도 살 수 있다 (게임성 리뷰 #6)
   { id: 'basics', name: '단단한 기본기', cost: 2, desc: '파워 +2', stat: { power: 2 } },
   { id: 'spinsense', name: '회전의 이해', cost: 2, desc: '스핀 +2', stat: { spin: 2 } },
   { id: 'composure', name: '침착함', cost: 2, desc: '집중 +2', stat: { focus: 2 } },
@@ -24,6 +25,27 @@ export const LEGACY_BONUSES = Object.freeze([
   { id: 'strongheart', name: '강심장', cost: 5, desc: '듀스 타이밍 윈도우 +8%' },
   { id: 'comeback', name: '역전의 명수', cost: 5, desc: '매치포인트 위기 파워 +6%' },
 ]);
+/** 드래프트 리롤 (스탯 포인트 싱크, 게임성 리뷰 #5): 한 드래프트에서 2→3→4pt(상한 4). 「든든한 보험」은 시즌마다 개당 1회 무료 */
+export const REROLL_COSTS = Object.freeze([2, 3, 4]);
+export function rerollCost(state) {
+  const r = ensureRogue(state); if (!r.draft) return null;
+  const freeLeft = (r.owned.freereroll ?? 0) - (r.freeUsed ?? 0);
+  return freeLeft > 0 ? 0 : REROLL_COSTS[Math.min(r.draft.rerolls ?? 0, REROLL_COSTS.length - 1)];
+}
+export function rerollDraft(state) {
+  const r = ensureRogue(state); const cost = rerollCost(state);
+  if (cost == null) throw new Error('열린 드래프트가 없음');
+  if (state.statPoints < cost) return false;
+  if (cost === 0) r.freeUsed = (r.freeUsed ?? 0) + 1;
+  state.statPoints -= cost;
+  const n = (r.draft.rerolls ?? 0) + 1;
+  const prev = new Set(r.draft.options);
+  const salt = (r.draft.matches ?? 50) + 1000 * n;
+  let options = draftOptions(state, salt);
+  if (options.every((id) => prev.has(id))) options = draftOptions(state, salt + 17); // 거의 같은 후보가 또 나오면 한 번 더 굴림
+  r.draft = { ...r.draft, options, rerolls: n };
+  return true;
+}
 export const bonusOf = (id) => LEGACY_BONUSES.find((b) => b.id === id) ?? null;
 
 // ---- B: 시즌 특성 (수치는 밸런싱 단계에서 조정 — 시즌 한정이라 과감하게) ----
@@ -56,7 +78,7 @@ export const GROWTH_PROJECTS = Object.freeze({
 // ---- 상태 ----
 export function emptyRogue() {
   return {
-    points: 0, owned: {}, build: [], draftedAt: [], draft: null,
+    points: 0, owned: {}, build: [], draftedAt: [], draft: null, queued: 0, queuedAt: [], cupTrophies: 0, freeUsed: 0,
     rival: {}, growth: { power: 0, spin: 0, focus: 0 }, growthDir: 'power', carry: 0, lastLegacy: null,
   };
 }
@@ -72,6 +94,10 @@ export function ensureRogue(state) {
   if (!Array.isArray(r.build)) r.build = [];
   r.build = r.build.filter((id) => traitOf(id)).slice(-BUILD_MAX);
   if (!Array.isArray(r.draftedAt)) r.draftedAt = [];
+  if (!Array.isArray(r.queuedAt)) r.queuedAt = [];
+  if (!Number.isFinite(r.freeUsed) || r.freeUsed < 0) r.freeUsed = 0;
+  if (!Number.isFinite(r.cupTrophies) || r.cupTrophies < 0) r.cupTrophies = 0;
+  if (!Number.isFinite(r.queued) || r.queued < 0) r.queued = r.queuedAt.length;
   if (r.draft && !(Array.isArray(r.draft.options) && r.draft.options.every((id) => traitOf(id)))) r.draft = null;
   if (r.draft === undefined) r.draft = null;
   if (!r.rival || typeof r.rival !== 'object' || Array.isArray(r.rival)) r.rival = {};
@@ -103,14 +129,14 @@ export function settleSeason(state, { champion, rank }) {
   const r = ensureRogue(state);
   const gained = legacyPointsFor({ champion, rank });
   const lostBuild = r.build.slice();
-  r.points += gained; r.build = []; r.draft = null; r.draftedAt = [];
+  r.points += gained; r.build = []; r.draft = null; r.draftedAt = []; r.queued = 0; r.queuedAt = []; r.freeUsed = 0;
   r.lastLegacy = { gained, lostBuild };
   return { gained, total: r.points, lostBuild };
 }
 
 /** 새 시즌 시작: 빌드·드래프트 기록 초기화 (이미 settleSeason 으로 비워졌더라도 안전) */
 export function resetSeasonBuild(state) {
-  const r = ensureRogue(state); r.build = []; r.draft = null; r.draftedAt = [];
+  const r = ensureRogue(state); r.build = []; r.draft = null; r.draftedAt = []; r.queued = 0; r.queuedAt = []; r.freeUsed = 0;
 }
 
 // ---- 스탯 합산: 투자 스탯(raw)에 더해진 뒤 statCurve 를 통과한다 (season.js effectiveStats) ----
@@ -148,16 +174,30 @@ export function draftOptions(state, salt) {
   const pool = TRAITS.filter((t) => !r.build.includes(t.id)).map((t) => t.id);
   const out = [];
   while (out.length < DRAFT_CHOICES && pool.length) out.push(...pool.splice(Math.floor(rnd() * pool.length), 1));
+  // 3장이 전부 같은 계열이면 마지막 장을 다른 계열 하나로 바꾼다 — 계열을 고를 선택지를 보장 (게임성 리뷰 #7)
+  if (out.length === DRAFT_CHOICES && out.every((id) => traitOf(id).style === traitOf(out[0]).style)) {
+    const other = pool.filter((id) => traitOf(id).style !== traitOf(out[0]).style);
+    if (other.length) out[DRAFT_CHOICES - 1] = other[Math.floor(rnd() * other.length)];
+  }
   return out;
 }
 
-/** 정규 시즌 내 승리 직후 호출: 2·4·6승째면 드래프트를 연다. 반환: 새로 열렸으면 true */
-export function checkDraft(state, wins) {
+/** 정규 경기 하나를 마친 직후 호출(승패 무관): matches 번째 경기가 2·4·6이면 드래프트를 연다. 반환: 새로 열렸으면 true */
+export function checkDraft(state, matches) {
   const r = ensureRogue(state);
-  if (state.phase !== 'regular' && state.phase !== 'tournament') return false;
-  if (!DRAFT_AT.includes(wins) || r.draftedAt.includes(wins) || r.draft) return false;
-  r.draftedAt.push(wins);
-  r.draft = { options: draftOptions(state, wins), source: 'wins', wins };
+  if (state.phase !== 'regular') return false;
+  if (!DRAFT_AT.includes(matches) || r.draftedAt.includes(matches)) return false;
+  r.draftedAt.push(matches);
+  if (r.draft) { r.queued = (r.queued ?? 0) + 1; r.queuedAt = [...(r.queuedAt ?? []), matches]; return false; } // 아직 안 고른 드래프트가 있으면 순서를 기다린다 (고르면 다음 것이 열림)
+  r.draft = { options: draftOptions(state, matches), source: 'matches', matches };
+  return true;
+}
+
+/** 재도전 시즌(같은 리그를 다시 하는 시즌): 1주차 경기 전에 드래프트 1회 선지급 — 시즌 최대 3회와 별개의 보너스. 이미 열려 있으면 열지 않는다 */
+export function openRetryDraft(state) {
+  const r = ensureRogue(state);
+  if (r.draft) return false;
+  r.draft = { options: draftOptions(state, 50), source: 'retry', matches: 0 };
   return true;
 }
 
@@ -165,7 +205,7 @@ export function checkDraft(state, wins) {
 export function openEventDraft(state) {
   const r = ensureRogue(state);
   if (r.draft) return false;
-  r.draft = { options: draftOptions(state, 100 + (state.week ?? 0)), source: 'event', wins: null };
+  r.draft = { options: draftOptions(state, 100 + (state.week ?? 0)), source: 'event', matches: null };
   return true;
 }
 
@@ -178,15 +218,16 @@ export function pickDraft(state, id) {
   r.build.push(id);
   const dropped = r.build.length > BUILD_MAX ? r.build.shift() : null;
   r.draft = null;
+  if (r.queued > 0) { const m = r.queuedAt.shift(); r.queued -= 1; r.draft = { options: draftOptions(state, m), source: 'matches', matches: m }; }
   return { picked: id, dropped };
 }
 
-/** 다음 드래프트까지 필요한 승수 (없으면 null) — 리그 화면의 게이지용 */
+/** 다음 드래프트까지 남은 경기 수 (없으면 null) — 리그 화면의 게이지용 */
 export function draftGauge(state) {
   const r = ensureRogue(state);
-  const wins = state.teams?.[0]?.wins ?? 0;
-  const next = DRAFT_AT.find((n) => n > wins && !r.draftedAt.includes(n)) ?? null;
-  return { wins, next, need: next == null ? null : next - wins, done: DRAFT_AT.filter((n) => r.draftedAt.includes(n)).length, total: DRAFT_AT.length };
+  const played = state.phase === 'regular' ? Math.max(0, (state.week ?? 1) - 1) : 9; // 이번 시즌에 마친 정규 경기 수
+  const next = DRAFT_AT.find((n) => n > played && !r.draftedAt.includes(n)) ?? null;
+  return { played, next, need: next == null ? null : next - played, done: DRAFT_AT.filter((n) => r.draftedAt.includes(n)).length, total: DRAFT_AT.length };
 }
 
 // ---- 라이벌 전적 ----
@@ -237,25 +278,35 @@ export function modsFor(state) {
   const n = (id) => r.owned[id] ?? 0;
   const t = new Set(r.build);
   const streak = t.has('moodmaker') ? Math.min(5, winStreak(state)) : 0;
+  const setStep = Object.fromEntries(Object.keys(TRAIT_STYLES).map((st) => [st, Math.max(0, r.build.filter((id) => traitOf(id)?.style === st).length - 1)]));
   const m = {
     traits: [...t],
-    leniency: 1 + 0.04 * n('sharpeye') + 0.015 * streak, // 예리한 눈 · 분위기 메이커
+    leniency: (1 + 0.04 * n('sharpeye') + 0.015 * streak) * (1 + SET_FX.ops.leniency * setStep.ops), // 예리한 눈 · 분위기 메이커
     deuceLeniency: 1 + 0.08 * n('strongheart'),
-    firstPower: 1 + 0.05 * n('firstball'), firstShots: 3,
-    crisisPower: 1 + 0.06 * n('comeback'),
+    firstPower: 1 + 0.05 * n('firstball'), firstShots: 3, firstSigma: 1 + FX_SIGMA.firstball * n('firstball'), // 첫 공의 달인: 위력 +5% 에 더해 상대가 첫 3구를 받기 어렵다(탭 오차)
+    crisisPower: 1 + 0.06 * n('comeback'), crisisSigma: 1 + FX_SIGMA.comeback * n('comeback'), // 역전의 명수: 위기 때 위력 +6%, 상대가 흔들린다
     serveSigma: t.has('servemagic') ? 1.3 : 1,
-    strikeSigma: t.has('gambler') ? TRAIT_FX.gambler.aiSigma : 1, // 도박사: 강타를 받는 AI 의 탭 오차 (커트는 강타가 아님)
+    strikeSigma: (t.has('gambler') ? TRAIT_FX.gambler.aiSigma : 1) * (1 + SET_FX.attack.strike * setStep.attack), // 도박사 + 공격 세트: 강타를 받는 AI 의 탭 오차 (커트는 강타가 아님)
+    topSigma: t.has('heavydrive') ? TRAIT_FX.heavydrive.aiSigma : 1,
+    setNoise: 1 - SET_FX.defense.noise * setStep.defense, setSigma: 1 + SET_FX.trick.sigma * setStep.trick,
+    setSteps: setStep,
   };
-  const active = m.leniency !== 1 || m.deuceLeniency !== 1 || m.firstPower !== 1 || m.crisisPower !== 1 || m.traits.length > 0;
+  const active = m.setNoise !== 1 || m.setSigma !== 1 || m.leniency !== 1 || m.deuceLeniency !== 1 || m.firstPower !== 1 || m.crisisPower !== 1 || m.firstSigma !== 1 || m.crisisSigma !== 1 || m.traits.length > 0;
   return active ? m : null;
 }
 
-const MODS_NONE = Object.freeze({ traits: [], leniency: 1, deuceLeniency: 1, firstPower: 1, firstShots: 3, crisisPower: 1, serveSigma: 1, strikeSigma: 1 });
+const MODS_NONE = Object.freeze({ traits: [], leniency: 1, deuceLeniency: 1, firstPower: 1, firstShots: 3, firstSigma: 1, crisisPower: 1, crisisSigma: 1, serveSigma: 1, strikeSigma: 1, topSigma: 1, setNoise: 1, setSigma: 1, setSteps: {} });
 export const normalizeMods = (m) => m ?? MODS_NONE;
 
+/** 계승 보너스 중 '위력 %' 만으로는 효과가 측정되지 않던 두 개(시뮬 0%p)를 상대 탭 오차로도 표현 (게임성 리뷰 #6) — 개당 가산 */
+export const FX_SIGMA = { firstball: 0.12, comeback: 0.15 };
+
 /** 특성 수치 (밸런싱 대상 — scripts/sim-roguelike.mjs 로 확인). 시즌 한정이라 A 보다 과감하게 */
+/** 계열 세트 보너스 (게임성 리뷰 #7, 설계안 "계열별 시너지"): 같은 계열 2개면 1단, 3개면 2단. 단계당 수치 */
+export const SET_FX = { attack: { strike: 0.08 }, defense: { noise: 0.06 }, trick: { sigma: 0.05 }, ops: { leniency: 0.02 } };
 export const TRAIT_FX = {
-  heavydrive: { top: 1.15, cut: 0.9 }, smashchance: { power: 1.2 }, quickattack: { noise: 0.9 }, ironcut: { noise: 0.85 },
+  // 헤비 드라이브: 탑스핀 위력만으로는 powerCap 을 넘어 효과가 0 이었다(시뮬) → 상대가 받기 어려운 탑스핀(aiSigma)으로도 표현
+  heavydrive: { top: 1.15, cut: 0.9, aiSigma: 1.12 }, smashchance: { power: 1.2 }, quickattack: { noise: 0.9 }, ironcut: { noise: 0.85 },
   // 도박사: noise 는 PERFECT 가 아닐 때만 (정확히 맞추면 안전한 강타, 어설프면 크게 흔들림). aiSigma = 강타를 받는 AI 의 탭 오차 배율
   gambler: { power: 1.3, noise: 1.3, aiSigma: 1.7 }, variation: { win: 0.9, lose: 1.0 }, stamina: { noise: 0.85 },
 };
@@ -300,6 +351,7 @@ export function shotAdjust(m, { type, matchup = 'even', incomingSpeed = null, ba
   if (t.includes('ironcut') && type === 'cut') noiseMul *= fx.ironcut.noise;
   if (t.includes('stamina') && c.late) noiseMul *= fx.stamina.noise;
   if (t.includes('variation')) noiseMul *= matchup === 'win' ? fx.variation.win : matchup === 'lose' ? fx.variation.lose : 1;
+  noiseMul *= m.setNoise; // 수비 세트
   if (ballIndex <= m.firstShots) powerMul *= m.firstPower; // 첫 3구: 각 랠리의 서브(1구)·리턴(2구)·3구 공격
   if (c.crisis) powerMul *= m.crisisPower;
   return { powerMul, noiseMul };

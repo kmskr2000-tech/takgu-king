@@ -1,8 +1,8 @@
 // 커리어 화면: 랜덤 이벤트, 월간 컵 대진표, 시즌 결산 레이더. 목업(files/media-generation-takgu-*.webp) 구성을 따른다.
-import { h, svg } from './dom.js?v=1791775159';
-import { radarGeometry } from '../game/review.js?v=1791775159';
-import { safeReward, FAIL_LOSS } from '../game/events.js?v=1791775159';
-import { TRAIT_STYLES, LEGACY_BONUSES, BUILD_MAX, traitOf, DRAFT_AT, GROWTH_STAGES, GROWTH_PROJECTS, STAT_KEYS, growthStage, draftGauge, ensureRogue } from '../game/roguelike.js?v=1791775159';
+import { h, svg } from './dom.js?v=1791780382';
+import { radarGeometry } from '../game/review.js?v=1791780382';
+import { safeReward, FAIL_LOSS } from '../game/events.js?v=1791780382';
+import { TRAIT_STYLES, LEGACY_BONUSES, BUILD_MAX, traitOf, DRAFT_AT, GROWTH_STAGES, GROWTH_PROJECTS, STAT_KEYS, growthStage, draftGauge, ensureRogue } from '../game/roguelike.js?v=1791780382';
 
 const btn = (text, onclick, cls = '') => h('button', { class: `btn ${cls}`.trim(), onclick, type: 'button' }, text);
 const pct = (p) => `${Math.round(p * 100)}%`;
@@ -65,7 +65,7 @@ export function cupScreen({ view, offer, next, onStart, onJoin, onSkip, onClose,
     h('h2', {}, view ? view.name : offer ? offer.name : '월간 컵'),
     !view && offer && h('p', {}, `8인 단판 토너먼트 — 상·하위 리그 선수도 나와요. 승리마다 +1pt, 우승 +1pt 더. 정규 시즌 순위엔 영향이 없어요. (${offer.lastWeek}주차까지 참가 가능)`),
     view && view.rounds.flatMap((r) => [h('h3', {}, r.name), ...r.matches.map(slot)]),
-    view && view.done && h('p', { class: view.place === '우승' ? 'win' : '' }, `결과: ${view.place} · 획득 +${view.gained}pt`),
+    view && view.done && h('p', { class: view.place === '우승' ? 'win' : '' }, `결과: ${view.place} · 획득 +${view.gained}pt${view.place === '우승' ? ' · 컵 트로피 획득!' : ''}`),
     view && !view.done && next && h('p', { class: 'next' }, `다음 경기: ${view.roundName} — ${next.opp.name} (${next.opp.tag})`),
     !view && offer && btn('참가하기', onJoin, 'primary'),
     !view && offer && btn('이번엔 불참', onSkip),
@@ -79,7 +79,7 @@ export function cupScreen({ view, offer, next, onStart, onJoin, onSkip, onClose,
 const STAT_LABEL = { power: '파워', spin: '스핀', focus: '집중' };
 
 /** 특성 3택1 카드. source: 'wins'(리그 승리) | 'event' */
-export function draftScreen({ draft, build, onPick }) {
+export function draftScreen({ draft, build, onPick, onReroll = null, rerollCost = null, points = 0 }) {
   const cards = draft.options.map((id) => {
     const t = traitOf(id);
     return h('button', { class: `draft-card ${t.style}`, type: 'button', 'data-trait': t.id, onclick: () => onPick(t.id) },
@@ -87,10 +87,11 @@ export function draftScreen({ draft, build, onPick }) {
   });
   const full = build.length >= BUILD_MAX;
   return h('section', { class: 'screen draft', 'aria-label': '특성 드래프트' },
-    h('p', { class: 'event-crumb' }, draft.source === 'event' ? '이벤트 보상' : `리그 ${draft.wins}승 달성`),
+    h('p', { class: 'event-crumb' }, draft.source === 'event' ? '이벤트 보상' : draft.source === 'retry' ? '재도전 보너스 — 지면 다시!' : `리그 ${draft.matches}경기를 마쳤어요`),
     h('h2', {}, '특성 드래프트'),
     h('p', {}, '이번 시즌 동안만 쓰는 특성이에요. 한 장 고르면 다음 경기부터 적용!'),
     h('div', { class: 'draft-cards' }, ...cards),
+    onReroll && rerollCost != null && h('button', { class: 'btn draft-reroll', type: 'button', disabled: points < rerollCost ? true : null, onclick: onReroll }, rerollCost === 0 ? '🔄 다시 뽑기 (무료)' : `🔄 다시 뽑기 (${rerollCost}pt · 보유 ${points}pt)`),
     full && h('p', { class: 'draft-note' }, `빌드가 가득 찼어요 — 새로 고르면 가장 오래된 특성「${traitOf(build[0]).name}」이 빠져요.`),
     build.length > 0 && h('p', { class: 'draft-build' }, `현재 빌드: ${build.map((id) => `${traitOf(id).icon} ${traitOf(id).name}`).join(' · ')}`));
 }
@@ -110,12 +111,12 @@ export function buildStrip(state) {
     const t = traitOf(r.build[i]);
     return h('span', { class: `build-slot${t ? ' on' : ''}`, title: t ? `${t.name}: ${t.desc}` : '빈 칸', 'data-trait': t?.id ?? '' }, t ? t.icon : '·');
   });
-  const gauge = g.next == null ? '이번 시즌 드래프트 완료' : g.need === 1 ? '1승 더 하면 드래프트!' : `${g.need}승 더 하면 드래프트`;
+  const gauge = g.next == null ? '이번 시즌 드래프트 완료' : g.need === 1 ? '1경기 더 하면 드래프트!' : `${g.need}경기 더 하면 드래프트`;
   return h('div', { class: 'build-strip', 'aria-label': '시즌 빌드' },
     h('span', { class: 'build-slots' }, ...slots),
     h('span', { class: 'build-gauge' },
-      h('small', {}, `승리 ${g.wins} · ${gauge}`),
-      h('i', { class: 'gauge-bar', 'aria-hidden': 'true' }, ...DRAFT_AT.map((n) => h('b', { class: g.wins >= n || r.draftedAt.includes(n) ? 'on' : '' }, String(n))))));
+      h('small', {}, `${g.played}경기 · ${gauge}`),
+      h('i', { class: 'gauge-bar', 'aria-hidden': 'true' }, ...DRAFT_AT.map((n) => h('b', { class: g.played >= n || r.draftedAt.includes(n) ? 'on' : '' }, String(n))))));
 }
 
 /** 시즌 결산: 계승 포인트 + 사라지는 빌드 + 투자 상점 (A/B 연결) */

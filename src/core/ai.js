@@ -1,7 +1,7 @@
-import { GRADES, COURSE_X, AI_PERFECT_RATIO, AI_BAD_FRACTION } from './constants.js?v=1791775159';
-import { buildTiming, judgeTap } from './timing.js?v=1791775159';
-import { MIN_REACTION_S } from './constants.js?v=1791775159';
-import { createShot, flightOf, powerCap } from './shot.js?v=1791775159';
+import { GRADES, COURSE_X, AI_PERFECT_RATIO, AI_BAD_FRACTION } from './constants.js?v=1791780382';
+import { buildTiming, judgeTap } from './timing.js?v=1791780382';
+import { MIN_REACTION_S } from './constants.js?v=1791780382';
+import { createShot, flightOf, powerCap } from './shot.js?v=1791780382';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -26,7 +26,7 @@ export const LEAGUE_BASE = Object.freeze({
 export const LEAGUE_UPLIFT = { amateur: 0, third: 0.10, second: 0.09, first: 0.02, world: -0.03 };
 export const TIER_UPLIFT_SHARE = { low: 1, mid: 1, high: 1, rival: 1 };
 // 상위 리그는 기본값이 이미 높아 등급 배율(×0.8~×1.4)이 clamp 로 뭉개져 상위·라이벌이 벽이 된다 → 리그별로 배율의 편차를 줄인다 (1 = 기존). 확정값 기준 시즌 후반 승률(사람 전략·skill 0.17): 3부 97/87/65/53 · 2부 93/83/63/37 · 1부 93/77/53/25 · 세계 75/53/45/27 (하위/중위/상위/라이벌 %). 2026-10-07 커트 득점 루트(cutNoise 4.3)·1부 캡·PERFECT 구간 축소(0.3→0.15, 플레이어만) 후 재보정(scripts/tune-balance.mjs --n 250 --skill 0.17 실측(최종 가산 기준), 하위/중위/상위/라이벌): 3부 96/90/80/56 · 2부 96/92/74/48 · 1부 98/86/58/29 · 세계 78/66/54/57 — 목표보다 전반적으로 쉽다(3부 상위 +15, 세계 중위 +13·라이벌 +30). 주의: 이 봇은 탭 오차 σ0.17s 의 서투른 플레이어이고, σ0.06s(보통 사람) 봇은 모든 리그·등급에서 100% 이긴다 — 정밀한 플레이어에겐 아직 쉽다. AI 끼리 리그 사다리(상위 리그가 하위 리그를 이김)는 test/strategy.test.js 가 지킨다
-export const TIER_SPREAD = { amateur: 1, third: 0.65, second: 0.5, first: 0.5, world: 0.22 };
+export const TIER_SPREAD = { amateur: 1, third: 0.65, second: 0.5, first: 0.5, world: 0.35 }; // 세계대회 0.22→0.35 (게임성 리뷰 #10: 세계 라이벌이 1부 라이벌보다 쉬웠던 역전 해소, σ0.17 봇 실측 하위/중위/상위/라이벌 95/70/37/23)
 
 /** 선수 난이도 배분 (설계서 5.3): 하위 -20%, 중위 0, 상위 +20%, 라이벌 +40% */
 export const TIER_MULT = Object.freeze({ low: 0.8, mid: 1.0, high: 1.2, rival: 1.4 });
@@ -47,6 +47,14 @@ export const RIVAL_CYCLE = Object.freeze({
   first: { disguiseS: 0.25, variety: 0.7, rhythm: { tempoVar: 0.2, tempoBase: 0.04 } }, // 서유나: 구질을 한 박자 늦게 보여 준다
   world: { disguiseS: 0.25, variety: 0.8, rhythm: { tempoVar: 0.26, tempoBase: 0.04 } }, // 제노: 끝까지 숨기고 템포가 크게 흔들린다
 });
+// 1회차 라이벌 개성 (게임성 리뷰 #9): 리듬 수치 말고도 라이벌마다 "다른 상대"로 느껴지게 구질 성향·코스 공략·구질 위장을 따로 준다.
+// 오순자는 이미 커트 전형(style cut). 2회차(RIVAL_CYCLE)는 이 위에 덮어쓴다.
+export const RIVAL_TRAITS = Object.freeze({
+  third: { variety: 0.55, rhythm: { tempoBase: 0.12 } }, // 차하늘: 탑스핀을 섞어 빠르게 몰아붙인다
+  second: { disguiseS: 0.1 }, // 마도철: 구질을 한 박자 숨긴다
+  first: { courseAim: 0.8 }, // 서유나: 빈 구석을 정확히 찌른다
+  world: { courseAim: 0.88, variety: 0.75 }, // 제노: 구석 공략 + 다양한 구질
+});
 /** 2회차부터 모든 상대의 리턴율·정확도에 회차마다 더하는 값 (스탯이 이월되므로 약간만) */
 export const CYCLE_UPLIFT = 0.04;
 
@@ -56,10 +64,18 @@ export function makeAiParams(league, tier = 'mid', style = 'balanced', cycle = 1
   const mult0 = TIER_MULT[tier];
   if (!mult0) throw new Error(`알 수 없는 등급: ${tier}`);
   const mult = 1 + (mult0 - 1) * (TIER_SPREAD[league] ?? 1);
-  const p = { style, league, tier, variety: LEAGUE_VARIETY[league] ?? 0 };
+  const p = { style, league, tier, variety: tier === 'low' && LOW_TIER_VARIETY[league] != null ? LOW_TIER_VARIETY[league] : LEAGUE_VARIETY[league] ?? 0 };
   if (tier === 'rival') p.rhythm = RIVAL_RHYTHM[league];
   const up = (LEAGUE_UPLIFT[league] ?? 0) * (TIER_UPLIFT_SHARE[tier] ?? 0);
   for (const k of Object.keys(base)) p[k] = clamp(base[k] * mult + (k === 'returnRate' || k === 'accuracy' ? up : 0), 0, 1);
+  if (tier === 'low' && league === 'amateur') p.readProbMult = 0.25; // 아마추어 하위는 내 편중을 거의 못 읽는다: 한 가지 샷으로도 이길 수 있는 첫 연습장
+  const rt = tier === 'rival' ? RIVAL_TRAITS[league] : null;
+  if (rt) { // 1회차 라이벌 개성(구질 성향·코스·위장·템포 가산)
+    if (rt.variety != null) p.variety = rt.variety;
+    if (rt.courseAim != null) p.courseAim = rt.courseAim;
+    if (rt.disguiseS != null) p.disguiseS = rt.disguiseS;
+    if (rt.rhythm) p.rhythm = { ...p.rhythm, ...rt.rhythm };
+  }
   if (cycle >= 2) { // 2회차 이상: 전원 소폭 상향 + 라이벌은 변주 (구질 성향·리듬·위장). 1회차는 이 블록을 지나지 않는다
     const cu = CYCLE_UPLIFT * (cycle - 1);
     p.returnRate = clamp(p.returnRate + cu, 0, 1); p.accuracy = clamp(p.accuracy + cu, 0, 1);
@@ -123,7 +139,7 @@ function buildAiShot(p, rng, side, from, hitY, grade, offset, foeX, powerCap = 1
   // 공정성 하한(설계안 §6.4): 바운드 → 밴드 중심이 MIN_REACTION_S 보다 짧은 공은 만들지 않는다 (파워를 낮춰 다시)
   for (let i = 0; i < (p.cycle >= 2 ? 14 : 6); i++) { // 2회차는 반응창 하한을 끝까지 지킨다. 1회차는 확정된 기존 동작 유지(드물게 0.194s 까지 내려가는 점은 보고서에 기록)
     const f = flightOf(shot);
-    if (f.kind !== 'in' || buildTiming(f, 0).center - f.tLand >= MIN_REACTION_S) break;
+    if (f.kind !== 'in' || buildTiming(f, 0).center - f.tLand >= (p.minReactionS ?? MIN_REACTION_S)) break;
     aim.power = Math.max(0.1, aim.power - 0.08); shot = make();
   }
   return shot;
@@ -176,6 +192,8 @@ export const RIVAL_RHYTHM = {
   first: { tempoVar: 0.16, tempoBase: 0.04 }, // 국가대표 후보: 복합
   world: { tempoVar: 0.2, tempoBase: 0.04 }, // 황제: 고도 변칙(읽기 어렵지만 가능 — 하한 준수)
 };
+// 아마추어 하위 3명은 거의 한 구질(일반)만 친다 — 상성을 몰라도 이길 수 있는 연습장 (게임성 리뷰 #2). 구질을 섞어 치는 건 중위 이상부터
+export const LOW_TIER_VARIETY = { amateur: 0.12 };
 export const LEAGUE_VARIETY = { amateur: 0.35, third: 0.35, second: 0.4, first: 0.55, world: 0.7 };
 const COUNTER_SPIN = { topspin: 0, cut: 1, normal: -1 }; // 내 샷 종류 → AI 가 고를 스핀 (내 탑스핀 ← 일반, 내 일반 ← 커트, 내 커트 ← 탑스핀)
 // cutNoise: 백스핀(커트) 공을 받아칠 때 AI 샷 실수 난수 배율(>1 이면 네트/아웃이 늘어 커트가 득점 루트가 된다). topSigmaMult: 탑스핀 공 탭 오차 배율(<1 이면 받아내기 쉬워져 탑스핀 일변도를 막는다). 1 이면 기존과 동일
@@ -202,6 +220,15 @@ export function predictZone(hist) {
 
 // 필살기(3연속 PERFECT 다음 샷)를 받는 AI 의 탭 오차 배율: 자동 득점이 아니라 "매우 강한 샷" — 리그가 높을수록 낮은 확률로 받아낸다 (scripts/sim-special.mjs 로 확정)
 export const SPECIAL_SIGMA = { amateur: 2.6, third: 2.7, second: 2.8, first: 3.0, world: 3.2 };
+
+// 흐름 읽기 (게임성 리뷰 #3b·#4): 2부 이상의 상위·라이벌급 AI 는 내 PERFECT 가 연달아 나오면(2연속부터) 박자에 적응해 탭 오차가 줄어든다.
+// 숙련자(σ0.10 이하)만 PERFECT 를 연달아 치므로 서툰 플레이어의 난이도는 거의 그대로, 숙련자에게만 천장이 생긴다. 코치·하위 등급·3부 이하는 적용 안 함.
+export const FLOW_READ = { league: { second: 0.05, first: 0.08, world: 0.11 }, tier: { low: 0, mid: 0.5, high: 1, rival: 1.3 }, maxSteps: 3 };
+export function flowReadMult(p, run) {
+  if (!p || p.counter === false || run < 2) return 1;
+  const s = (FLOW_READ.league[p.league] ?? 0) * (FLOW_READ.tier[p.tier] ?? 0);
+  return Math.max(0.4, 1 - s * Math.min(FLOW_READ.maxSteps, run - 1));
+}
 
 export const tapSigma = (p, speed) =>
   (SIGMA_FLOOR + SIGMA_RANGE * (1 - p.returnRate)) * clamp(speed / 220, 0.8, 1.8);

@@ -1,6 +1,7 @@
 // 스토리: 주인공 페르소나, 리그별 라이벌 대사(첫 등장/경기 전/패배 시/승리 시), 리그별 스토리 비트(도입/연패/중반/관계/결승/우승).
 // 출처: ../files/스토리라인.md. DOM 무관 순수 데이터·로직 — 시즌 저장(state.story)에 본 비트·만난 라이벌·라이벌전 패배 수만 기록한다.
-import { LEAGUES, RIVAL_CYCLE } from '../core/index.js?v=1791775159';
+import { LEAGUES, RIVAL_CYCLE } from '../core/index.js?v=1791780382';
+import { rivalRecord } from './roguelike.js?v=1791780382';
 
 export const PROTAGONIST = Object.freeze({
   name: '도민구', nickname: '벽치기', age: 29, job: '물류센터 야간 상하차 알바',
@@ -269,6 +270,14 @@ export function rivalStory(league, cycle = 1) {
   return { ...base, nickname: v.nickname, blurb: v.blurb, style: RIVAL_CYCLE[league]?.style ?? base.style, lines: { ...base.lines, ...v.lines } };
 }
 
+/** 전적이 한쪽으로 3승 이상 벌어지면 라이벌이 한마디 더 한다 */
+export function recordLine(state, r) {
+  const { w, l } = rivalRecord(state);
+  if (l - w >= 3) return `벌써 ${l}번째야. 이쯤 되면 내 공이 몸에 익었겠지?`;
+  if (w - l >= 3) return `...${w}번이나 졌군. 오늘은 내가 처음부터 달린다.`;
+  return '';
+}
+
 /**
  * 라이벌전 직전 컷: 처음 만나면 '첫 등장' 대사 + '경기 전' 대사, 이후엔 '경기 전' 대사만. 만난 걸로 저장한다.
  * 반환 { rival, lines:[{who,text}], first } (라이벌전이 아니면 null)
@@ -281,6 +290,8 @@ export function rivalPreMatch(state, opp) {
   const first = !s.met.includes(mk);
   if (first) s.met.push(mk);
   const lines = [...(first ? [{ who: r.name, text: r.lines.first }] : []), { who: r.name, text: r.lines.pre }];
+  const extra = recordLine(state, r); // 누적 전적(3승 차) 분기 대사 (게임성 리뷰 #9)
+  if (extra) lines.push({ who: r.name, text: extra });
   return { rival: r, lines, first };
 }
 
