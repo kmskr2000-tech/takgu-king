@@ -24,7 +24,7 @@
     if (mountQa(document.getElementById('app'), hash.slice(4))) return;
   }
   const { createApp } = await import(`./ui/app.js${q}`);
-  const app = createApp(document.getElementById('app'));
+  const app = createApp(document.getElementById('app'), { onboarding: true });
   // 직접 링크: #rules(룰 설명) / #settings(설정) — 상태가 필요 없는 화면만. 인트로는 건너뛴다
   if (hash === '#rules') app.showRules();
   else if (hash === '#settings') app.showSettings();

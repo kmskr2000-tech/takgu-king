@@ -66,3 +66,15 @@ export function createFirstGuide({ store, mode = 'simple', enabled = true }) {
     skipAll() { store.addAll(); },
   };
 }
+
+/** 홈 메뉴 설명을 본 적이 있는지 (새로 시작하면 다시 보여 준다). 한 번 열리면 닫아도 본 것으로 친다 */
+export const MENU_GUIDE_KEY = 'tabgu-king-menuguide-v1';
+export function createMenuGuideStore(storage = globalThis.localStorage) {
+  let seen = false;
+  try { seen = JSON.parse(storage?.getItem(MENU_GUIDE_KEY) ?? 'false') === true; } catch { seen = false; }
+  return {
+    get seen() { return seen; },
+    mark() { seen = true; try { storage?.setItem(MENU_GUIDE_KEY, 'true'); } catch { /* 무시 */ } },
+    clear() { seen = false; try { storage?.removeItem(MENU_GUIDE_KEY); } catch { /* 무시 */ } },
+  };
+}

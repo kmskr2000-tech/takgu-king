@@ -139,6 +139,11 @@ canvas.intro-canvas { height: 100%; width: min(100%, 480px); object-fit: cover; 
 .coach-goals { color: #c8d3e0; font-size: .85rem; }
 .coach-feedback { color: #ffd24a; font-weight: 800; min-height: 1.3em; margin-top: 2px; }
 .btn.recommend { border-color: var(--accent); color: var(--accent); }
+.screen.newbie-offer ol, .screen.menu-guide ol { margin: 0; padding-left: 1.3em; line-height: 1.6; text-align: left; }
+.screen.menu-guide dl { margin: 0; text-align: left; }
+.screen.menu-guide dt { font-weight: 700; margin-top: .6em; color: var(--accent, #ffd23f); }
+.screen.menu-guide dd { margin: .1em 0 0; line-height: 1.5; }
+.screen.menu-guide h3 { margin: 1em 0 .3em; }
 .screen.tutorial-done ul { margin: 0; padding-left: 1.2em; line-height: 1.7; }
 
 /* 샷 선택 바 (간단 조작) */
