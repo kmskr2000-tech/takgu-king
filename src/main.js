@@ -23,8 +23,20 @@
     const { mountQa } = await import(`./ui/qa.js${q}`);
     if (mountQa(document.getElementById('app'), hash.slice(4))) return;
   }
+  // 원스토어 H5 SDK: 리스너 → initializeAsync → 로딩 진행률 → startGameAsync(게임 화면 노출). 원스토어 밖이면 init()=false → SDK 없이 그대로 진행
+  let app = null;
+  const { createOneStoreBridge } = await import(`./platform/onestore.js${q}`);
+  const os = createOneStoreBridge({ hooks: {
+    pause: () => app?.platformPause(), resume: () => app?.platformResume(),
+    exit: () => app?.saveNow(), back: () => (app ? app.handleBack() : false),
+  } });
+  await os.init();
+  os.progress(20);
   const { createApp } = await import(`./ui/app.js${q}`);
-  const app = createApp(document.getElementById('app'), { onboarding: true });
+  os.progress(70);
+  app = createApp(document.getElementById('app'), { onboarding: true });
+  os.progress(100);
+  await os.start(); // 이 뒤부터 원스토어 로딩 화면이 걷히고 게임이 보인다
   // 직접 링크: #rules(룰 설명) / #settings(설정) — 상태가 필요 없는 화면만. 인트로는 건너뛴다
   if (hash === '#rules') app.showRules();
   else if (hash === '#settings') app.showSettings();

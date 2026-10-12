@@ -1,54 +1,54 @@
-import { h } from './dom.js?v=1791793229';
+import { h } from './dom.js?v=1791797039';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen, rivalCardScreen, storyBeatScreen, storyIntroScreen,
   multiScreen, netResultScreen, trainingScreen,
-} from './screens.js?v=1791793229';
-import { eventScreen, eventResultScreen, cupScreen, draftScreen, draftPickedScreen } from './careerScreens.js?v=1791793229';
-import { rerollCost, rerollDraft, pendingDraft, pickDraft, buyBonus, addGrowth, setGrowthDir, modsFor, rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791793229';
-import { pendingEvent, resolveEvent } from '../game/events.js?v=1791793229';
-import { revengeOffer, applyRevengeResult } from '../game/season.js?v=1791793229';
-import { cupOffer, activeCup, startCup, skipCup, closeCup, cupMatch, cupParams, cupView, applyCupResult } from '../game/cup.js?v=1791793229';
-import { addMatchToTally } from '../game/review.js?v=1791793229';
-import { createLearnStore } from '../game/learn.js?v=1791793229';
-import { selectSkin, selectTitle, wonLeagues } from '../game/perks.js?v=1791793229';
-import { createNetSession } from '../net/session.js?v=1791793229';
-import { createNetClock } from '../net/clock.js?v=1791793229';
-import { FirebaseRoom } from '../net/fireroom.js?v=1791793229';
+} from './screens.js?v=1791797039';
+import { eventScreen, eventResultScreen, cupScreen, draftScreen, draftPickedScreen } from './careerScreens.js?v=1791797039';
+import { rerollCost, rerollDraft, pendingDraft, pickDraft, buyBonus, addGrowth, setGrowthDir, modsFor, rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791797039';
+import { pendingEvent, resolveEvent } from '../game/events.js?v=1791797039';
+import { revengeOffer, applyRevengeResult } from '../game/season.js?v=1791797039';
+import { cupOffer, activeCup, startCup, skipCup, closeCup, cupMatch, cupParams, cupView, applyCupResult } from '../game/cup.js?v=1791797039';
+import { addMatchToTally } from '../game/review.js?v=1791797039';
+import { createLearnStore } from '../game/learn.js?v=1791797039';
+import { selectSkin, selectTitle, wonLeagues } from '../game/perks.js?v=1791797039';
+import { createNetSession } from '../net/session.js?v=1791797039';
+import { createNetClock } from '../net/clock.js?v=1791797039';
+import { FirebaseRoom } from '../net/fireroom.js?v=1791797039';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791793229';
-import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791793229';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791793229';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791793229';
-import { startTour } from './spotlight.js?v=1791793229';
-import { createGuideStore, createMenuGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791793229';
-import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791793229';
-import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791793229';
-import { applyGameLevel, gameLevelOf, effectiveGameLevel } from '../game/gamelevel.js?v=1791793229';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791793229';
-import { oppProfile } from '../game/oppProfile.js?v=1791793229';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791793229';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791793229';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791793229';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TRAINER_PICK_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791793229';
-import { createAudio } from './audio.js?v=1791793229';
-import { createBgm } from './bgm.js?v=1791793229';
-import { createHaptics, react } from './feedback.js?v=1791793229';
-import { installPressFeedback } from './pressfx.js?v=1791793229';
-import { planLiveRound, createLiveTicker } from '../game/liveRound.js?v=1791793229';
-import { snapshotBefore, buildRecap } from '../game/recap.js?v=1791793229';
-import { createMatchTally, createRecordsStore } from '../game/records.js?v=1791793229';
-import { createTrainingStore, trainingParams, trainingReward, TRAIN_OPPONENT } from '../game/training.js?v=1791793229';
-import { createRenderer } from './render.js?v=1791793229';
-import { createMatchController } from '../game/matchController.js?v=1791793229';
+} from './intro.js?v=1791797039';
+import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791797039';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791797039';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791797039';
+import { startTour } from './spotlight.js?v=1791797039';
+import { createGuideStore, createMenuGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791797039';
+import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791797039';
+import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791797039';
+import { applyGameLevel, gameLevelOf, effectiveGameLevel } from '../game/gamelevel.js?v=1791797039';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791797039';
+import { oppProfile } from '../game/oppProfile.js?v=1791797039';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791797039';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791797039';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791797039';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TRAINER_PICK_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791797039';
+import { createAudio } from './audio.js?v=1791797039';
+import { createBgm } from './bgm.js?v=1791797039';
+import { createHaptics, react } from './feedback.js?v=1791797039';
+import { installPressFeedback } from './pressfx.js?v=1791797039';
+import { planLiveRound, createLiveTicker } from '../game/liveRound.js?v=1791797039';
+import { snapshotBefore, buildRecap } from '../game/recap.js?v=1791797039';
+import { createMatchTally, createRecordsStore } from '../game/records.js?v=1791797039';
+import { createTrainingStore, trainingParams, trainingReward, TRAIN_OPPONENT } from '../game/training.js?v=1791797039';
+import { createRenderer } from './render.js?v=1791797039';
+import { createMatchController } from '../game/matchController.js?v=1791797039';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, ranking, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult, seasonGoals, startCycle,
-} from '../game/season.js?v=1791793229';
-import { createStore } from '../game/store.js?v=1791793229';
-import { createRng, MIN_REACTION_S } from '../core/index.js?v=1791793229';
-import { applyIosTopGap } from './iosTopGap.js?v=1791793229';
+} from '../game/season.js?v=1791797039';
+import { createStore } from '../game/store.js?v=1791797039';
+import { createRng, MIN_REACTION_S } from '../core/index.js?v=1791797039';
+import { applyIosTopGap } from './iosTopGap.js?v=1791797039';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -111,11 +111,13 @@ export function createApp(root, deps = {}) {
   const reducedMotion = deps.reducedMotion ?? (() => !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
   let state = migrate(store.load());
   let loop = null; // 경기 루프 중단 플래그
+  let backFn = null; // 지금 화면의 '뒤로' 동작 (Android 백키용). null 이면 앱 기본(종료 확인)
+  let platformHeld = false; // 플랫폼(원스토어)이 게임을 멈추라고 한 상태
   let resultToken = null;
 
   // 화면 전환 때 스크롤을 맨 위로: 이전 화면(긴 홈 등)에서 내려온 스크롤이 남으면 새 화면의 윗부분(점수판·제목)이 잘려 보인다
   const toTop = () => { try { globalThis.scrollTo?.(0, 0); const d = globalThis.document; if (d?.documentElement) d.documentElement.scrollTop = 0; if (d?.body) d.body.scrollTop = 0; } catch { /* 무시 */ } };
-  const mount = (el) => { while (root.firstChild) root.removeChild(root.firstChild); root.appendChild(el); toTop(); };
+  const mount = (el, back = null) => { while (root.firstChild) root.removeChild(root.firstChild); root.appendChild(el); backFn = back ? () => { back(); return true; } : null; toTop(); };
   const persist = () => store.save(state);
   // 새 게임·데이터 삭제: '첫 경기' 안내(평생 한 번 저장)와 일반 힌트의 본 기록도 처음으로 — 한 번 본 기기에서 새로 시작해도 첫 경기에 안내가 다시 나온다
   const resetGuides = () => { menuGuideStore.clear(); guideStore.clear(); tipsStore.clear(); learn.clear(); };
@@ -123,6 +125,19 @@ export function createApp(root, deps = {}) {
   const api = {
     get state() { return state; },
     get tutorialStore() { return tutorialStore; },
+    // ---- 플랫폼(원스토어 H5 SDK) 연동 지점: main.js 가 SDK 이벤트를 여기에 잇는다 ----
+    /** pause: 게임 루프·BGM·효과음 즉시 정지 */
+    platformPause() { platformHeld = true; bgm.setSuspended(true); audio.setSuspended?.(true); api._hold?.pause(); },
+    /** resume: 재개 (탭이 숨겨진 상태면 BGM 은 계속 멈춤) */
+    platformResume() { platformHeld = false; audio.setSuspended?.(false); bgm.setSuspended(!!globalThis.document?.hidden); api._hold?.resume(); },
+    /** exit: 진행 상황 저장 (동기, 0.5초 안) */
+    saveNow() { try { if (state) persist(); } catch { /* 저장 실패는 종료를 막지 않는다 */ } },
+    /** Android 백키 (동기, 200ms 내 회신): 게임이 처리했으면 true, 아니면 false → 앱의 종료 확인창 */
+    handleBack() {
+      const skip = root.querySelector?.('.tour .tour-skip'); // 가이드 투어가 떠 있으면 먼저 닫는다
+      if (skip) { skip.click(); return true; }
+      return backFn ? backFn() === true : false;
+    },
     get ads() { return ads; },
     get bgm() { return bgm; },
     /** 앱 첫 진입: 인트로(설정이 켜져 있고 '동작 줄이기'가 아니면) → 타이틀 */
@@ -200,7 +215,7 @@ export function createApp(root, deps = {}) {
     /** 룰 설명(그림): 카드의 도트 다이어그램이 시간에 따라 움직인다 */
     showRules() {
       const view = rulesScreen({ onBack: () => { loop = null; api.showTitle(); }, mode: settings.get().controls });
-      mount(view.el);
+      mount(view.el, () => { loop = null; api.showTitle(); });
       const token = {}; loop = token; const t0 = nowFn();
       const tick = () => { if (loop !== token) return; view.draw(nowFn() - t0); raf(tick); };
       tick();
@@ -215,7 +230,7 @@ export function createApp(root, deps = {}) {
           store.clear(); recordsStore.clear(); resetGuides(); state = null; api.showTitle();
         },
         onBack: () => api.showTitle(),
-      }));
+      }), () => api.showTitle());
     },
     /** 홈 가이드 투어: 리그표·다음 상대·스탯·경기 시작·메뉴 버튼을 하이라이트 박스로 하나씩 짧게 소개. 첫 홈에서 한 번 자동, 홈의 ❓ 버튼으로 다시 */
     startHomeTour() {
@@ -298,7 +313,7 @@ export function createApp(root, deps = {}) {
         onInvest: (k) => { if (state.statPoints > 0) { state.stats[k] += 1; state.statPoints -= 1; addGrowth(state, k, 1); persist(); } api.showStats(); }, // 성장 줄기: 투자한 방향이 한 칸 자란다
         onBuy: (id) => { buyBonus(state, id); persist(); api.showStats(); },
         onBack: () => api.showHome(),
-      }));
+      }), () => api.showHome());
     },
     /** 훈련 모드: 시즌 밖 연습 경기 (하루 도전 한도) */
     showTraining() {
@@ -308,13 +323,13 @@ export function createApp(root, deps = {}) {
         onStart: () => api.startMatch({ training: true }),
         onDir: (k) => { setGrowthDir(state, k); persist(); api.showTraining(); },
         onBack: () => api.showHome(),
-      }));
+      }), () => api.showHome());
     },
     showBracket() {
       const br = bracketView(state);
       const top = !br && state.phase === 'regular' ? ranking(state).slice(0, 4) : null; // 토너먼트 전: 현재 순위 기준 예상 대진
       const pv = top?.length === 4 ? { left: Math.max(0, 9 - (state.week - 1)), semis: [[0, 3], [1, 2]].map(([a, b]) => ({ a: top[a].name, b: top[b].name, me: top[a].id === 0 || top[b].id === 0, winner: null, score: null })) } : null;
-      mount(bracketScreen({ bracket: br, preview: pv, onBack: () => api.showHome() }));
+      mount(bracketScreen({ bracket: br, preview: pv, onBack: () => api.showHome() }), () => api.showHome());
     },
     showEquip() {
       mount(equipScreen({
@@ -327,7 +342,7 @@ export function createApp(root, deps = {}) {
         onSkin: (id) => { selectSkin(state, id); persist(); api.showEquip(); },
         onStart: () => api.beforeMatch(),
         onBack: () => api.showHome(),
-      }));
+      }), () => api.showHome());
     },
     /** 경기 시작 직전: 라이벌전이면 라이벌 소개·대사 컷(처음엔 '첫 등장' 대사까지)을 보여 주고 경기 화면으로 */
     beforeMatch() {
@@ -455,6 +470,9 @@ export function createApp(root, deps = {}) {
         },
       });
       mount(view.el); bgm.play('match');
+      backFn = () => { if (!view.guideOpen) later(() => view.quit(), 0); return true; }; // 백키 = 포기/나가기 버튼 (확인창은 회신 뒤에 띄운다: 확인창이 떠 있으면 200ms 회신을 못 한다)
+      api._hold = { pause: () => clock.pause(), resume: () => { if (!view.guideOpen) clock.resume(); } }; // 플랫폼 pause/resume: 안내가 열려 있으면 resume 해도 계속 멈춘다
+      if (platformHeld) clock.pause();
       view.setShotBar(mode === 'simple'); view.setLane(mode === 'simple' ? 'center' : null); view.setRps(mode === 'simple' && !tut);
       const renderer = createRenderer(canvas, { options: () => settings.get() });
       renderer.setControlMode(mode);
@@ -675,7 +693,7 @@ export function createApp(root, deps = {}) {
         }
       }
       if (opts.message) view.setMode('menu', { message: opts.message });
-      mount(view.el);
+      mount(view.el, () => { stopPoll(); dropSession('cancel'); api.showTitle(); });
       startPoll();
     },
     /** 상대 메시지: 경기 컨트롤러가 준비되기 전에 오면 큐에 둔다 */
@@ -694,6 +712,7 @@ export function createApp(root, deps = {}) {
         onQuit: () => { if (!ended && ctl.phase !== 'over' && !confirmFn('나가면 이 경기는 패배로 끝나요. 나갈까요?')) return; exit(true); },
       });
       mount(view.el); bgm.play('match');
+      backFn = () => { later(() => view.quit(), 0); return true; };
       view.setShotBar(true); view.setLane('center'); view.setRps(true);
       const renderer = createRenderer(canvas, { options: () => settings.get() });
       renderer.setControlMode(mode); renderer.setOpponentLook('opp');

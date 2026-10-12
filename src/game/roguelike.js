@@ -3,7 +3,7 @@
 //  - B 시즌 빌드(시즌 한정): 정규 시즌 2·4·6승째 3택1 드래프트. 12종 특성, 시즌이 끝나면 소멸.
 //  - 라이벌 전적 / 성장 줄기(훈련 방향 3단계 → 프로젝트): 양념. 기존 스탯 투자·훈련 모드를 그대로 쓴다.
 //  모든 효과는 state.rogue 한 곳에서 파생된다. 경기·AI 난수 흐름은 건드리지 않는다(드래프트 후보는 시즌·승수로 정해지는 결정적 난수).
-import { ballSpeedClass } from './controls.js?v=1791793229';
+import { ballSpeedClass } from './controls.js?v=1791797039';
 
 export const STAT_KEYS = Object.freeze(['power', 'spin', 'focus']);
 export const DRAFT_AT = Object.freeze([2, 4, 6]); // 정규 시즌 N번째 경기를 마친 뒤 (승패 무관, 2026-10-12 설계 변경: 승수 → 경기 수)

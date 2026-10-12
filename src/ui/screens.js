@@ -1,20 +1,20 @@
-import { h } from './dom.js?v=1791793229';
-import { placeSpotlight } from './spotlight.js?v=1791793229';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791793229';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791793229';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791793229';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791793229';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791793229';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791793229';
+import { h } from './dom.js?v=1791797039';
+import { placeSpotlight } from './spotlight.js?v=1791797039';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791797039';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791797039';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791797039';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791797039';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791797039';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791797039';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791793229';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791793229';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791793229';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791793229';
-import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791793229';
-import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791793229';
-import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791793229';
+} from '../game/season.js?v=1791797039';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791797039';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791797039';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791797039';
+import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791797039';
+import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791797039';
+import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791797039';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -464,6 +464,8 @@ export function matchScreen({ oppName, oppStyle = '', oppTags = null, canvas, on
     },
     hideGuide() { guide.className = 'guide'; guideNext = null; guideSkip = null; },
     get guideOpen() { return guide.className.includes('on'); },
+    /** 포기/나가기 버튼과 같은 동작 (Android 백키 등 외부에서 호출) */
+    quit() { onQuit?.(); },
     setTip(text) { tip.textContent = text; tip.className = text ? 'tip on' : 'tip'; },
     /** 샷 선택 바: 간단 조작에서만 보인다 */
     setShotBar(visible) { bar.className = visible ? 'shotbar on' : 'shotbar'; },
