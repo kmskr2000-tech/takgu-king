@@ -1,62 +1,63 @@
-import { h } from './dom.js?v=1791802746';
+import { h } from './dom.js?v=1791805377';
 import {
   titleScreen, rulesScreen, leagueHomeScreen, statsScreen, bracketScreen, resultScreen, matchScreen,
   equipScreen, seasonIntroScreen, seasonResultScreen, endingScreen, settingsScreen, introScreen, tutorialDoneScreen, rivalCardScreen, storyBeatScreen, storyIntroScreen,
   multiScreen, netResultScreen, trainingScreen,
-} from './screens.js?v=1791802746';
-import { eventScreen, eventResultScreen, cupScreen, draftScreen, draftPickedScreen } from './careerScreens.js?v=1791802746';
-import { rerollCost, rerollDraft, pendingDraft, pickDraft, buyBonus, addGrowth, setGrowthDir, modsFor, rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791802746';
-import { pendingEvent, resolveEvent } from '../game/events.js?v=1791802746';
-import { revengeOffer, applyRevengeResult } from '../game/season.js?v=1791802746';
-import { cupOffer, activeCup, startCup, skipCup, closeCup, cupMatch, cupParams, cupView, applyCupResult } from '../game/cup.js?v=1791802746';
-import { addMatchToTally } from '../game/review.js?v=1791802746';
-import { createLearnStore } from '../game/learn.js?v=1791802746';
-import { selectSkin, selectTitle, wonLeagues } from '../game/perks.js?v=1791802746';
-import { createNetSession } from '../net/session.js?v=1791802746';
-import { createNetClock } from '../net/clock.js?v=1791802746';
-import { FirebaseRoom, anonymousUid } from '../net/fireroom.js?v=1791802746';
-import { resolveIdentity, checkPassword, quickBefore } from '../net/nicks.js?v=1791802746';
+} from './screens.js?v=1791805377';
+import { eventScreen, eventResultScreen, cupScreen, draftScreen, draftPickedScreen } from './careerScreens.js?v=1791805377';
+import { rerollCost, rerollDraft, pendingDraft, pickDraft, buyBonus, addGrowth, setGrowthDir, modsFor, rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791805377';
+import { pendingEvent, resolveEvent } from '../game/events.js?v=1791805377';
+import { revengeOffer, applyRevengeResult } from '../game/season.js?v=1791805377';
+import { cupOffer, activeCup, startCup, skipCup, closeCup, cupMatch, cupParams, cupView, applyCupResult } from '../game/cup.js?v=1791805377';
+import { addMatchToTally } from '../game/review.js?v=1791805377';
+import { createLearnStore } from '../game/learn.js?v=1791805377';
+import { selectSkin, selectTitle, wonLeagues } from '../game/perks.js?v=1791805377';
+import { createNetSession } from '../net/session.js?v=1791805377';
+import { createNetClock } from '../net/clock.js?v=1791805377';
+import { FirebaseRoom, anonymousUid } from '../net/fireroom.js?v=1791805377';
+import { resolveIdentity, checkPassword, quickBefore } from '../net/nicks.js?v=1791805377';
 import {
   drawIntro, captionAt, createIntroController, INTRO_W, INTRO_H,
-} from './intro.js?v=1791802746';
-import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791802746';
-import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791802746';
-import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791802746';
-import { startTour } from './spotlight.js?v=1791802746';
-import { createGuideStore, createMenuGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791802746';
-import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791802746';
-import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791802746';
-import { applyGameLevel, gameLevelOf, effectiveGameLevel } from '../game/gamelevel.js?v=1791802746';
-import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791802746';
-import { oppProfile } from '../game/oppProfile.js?v=1791802746';
-import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791802746';
-import { DIAGRAM_FOR_STEP } from './rules.js?v=1791802746';
-import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791802746';
-import { createTutorial, createTutorialStore, TRAINER_PARAMS, TRAINER_PICK_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791802746';
-import { createAudio } from './audio.js?v=1791802746';
-import { createBgm } from './bgm.js?v=1791802746';
-import { createHaptics, react } from './feedback.js?v=1791802746';
-import { installPressFeedback } from './pressfx.js?v=1791802746';
-import { planLiveRound, createLiveTicker } from '../game/liveRound.js?v=1791802746';
-import { snapshotBefore, buildRecap } from '../game/recap.js?v=1791802746';
-import { createMatchTally, createRecordsStore } from '../game/records.js?v=1791802746';
-import { createTrainingStore, trainingParams, trainingReward, TRAIN_OPPONENT } from '../game/training.js?v=1791802746';
-import { createRenderer } from './render.js?v=1791802746';
-import { createMatchController } from '../game/matchController.js?v=1791802746';
+} from './intro.js?v=1791805377';
+import { drawStoryIntro, captionAt as storyCaptionAt, createStoryIntro, INTRO_W as SI_W, INTRO_H as SI_H } from './storyIntro.js?v=1791805377';
+import { createSettings, SETTING_DEFS } from '../game/settings.js?v=1791805377';
+import { createTipsStore, createTipper, tipsFor } from '../game/tips.js?v=1791805377';
+import { startTour } from './spotlight.js?v=1791805377';
+import { createGuideStore, createMenuGuideStore, createFirstGuide, GUIDE_COVERS } from '../game/firstGuide.js?v=1791805377';
+import { introBeat, pendingBeat, clearBeat, markBeat, rivalPreMatch, rivalPostMatch, beatOf } from '../game/story.js?v=1791805377';
+import { SHOT_TYPES, shotKeyOfSpin, counterOf, HINT_MATCHES } from '../game/controls.js?v=1791805377';
+import { applyGameLevel, gameLevelOf, effectiveGameLevel } from '../game/gamelevel.js?v=1791805377';
+import { describePoint, incomingLabel } from '../game/pointReason.js?v=1791805377';
+import { oppProfile } from '../game/oppProfile.js?v=1791805377';
+import { createGameClock, ballSpeedOf } from '../game/ballspeed.js?v=1791805377';
+import { DIAGRAM_FOR_STEP } from './rules.js?v=1791805377';
+import { createAdManager, providerFromWindow } from '../game/ads.js?v=1791805377';
+import { createTutorial, createTutorialStore, TRAINER_PARAMS, TRAINER_PICK_PARAMS, TUTORIAL_STATS } from '../game/tutorial.js?v=1791805377';
+import { createAudio } from './audio.js?v=1791805377';
+import { createBgm } from './bgm.js?v=1791805377';
+import { createHaptics, react } from './feedback.js?v=1791805377';
+import { installPressFeedback } from './pressfx.js?v=1791805377';
+import { planLiveRound, createLiveTicker } from '../game/liveRound.js?v=1791805377';
+import { snapshotBefore, buildRecap } from '../game/recap.js?v=1791805377';
+import { createMatchTally, createRecordsStore } from '../game/records.js?v=1791805377';
+import { createTrainingStore, trainingParams, trainingReward, TRAIN_OPPONENT } from '../game/training.js?v=1791805377';
+import { createRenderer } from './render.js?v=1791805377';
+import { createMatchController } from '../game/matchController.js?v=1791805377';
 import {
   newGame, nextMatch, aiParamsFor, effectiveStats, equip, bracketView, ranking, migrate, startNextSeason,
   applyRegularResult, applyTournamentResult, seasonGoals, startCycle,
-} from '../game/season.js?v=1791802746';
-import { createStore } from '../game/store.js?v=1791802746';
-import { createRng, MIN_REACTION_S } from '../core/index.js?v=1791802746';
-import { applyIosTopGap } from './iosTopGap.js?v=1791802746';
+} from '../game/season.js?v=1791805377';
+import { createStore } from '../game/store.js?v=1791805377';
+import { createRng, MIN_REACTION_S } from '../core/index.js?v=1791805377';
+import { applyIosTopGap } from './iosTopGap.js?v=1791805377';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
 export const FORFEIT_AFTER = 120;
 /** 멀티플레이: 두 사람이 같은 조건 — 능력치·판정 범위·공 속도를 고정한다 (기록·포인트·시즌과 무관) */
 const NICK_KEY = 'tabgu-king-nick-v1';
-const CLAIMED_KEY = 'tabgu-king-nick-claimed-v1'; // 서버에 선점해 둔 닉네임 (바꿀 때 반납)
+const CLAIMED_KEY = 'tabgu-king-nick-claimed-v1'; // (옛 버전) 서버에 선점해 둔 닉네임 — 있으면 그대로 잠근 닉네임으로 이어받는다
+const LOCK_KEY = 'tabgu-king-nick-locked-v1'; // 멀티 닉네임: 첫 진입에서 한 번 정하면 {nick, uid} 로 잠긴다 (변경 불가)
 const QUICK_POLL_MS = 2500; const QUICK_MAX_STEPS = 24; // 빠른 대전: 약 60초 동안 찾는다
 export const NET_STATS = Object.freeze({ power: 7, spin: 7, focus: 7 });
 export const NET_DIFFICULTY = 'normal';
@@ -645,11 +646,19 @@ export function createApp(root, deps = {}) {
       const dropSession = (reason) => { const s = session; session = null; if (s) s.close(reason); };
       const T = deps.netTimers ?? { setInterval: (f, ms) => setInterval(f, ms), clearInterval: (i) => clearInterval(i), setTimeout: (f, ms) => setTimeout(f, ms) };
       const nickStore = store.storage ?? globalThis.localStorage;
-      const loadNick = () => { try { return nickStore.getItem(NICK_KEY) || ''; } catch { return ''; } };
+      const loadNick = () => { try { return nickStore.getItem(NICK_KEY) || ''; } catch { return ''; } }; // 옛 입력값(닉네임 정하기 칸 미리 채움용)
+      const loadLocked = () => { // 잠긴 닉네임 {nick, uid}. 옛 버전에서 이미 선점해 둔 닉네임이 있으면 그것으로 잠근다
+        try {
+          const j = JSON.parse(nickStore.getItem(LOCK_KEY) || 'null'); if (j && typeof j.nick === 'string' && j.nick) return j;
+          const c = nickStore.getItem(CLAIMED_KEY); if (c) return { nick: c, uid: null };
+        } catch { /* 무시 */ }
+        return null;
+      };
+      let locked = loadLocked();
       let poll = null; let listing = false;
       const stopPoll = () => { if (poll != null) { T.clearInterval(poll); poll = null; } };
       const refreshRooms = async () => { // 로비 목록: 메뉴를 보고 있을 때만 갱신
-        if (listing || session || view.mode !== 'menu') return;
+        if (listing || session || view.mode !== 'friends') return;
         listing = true;
         try { const r = (deps.roomFactory ?? (() => new FirebaseRoom()))(); view.setRooms((await r.listRooms()).filter((x) => !x.quick)); } // 빠른 대전 방은 친구 방 목록에 안 보인다
         catch { view.setRooms(null, true); }
@@ -660,12 +669,15 @@ export function createApp(root, deps = {}) {
       const identity = async () => (ident ??= await (deps.identity ? deps.identity() : resolveIdentity({ signIn: deps.roomFactory ? null : anonymousUid, storage: nickStore })));
       let starting = false; let quickTok = null;
       const view = multiScreen({
-        nick: loadNick(),
-        onHost: (title, nick, pw) => { stopPoll(); go('host', { title, nick, pw }); },
-        onPick: (code, nick, pw) => { stopPoll(); go('guest', { code, nick, pw }); },
-        onQuick: (nick) => { stopPoll(); quick(nick); },
+        nick: locked?.nick ?? '', prefill: loadNick(),
+        onSetNick: (n) => setupNick(n),
+        onHost: (title, pw) => { stopPoll(); go('host', { title, pw }); },
+        onPick: (code, pw) => { stopPoll(); go('guest', { code, pw }); },
+        onQuick: () => { stopPoll(); quick(); },
+        onFriends: () => startPoll(),
+        onHub: () => stopPoll(),
         onRefresh: () => { view.setRooms(null); refreshRooms(); },
-        onCancel: () => { quickTok = null; starting = false; dropSession('cancel'); view.setMode('menu'); startPoll(); },
+        onCancel: () => { quickTok = null; starting = false; dropSession('cancel'); view.setMode('menu'); if (view.mode === 'friends') startPoll(); },
         onBack: () => { quickTok = null; stopPoll(); dropSession('cancel'); api.showTitle(); },
       });
       const startPoll = () => { stopPoll(); view.setRooms(null); refreshRooms(); poll = T.setInterval(refreshRooms, 5000); };
@@ -676,46 +688,43 @@ export function createApp(root, deps = {}) {
           : m === 'firebase-not-configured' ? '멀티플레이 서버 설정이 없어요.'
           : m === 'connect-timeout' ? '연결 시간이 초과됐어요. 다시 시도해 주세요.' : '연결하지 못했어요. 네트워크를 확인하고 다시 시도해 주세요.';
       };
-      const toMenu = (message) => { view.setMode('menu', { message }); startPoll(); };
-      /** 닉네임 선점: 먼저 등록한 사람이 임자. 비워 두면 비어 있는 '선수NN' 을 잡는다. 반환 { nick, uid } | { error } */
-      const claimNick = async (raw) => {
-        let nick = String(raw ?? '').replace(/\s+/g, ' ').trim().slice(0, 12); const auto = !nick;
+      const toMenu = (message) => { view.setMode('menu', { message }); if (view.mode === 'friends') startPoll(); };
+      /** 닉네임 정하기(첫 진입 1회): 먼저 등록한 사람이 임자(대소문자·공백 무시). 성공하면 잠가서 바꿀 수 없다 */
+      async function setupNick(raw) {
+        if (locked || starting) return;
+        const nick = String(raw ?? '').replace(/\s+/g, ' ').trim().slice(0, 12);
+        if (nick.length < 2) { view.setMode('menu', { message: '닉네임은 2자 이상으로 정해 주세요.' }); return; }
+        starting = true; view.setMode('menu', { message: '' });
         let id; try { id = await identity(); } catch { id = { uid: 'unknown' }; }
-        const r = factory();
-        for (let i = 0; i < (auto ? 6 : 1); i++) {
-          if (auto) nick = `선수${Math.floor(10 + Math.random() * 990)}`;
-          if (!r.claimNick) return { nick, uid: id.uid };
-          let st; try { st = await r.claimNick(nick, id.uid); } catch (e) { return { error: errText(e) }; }
-          if (st === 'ok') {
-            const prev = (() => { try { return nickStore.getItem(CLAIMED_KEY) || ''; } catch { return ''; } })();
-            if (prev && prev !== nick) r.releaseNick?.(prev, id.uid); // 닉네임을 바꾸면 예전 것은 반납
-            try { nickStore.setItem(NICK_KEY, nick); nickStore.setItem(CLAIMED_KEY, nick); } catch { /* 무시 */ }
-            return { nick, uid: id.uid };
-          }
-        }
-        return { error: `‘${nick}’ 은(는) 이미 다른 사람이 쓰고 있어요. 다른 닉네임을 써 주세요.` };
-      };
-      /** 방 만들기/입장 진입점: 입력 검사 → 닉네임 선점 → begin */
-      async function go(role, { title = '', code = '', nick = '', pw = '' }) {
-        if (session || starting) return;
+        let st = 'ok';
+        try { const r = factory(); if (r.claimNick) st = await r.claimNick(nick, id.uid); } catch (e) { starting = false; view.setMode('menu', { message: errText(e) }); return; }
+        starting = false;
+        if (st !== 'ok') { view.setMode('menu', { message: `‘${nick}’ 은(는) 이미 다른 사람이 쓰고 있어요. 다른 닉네임을 써 주세요.` }); return; }
+        locked = { nick, uid: id.uid };
+        try { nickStore.setItem(LOCK_KEY, JSON.stringify(locked)); nickStore.setItem(NICK_KEY, nick); } catch { /* 무시 */ }
+        view.lockNick(nick); view.setMode('menu', { message: '' });
+      }
+      /** 잠긴 닉네임과 uid (uid 가 아직 없으면 지금 신원으로) */
+      const whoAmI = async () => { let uid = locked.uid; if (!uid) { try { uid = (await identity()).uid; } catch { uid = 'unknown'; } } return { nick: locked.nick, uid }; };
+      /** 방 만들기/입장 진입점: 입력 검사 → begin */
+      async function go(role, { title = '', code = '', pw = '' }) {
+        if (session || starting || !locked) return;
         const pc = checkPassword(pw);
         if (role === 'host' && !pc.ok) { toMenu(pc.error); return; }
         starting = true; audio.unlock();
         view.setMode(role === 'host' ? 'hosting' : 'joining', { title: String(title).slice(0, 20) || '탁구 한판', locked: !!pc.password });
-        const who = await claimNick(nick);
+        const who = await whoAmI();
         starting = false;
-        if (who.error) { toMenu(who.error); return; }
         await begin(role, { code, title, nick: who.nick, uid: who.uid, password: role === 'host' ? pc.password : String(pw ?? '').trim() });
       }
       /** 빠른 대전(랜덤 매칭): 열려 있는 빠른 대전 방에 무작위로 들어가고, 없으면 내가 방을 열어 기다린다. 동시에 연 두 방은 '먼저 만든 방'이 이긴다 */
-      async function quick(nickRaw) {
-        if (session || starting) return;
+      async function quick() {
+        if (session || starting || !locked) return;
         starting = true; audio.unlock(); view.setMode('matching');
         const tok = quickTok = {};
-        const who = await claimNick(nickRaw);
+        const who = await whoAmI();
         starting = false;
         if (quickTok !== tok) return;
-        if (who.error) { quickTok = null; toMenu(who.error); return; }
         const sched = T.setTimeout ?? ((f, ms) => setTimeout(f, ms));
         let hosted = false; let steps = 0;
         const shuffle = (a) => a.map((x) => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map(([, x]) => x);
@@ -771,8 +780,7 @@ export function createApp(root, deps = {}) {
         }
       }
       if (opts.message) view.setMode('menu', { message: opts.message });
-      mount(view.el, () => { stopPoll(); dropSession('cancel'); api.showTitle(); });
-      startPoll();
+      mount(view.el, () => view.back());
     },
     /** 상대 메시지: 경기 컨트롤러가 준비되기 전에 오면 큐에 둔다 */
     netInbound(msg) { if (api.netController) api.netController.remoteMessage(msg); else (api.netBacklog ??= []).push(msg); },

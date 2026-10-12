@@ -16,8 +16,8 @@
 //       gc: {pushId: candidate}       <- guest ICE candidates
 //       hc: {pushId: candidate}       <- host ICE candidates
 
-import { parseMsg } from './protocol.js?v=1791802746';
-import { cleanNick as cleanNickShared, nickKey, decideClaim, passwordProof } from './nicks.js?v=1791802746';
+import { parseMsg } from './protocol.js?v=1791805377';
+import { cleanNick as cleanNickShared, nickKey, decideClaim, passwordProof } from './nicks.js?v=1791805377';
 
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no confusing 0/O/1/I
 const ROOMS_PATH = 'pkmspl-rooms';
