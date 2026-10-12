@@ -1,12 +1,13 @@
-import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791532253';
-import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791532253';
-import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791532253';
-import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791532253';
-import { packShot, mirrorShot } from '../net/protocol.js?v=1791532253';
+import { DEFAULT_DIFFICULTY, difficultyOf, assistTargetX } from './difficulty.js?v=1791775159';
+import { simpleAim, shotTypeOf, shotKeyOfSpin, matchupOf, MATCHUP_FX, SHOT_ORDER, RHYTHM_SHIFT } from './controls.js?v=1791775159';
+import { courseOf, COURSE_X, COMMIT_WINDOW } from '../core/index.js?v=1791775159';
+import { DISGUISE_S, SPECIAL_AT } from './controls.js?v=1791775159';
+import { packShot, mirrorShot } from '../net/protocol.js?v=1791775159';
+import { normalizeMods, leniencyMul, focusAdd, shotAdjust } from './roguelike.js?v=1791775159';
 import {
   SIDES, STATES, GRADES, MIN_REACTION_S, createMatch, createShot, createSpecialShot, flightOf, buildTiming, judgeTap, judgeNoTap,
   classifyGesture, gestureToAim, aiServe, aiRespond, aiStats, otherSide, courseZone, predictZone, PERFECT_RATIO,
-} from '../core/index.js?v=1791532253';
+} from '../core/index.js?v=1791775159';
 
 /** 난수 배율 래퍼: createShot 의 실수 난수(signed)만 k 배. k=1 이면 기존과 비트 동일 */
 export const scaledRng = (rng, k) => (k === 1 ? rng : { next: rng.next, signed: () => rng.signed() * k });
@@ -23,9 +24,16 @@ export function createMatchController({
   stats, oppParams, rng, firstServer = SIDES.ME, courtWidth = 300, onEvent = () => {}, difficulty = DEFAULT_DIFFICULTY,
   controlMode = 'advanced', // 'simple': 샷 버튼을 누르는 순간이 스윙(c.swing) · 코트 탭은 코스만 / 'advanced': 탭 + 쓸기(확정 창 COMMIT_WINDOW)
   useMatchup = true, // 상성(가위바위보) 적용. 튜토리얼은 끈다
+  mods = null, // 로그라이크 효과(roguelike.js modsFor): 계승 보너스·시즌 특성. null 이면 기존과 비트 동일. 멀티플레이는 항상 null
   remote = null, // 멀티플레이: { send(msg), clock(createNetClock), delay(초, 실시간) } — 상대가 AI 가 아니라 네트워크 너머의 사람
 }) {
   const diff = difficultyOf(difficulty);
+  const M = normalizeMods(remote ? null : mods);
+  // 로그라이크 보정은 지금 점수·랠리 상황으로 그때그때 계산한다 (stats 는 집중만 동적으로 더한다)
+  const rctx = () => ({ score: m.score, rallyShots: m.rally?.shots ?? 0 });
+  const S = () => { const add = M.traits.length ? focusAdd(M, rctx()) : 0; return add ? { ...stats, focus: stats.focus + add } : stats; };
+  const lenMul = () => leniencyMul(M, m.score);
+  const adjust = (type, matchup, grade = null) => shotAdjust(M, { type, matchup, grade, incomingSpeed: c.flight && c.flight.kind === 'in' ? Math.abs(c.flight.vyPost) : null, ballIndex: (m.rally?.shots ?? 0) + 1, score: m.score });
   // 간단 조작: 고른 샷 종류가 내 타이밍 존 폭을 바꾼다 (탑스핀 좁음 / 일반 보통 / 커트 넓음). 고급 조작은 쓸기로 정해지므로 1
   // 상성: 상대가 친 공 종류(스핀) 대비, 내가 "누른" 샷 종류 → 존 폭·오차 배율 (간단 조작만).
   // 샷 종류는 스윙하는 순간(버튼)에 정해지므로 화면의 타이밍 존은 중립 폭(일반 기준)으로만 보이고, 실제 판정 폭은 누른 종류로 그 순간 계산한다
@@ -37,11 +45,11 @@ export function createMatchController({
   const simple = controlMode === 'simple';
   // 상성 실수 배율 (등급별). 상성을 쓰지 않으면(튜토리얼·고급 조작) 기존과 동일한 1
   const noiseFor = (mu, grade) => (useMatchup ? MATCHUP_FX[mu].noise[grade] ?? 1 : 1);
-  const leniencyFor = (type) => diff.leniency * (simple ? shotTypeOf(type).leniency : 1);
+  const leniencyFor = (type) => diff.leniency * lenMul() * (simple ? shotTypeOf(type).leniency : 1);
   const shiftFor = (type) => (simple ? RHYTHM_SHIFT[type] ?? 0 : 0);
   // 멀티 빈틈 공략 (2026-10-08 확정): 상대가 내 캐릭터 반대편 끝으로 치면 내 PERFECT 범위가 줄어든다. 공 속도는 그대로(속도 보너스 제외)
   let gapPerfect = 1;
-  const timingFor = (flight, lenient, shift = 0) => buildTiming(flight, stats.focus, { leniency: lenient, shift, bad: true, perfectRatio: PERFECT_RATIO * gapPerfect });
+  const timingFor = (flight, lenient, shift = 0) => buildTiming(flight, S().focus, { leniency: lenient, shift, bad: true, perfectRatio: PERFECT_RATIO * gapPerfect });
   const bandFor = (flight, type) => timingFor(flight, leniencyFor(type), shiftFor(type));
   // 노탭 만료: 어떤 종류를 눌러도 받아줄 수 있는 가장 늦은 밴드가 끝난 뒤
   const maxEnd = (flight) => Math.max(...SHOT_ORDER.map((k) => bandFor(flight, k).end));
@@ -109,7 +117,7 @@ export function createMatchController({
     gapPerfect = 1; c.gap = false;
     if (receiver === SIDES.ME && remote && res.flight.kind === 'in' && Math.abs((res.flight.land?.x ?? 50) - (c.myX ?? 50)) >= GAP_DIST) { gapPerfect = GAP_PERFECT; c.gap = true; }
     if (receiver === SIDES.ME) {
-      c.timing = timingFor(res.flight, diff.leniency); // 중립(일반) 밴드 — 고급 조작 판정·기본 표시
+      c.timing = timingFor(res.flight, diff.leniency * lenMul()); // 중립(일반) 밴드 — 고급 조작 판정·기본 표시
       c.bands = simple ? Object.fromEntries(SHOT_ORDER.map((k) => [k, bandFor(res.flight, k)])) : null; // 간단 조작: 구질별 리듬 밴드 3개(텔레그래핑 표시용)
       c.timingEnd = simple ? maxEnd(res.flight) : c.timing.end;
       c.pendingDown = null;
@@ -123,11 +131,12 @@ export function createMatchController({
       const zone = courseZone(res.flight.land?.x ?? 50); const predicted = predictZone(c.courseHist);
       const pattern = predicted ? (predicted === zone ? 'hit' : 'broken') : null;
       c.courseHist.push(zone); if (c.courseHist.length > 8) c.courseHist.shift();
-      const plan = aiRespond(oppParams, rng, SIDES.OPP, res.flight, foeX, key, { streak: c.streak, oppX: c.oppX, special: !!res.flight.special, pattern });
+      const plan = aiRespond(oppParams, rng, SIDES.OPP, res.flight, foeX, key, { streak: c.streak, oppX: c.oppX, special: !!res.flight.special, pattern, extraSigma: (opt.serve ? M.serveSigma : 1) * (c.lastMyShot !== 'cut' ? M.strikeSigma : 1) }); // 서브 마술사: 내 서브 뒤 첫 리턴만 어려워짐 / 도박사: 강타를 받는 AI 가 흔들림
       c.aiPlan = plan;
       c.aiAt = now + (plan.judgement.grade === GRADES.MISS ? plan.timing.end : plan.t);
     }
     if (c.gap) emit({ type: 'gap' });
+    if (M.traits.includes('courseread') && shooter === SIDES.OPP) emit({ type: 'courseHint', lane: farLane(c.oppX ?? 50) }); // 코스 읽기: 상대가 서 있는 자리에서 가장 먼 코스
     emit({ type: 'hit', side: shooter, flight: res.flight });
   }
 
@@ -136,6 +145,9 @@ export function createMatchController({
     afterShot(m.serve(shot), now, SIDES.OPP);
     emit({ type: 'serve', side: SIDES.OPP });
   }
+
+  // 코스 읽기: 상대가 마지막으로 친 자리(oppX)에서 가장 먼 코스 = 방향 전환 효과(reachMult)가 가장 큰 코스
+  const farLane = (ox) => Object.entries(COURSE_X).sort((a, b) => Math.abs(b[1] - ox) - Math.abs(a[1] - ox))[0][0];
 
   c.start = (now) => {
     if (m.server === SIDES.ME) c.phase = 'awaitServe';
@@ -166,8 +178,10 @@ export function createMatchController({
     const key = SHOT_ORDER.includes(type) ? type : 'normal';
     if (c.phase === 'awaitServe') {
       const aim = simpleAim(COURSE_X[c.lane], key);
+      const adj = adjust(key, 'even');
+      aim.power = Math.min(1, aim.power * adj.powerMul);
       c.lastMyShot = key; c.lastMatchup = 'even'; c.lastGradeMe = null;
-      const sshot = fair((a) => createShot({ from: { x: 50, side: SIDES.ME }, aim: a, stats, rng }), aim);
+      const sshot = fair((a) => createShot({ from: { x: 50, side: SIDES.ME }, aim: a, stats: S(), rng: scaledRng(rng, adj.noiseMul) }), aim);
       afterShot(m.serve(sshot), now, SIDES.ME, { shot: sshot, serve: true });
       emit({ type: 'serve', side: SIDES.ME, shotType: key });
       return true;
@@ -181,9 +195,11 @@ export function createMatchController({
     if (judge.grade === GRADES.MISS) { missNow(now, judge, 0, 0); return true; } // 구간 밖(너무 이르거나 늦음)은 즉시 실점
     const aim = simpleAim(COURSE_X[c.lane], key);
     if (diff.assistCourse) aim.targetX = assistTargetX(c.flight.pos(0).x, aim.targetX);
+    const adj = adjust(key, mu, judge.grade); // 로그라이크: 시즌 특성·계승 보너스 (없으면 1)
+    aim.power = Math.min(1, aim.power * adj.powerMul);
     c.pendingDown = { now, x: 0, y: 0, judge, last: { x: 0, y: 0 } };
     const shot = makeShot({
-      from: { x: pos.x, side: SIDES.ME }, aim, stats, rng: scaledRng(rng, noiseFor(mu, judge.grade)), grade: judge.grade, offset: judge.offset * shotTypeOf(key).error, hitY: pos.y, // 공격은 오차↑, 수비는 오차↓ / 상성은 실수 난수 배율(불리 ↑, 유리 ↓)
+      from: { x: pos.x, side: SIDES.ME }, aim, stats: S(), rng: scaledRng(rng, noiseFor(mu, judge.grade) * adj.noiseMul), grade: judge.grade, offset: judge.offset * shotTypeOf(key).error, hitY: pos.y, // 공격은 오차↑, 수비는 오차↓ / 상성은 실수 난수 배율(불리 ↑, 유리 ↓)
     });
     respondMe(now, shot, { course: c.lane, spin: aim.spin, power: aim.power, shotType: key, matchup: mu });
     return true;
@@ -225,7 +241,7 @@ export function createMatchController({
     return shot;
   };
   const makeShot = (args) => (c.special && args.grade !== GRADES.MISS
-    ? createSpecialShot({ from: args.from, aim: args.aim, stats, grade: args.grade, offset: args.offset, hitY: args.hitY, accept: remote ? (_s, f) => reactionGap(f) >= MIN_REACTION_S : null })
+    ? createSpecialShot({ from: args.from, aim: args.aim, stats: args.stats ?? stats, grade: args.grade, offset: args.offset, hitY: args.hitY, accept: remote ? (_s, f) => reactionGap(f) >= MIN_REACTION_S : null })
     : fair((aim) => createShot({ ...args, aim, human: true }), args.aim));
   function noteSpecial(shot, grade, matchup) {
     if (shot?.special) { c.special = false; c.perfectStreak = 0; emit({ type: 'special' }); return; }
@@ -261,10 +277,12 @@ export function createMatchController({
     const g = classifyGesture({ down: { x: d.x, y: d.y, t: d.now }, up: { x, y }, courtWidth });
     const aim = gestureToAim(g);
     if (diff.assistCourse && c.phase === 'flight' && c.flight) aim.targetX = assistTargetX(c.flight.pos(0).x, aim.targetX); // 쉬움: 상대 위치 기준 자동 코스
+    const adj = adjust(shotKeyOfSpin(aim.spin), 'even', d.judge?.grade ?? null); // 로그라이크 보정 (고급 조작은 쓸기 방향으로 구질을 판단)
+    aim.power = Math.min(1, aim.power * adj.powerMul);
     if (c.phase === 'awaitServe') {
       c.pendingDown = null;
       const shot = createShot({
-        from: { x: 50, side: SIDES.ME }, aim, stats, rng,
+        from: { x: 50, side: SIDES.ME }, aim, stats: S(), rng: scaledRng(rng, adj.noiseMul),
       });
       afterShot(m.serve(shot), now, SIDES.ME, { shot, serve: true });
       emit({ type: 'serve', side: SIDES.ME });
@@ -273,7 +291,7 @@ export function createMatchController({
     if (c.phase === 'flight' && c.timing && d.judge.grade !== GRADES.MISS) {
       const pos = c.flight.postPos(d.now - c.t0);
       const shot = makeShot({
-        from: { x: pos.x, side: SIDES.ME }, aim, stats, rng,
+        from: { x: pos.x, side: SIDES.ME }, aim, stats: S(), rng: scaledRng(rng, adj.noiseMul),
         grade: d.judge.grade, offset: d.judge.offset, hitY: pos.y,
       });
       respondMe(now, shot, g);

@@ -2,9 +2,9 @@
 // 물리·판정은 코트 좌표(x 0..100, y 0..200, 네트 y=100, 내 쪽이 y 큼)를 그대로 쓰고, 여기서는 화면 투영만 바꾼다.
 import {
   SPRITES, PALETTES, SPRITE_W, SPRITE_H, BALL, BALL_PALETTE, drawSprite, palettesFor,
-} from './sprites.js?v=1791532253';
-import { createEffects } from './effects.js?v=1791532253';
-import { createRng } from '../core/rng.js?v=1791532253';
+} from './sprites.js?v=1791775159';
+import { createEffects } from './effects.js?v=1791775159';
+import { createRng } from '../core/rng.js?v=1791775159';
 
 export const VIEW_W = 160;
 export const VIEW_H = 320;
@@ -66,7 +66,7 @@ export function swingFrame(sinceHit) {
 /** 깊이에 따른 정수 도트 배율 (선수/공 스프라이트) */
 export const spriteScale = (k, mult = 2) => Math.max(1, Math.round(k * mult));
 
-import { tailRects, stripeRects, bounceRects, spinKind, BOUNCE_FX_S } from './ballfx.js?v=1791532253';
+import { tailRects, stripeRects, bounceRects, spinKind, BOUNCE_FX_S } from './ballfx.js?v=1791775159';
 
 export function createRenderer(canvas, { rng, options } = {}) {
   // 설정(이펙트/흔들림/가이드)은 프레임마다 읽는다 → 토글 즉시 반영
@@ -359,6 +359,16 @@ export function createRenderer(canvas, { rng, options } = {}) {
   }
 
   // 간단 조작: 코스 마커 — 상대 쪽 코트에서 내 샷이 갈 3분의 1 구역을 은은하게 표시
+  function drawHintLane(now) {
+    if (st.controlMode !== 'simple' || !st.hintLane) return;
+    const r0 = Math.round(groundY(10)); const r1 = Math.round(groundY(96));
+    const a = (0.12 + 0.08 * Math.sin(now * 6)).toFixed(2);
+    for (let row = r0; row <= r1; row++) {
+      const hw = halfWidthAtRow(row); const third = (hw * 2) / 3;
+      const x0 = st.hintLane === 'left' ? CAM.CX - hw : st.hintLane === 'right' ? CAM.CX + hw - third : CAM.CX - third / 2;
+      ctx.fillStyle = `rgba(90,220,255,${a})`; ctx.fillRect(Math.round(x0), row, Math.round(third), 1);
+    }
+  }
   function drawLane(now) {
     if (st.controlMode !== 'simple' || !st.lane) return;
     const r0 = Math.round(groundY(10)); const r1 = Math.round(groundY(96));
@@ -422,6 +432,8 @@ export function createRenderer(canvas, { rng, options } = {}) {
     setControlMode(m) { st.controlMode = m; },
     /** 코스 마커: 'left' | 'center' | 'right' */
     setLane(lane) { st.lane = lane; },
+    /** 코스 읽기 특성: 상대가 닿기 어려운 코스를 하늘색으로 은은하게 표시 (null 이면 끔) */
+    setHintLane(lane) { st.hintLane = lane ?? null; },
     /** 내 선수 스킨(우승 특전). 없거나 모르는 값이면 기본 */
     setSkin(skin) { st.skin = skin; },
     setOpponentLook(look) { st.look = look === 'rival' ? 'rival' : 'opp'; },
@@ -499,6 +511,7 @@ export function createRenderer(canvas, { rng, options } = {}) {
       drawServeCue(ctl, now);
       if (opt().effects) drawSpecialGauge(ctl, now);
       drawCoachHint(now);
+      drawHintLane(now);
       drawLane(now);
       const sp = !!ctl.flight?.special && ctl.flight.dir < 0 && opt().effects;
       if (sp) { ctx.fillStyle = 'rgba(24,0,48,0.38)'; ctx.fillRect(0, 0, VIEW_W, VIEW_H); } // 필살기 비행 중엔 화면이 어두워지고 공만 빛난다

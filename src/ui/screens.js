@@ -1,19 +1,19 @@
-import { h } from './dom.js?v=1791532253';
-import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791532253';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791532253';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791532253';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791532253';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791532253';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791532253';
+import { h } from './dom.js?v=1791775159';
+import { ICON_PADDLE, ICON_PALETTE, drawSprite } from './sprites.js?v=1791775159';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791775159';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791775159';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791775159';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791775159';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791775159';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791532253';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791532253';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791532253';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791532253';
-import { reviewPanel } from './careerScreens.js?v=1791532253';
-import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791532253';
-import { RELEGATION_RANK, RELEGATION_STRIKES } from '../game/season.js?v=1791532253';
+} from '../game/season.js?v=1791775159';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791775159';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791775159';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791775159';
+import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791775159';
+import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791775159';
+import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791775159';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -134,7 +134,7 @@ export function rulesScreen({ onBack, mode = 'simple' }) {
   };
 }
 
-export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, onSeasonEnd, onTrain = null, onCup = null, cupLabel = '월간 컵', onEvent = null, eventLabel = '' }) {
+export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, onSeasonEnd, onTrain = null, onCup = null, cupLabel = '월간 컵', onEvent = null, eventLabel = '', onDraft = null }) {
   const table = standings(state);
   const nm = nextMatch(state);
   const rival = nm?.opp?.rival ? rivalFor(state) : null;
@@ -143,19 +143,22 @@ export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, o
   let nextLine;
   if (state.phase === 'seasonEnd') nextLine = '시즌이 끝났습니다.';
   else if (!nm) nextLine = '토너먼트 탈락 — 결과를 기다리는 중';
-  else nextLine = [h('strong', {}, state.phase === 'tournament' ? '토너먼트 상대: ' : '다음 경기: '), nm.opp.name, rival ? ` (${rival.nickname}) — “${rival.line}”` : ''];
+  else nextLine = [h('strong', {}, state.phase === 'tournament' ? '토너먼트 상대: ' : '다음 경기: '), nm.opp.name, rival ? ` (${rival.nickname}) — “${rival.line}”` : '', rival ? h('small', { class: 'rival-record' }, ` · ${rivalRecordText(state)}`) : ''];
   return h('section', { class: 'screen home' },
     titleName(state) && h('p', { class: 'title-badge' }, `「${titleName(state)}」`),
     h('header', {}, h('h2', {}, `${LEAGUE_NAMES[state.league]} ${state.season}시즌${(state.cycle ?? 1) >= 2 ? ` · ${state.cycle}회차` : ''}`), h('span', { class: 'week' }, header)),
     h('table', { class: 'standings' },
       h('thead', {}, h('tr', {}, ['순위', '선수', '승점', '승', '패'].map((t) => h('th', {}, t)))),
-      h('tbody', {}, table.map((t) => h('tr', { class: [t.me ? 'me' : '', state.league !== 'amateur' && t.rank >= RELEGATION_RANK ? 'drop' : '', t.rank <= 4 ? 'top' : ''].filter(Boolean).join(' ') },
+      h('tbody', {}, table.map((t) => h('tr', { class: [t.me ? 'me' : '', t.rank <= 4 ? 'top' : ''].filter(Boolean).join(' ') },
         h('td', {}, t.rank), h('td', {}, t.name), h('td', {}, t.points), h('td', {}, t.wins), h('td', {}, t.losses))))),
     h('div', { class: 'next' }, nextLine),
+    state.phase === 'regular' && buildStrip(state),
     h('div', { class: 'mystats' },
       Object.entries(STAT_INFO).map(([k, v]) => h('span', { class: 'chip' },
         `${v.label} ${state.stats[k]}${fmt(eff[k]) !== String(state.stats[k]) ? ` (${fmt(eff[k])})` : ''}`)),
-      h('span', { class: 'chip pts' }, `포인트 ${state.statPoints}`)),
+      h('span', { class: 'chip pts' }, `포인트 ${state.statPoints}`),
+      ensureRogue(state).points > 0 && h('span', { class: 'chip legacy-chip' }, `계승 ${ensureRogue(state).points}pt`)),
+    onDraft && btn('🃏 특성 드래프트 (고르기)', onDraft, 'primary draft-alert'),
     onEvent && btn(eventLabel, onEvent, 'primary event-alert'),
     state.phase === 'seasonEnd' && btn('시즌 결과 보기', onSeasonEnd, 'primary'),
     nm && btn(state.phase === 'tournament' ? '토너먼트 경기 시작' : '경기 시작', onPlay, 'primary'),
@@ -219,13 +222,13 @@ export function equipScreen({ state, onChange, onStart, onBack, onTitle = null, 
     btn('돌아가기', onBack));
 }
 
-export function seasonResultScreen({ summary, onNext, story = null, onTrain = null, trainLeft = 0, onCycle = null }) {
+export function seasonResultScreen({ summary, onNext, story = null, onTrain = null, trainLeft = 0, onCycle = null, state = null, onBuy = null }) {
   const unlockedNames = [
     ...summary.unlocked.grips.map((g) => GRIPS[g].name),
     ...summary.unlocked.rackets.map((r) => RACKETS[r].name),
   ];
   return h('section', { class: 'screen season-result' },
-    h('h2', {}, summary.champion ? '리그 챔피언!' : summary.relegated ? '시즌 종료 — 강등' : '시즌 종료'),
+    h('h2', {}, summary.champion ? '리그 챔피언!' : '시즌 종료'),
     h('p', {}, `${LEAGUE_NAMES[summary.league]} 정규 ${summary.rank}위`),
     h('p', {}, `우승자: ${summary.championName}`),
     summary.perks && h('div', { class: 'perks-got', role: 'group', 'aria-label': '우승 특전' },
@@ -234,11 +237,10 @@ export function seasonResultScreen({ summary, onNext, story = null, onTrain = nu
     summary.goals && h('ul', { class: 'season-goals-result', 'aria-label': '시즌 목표 결과' }, ...summary.goals.map((g) => h('li', { class: g.met ? 'met' : 'unmet' }, `${g.met ? '✔' : '✘'} ${g.label}`))),
     summary.review && reviewPanel(summary.review, { season: summary.season }),
     summary.promoted && h('p', { class: 'win' }, `${LEAGUE_NAMES[summary.nextLeague]}로 승격!`),
-    summary.relegated && h('p', { class: 'lose relegated' }, `${LEAGUE_NAMES[summary.nextLeague]}로 강등… 거기서 다시 올라와요!`),
-    summary.relegationRisk && h('p', { class: 'lose relegation-risk' }, `하위권(${RELEGATION_RANK}위 이하) 위험! ${RELEGATION_STRIKES}시즌 연속 목표에 못 닿고 하위권이면 한 단계 강등돼요.`),
     story && h('div', { class: 'story-beat' }, h('b', {}, story.title), ...story.text.split('\n').map((t) => h('p', {}, t))),
-    !summary.champion && !summary.relegated && h('p', { class: 'quote' }, `“${CATCHPHRASE}” — ${PROTAGONIST.name}. 같은 리그에서 다음 시즌!`),
-    !summary.champion && !summary.relegated && h('p', { class: 'retry-note' }, `목표에 닿지 못했어요 — ${LEAGUE_NAMES[summary.league]} ${(summary.retryCount ?? 1) + 1}번째 도전. 훈련 모드로 감각을 다듬고 다시 가요!`),
+    !summary.champion && h('p', { class: 'quote' }, `“${CATCHPHRASE}” — ${PROTAGONIST.name}. 같은 리그에서 다음 시즌!`),
+    summary.legacy && state && onBuy && legacyPanel({ legacy: summary.legacy, state, onBuy }),
+    !summary.champion && h('p', { class: 'retry-note' }, `목표에 닿지 못했어요 — ${LEAGUE_NAMES[summary.league]} ${(summary.retryCount ?? 1) + 1}번째 도전. 훈련 모드로 감각을 다듬고 다시 가요!`),
     !summary.champion && onTrain && btn(`훈련하러 가기 (오늘 남은 ${trainLeft}회)`, onTrain),
     unlockedNames.length > 0 && h('p', {}, `해금: ${unlockedNames.join(', ')}`),
     btn(summary.ending ? '엔딩 보기' : summary.cycleOffer && onCycle ? '세계대회 계속 (다음 시즌)' : '다음 시즌', onNext, 'primary'),
@@ -246,7 +248,7 @@ export function seasonResultScreen({ summary, onNext, story = null, onTrain = nu
 }
 
 /** 훈련 모드 화면: 오늘 남은 도전 횟수와 규칙 */
-export function trainingScreen({ state, status, onStart, onBack }) {
+export function trainingScreen({ state, status, onStart, onBack, onDir = null }) {
   const dots = Array.from({ length: status.limit }, (_, i) => h('span', { class: `dot${i < status.left ? ' on' : ''}`, 'aria-hidden': 'true' }, i < status.left ? '●' : '○'));
   return h('section', { class: 'screen training' },
     h('h2', {}, '훈련 모드'),
@@ -255,7 +257,9 @@ export function trainingScreen({ state, status, onStart, onBack }) {
     h('ul', { class: 'train-rules' },
       h('li', {}, '순위·시즌 일정·개인 기록에는 반영되지 않아요'),
       h('li', {}, `이기면 포인트 +${TRAIN_WIN_POINTS} (하루 ${status.limit}회까지)`),
-      h('li', {}, '시작하면 도전 1회가 사용돼요. 중간에 나가도 돌려주지 않아요')),
+      h('li', {}, '시작하면 도전 1회가 사용돼요. 중간에 나가도 돌려주지 않아요'),
+      h('li', {}, '이기면 고른 훈련 방향의 성장 줄기가 한 칸 자라요 (2칸 = 1단계, 3단계 = 프로젝트 해금)')),
+    onDir && growthPanel(state, { onDir }),
     status.left > 0 ? btn('훈련 시작', onStart, 'primary') : h('p', { class: 'quote' }, '오늘 도전을 모두 썼어요. 내일 다시 올 수 있어요!'),
     btn('돌아가기', onBack, status.left > 0 ? '' : 'primary'));
 }
@@ -272,6 +276,7 @@ export function endingScreen({ onNext, story = null, onCycle = null }) {
 }
 
 export function statsScreen({ state, onInvest, onBack }) {
+  const growth = growthPanel(state);
   return h('section', { class: 'screen stats' },
     h('h2', {}, '스탯 투자'),
     h('p', { class: 'pts' }, `보유 포인트: ${state.statPoints}`),
@@ -279,6 +284,7 @@ export function statsScreen({ state, onInvest, onBack }) {
       h('div', {}, h('strong', {}, `${v.label} ${state.stats[k]}`), h('small', {}, v.desc),
         h('small', { class: 'eff' }, `적용 ${fmt(statCurve(state.stats[k]))} · +1 효율 ${Math.round(statEfficiency(state.stats[k]) * 100)}%`)),
       h('button', { class: 'btn', type: 'button', disabled: state.statPoints < 1 ? true : null, onclick: () => onInvest(k) }, '+1'))),
+    growth,
     btn('돌아가기', onBack, 'primary'));
 }
 
@@ -525,13 +531,14 @@ function storyBubbles(lines) {
 }
 
 /** 라이벌전 직전 컷: 라이벌 소개(이름·별명·나이·한 줄 설명) + 대사. 시작 버튼으로 경기 화면으로 */
-export function rivalCardScreen({ rival, lines, first, onStart }) {
+export function rivalCardScreen({ rival, lines, first, onStart, record = '' }) {
   return h('section', { class: 'screen rival-card' },
     h('small', { class: 'rc-tag' }, first ? '라이벌 첫 등장' : '라이벌전'),
     h('h2', {}, rival.name),
     h('p', { class: 'rc-nick' }, `“${rival.nickname}” · ${rival.age}세`),
     h('p', { class: 'rc-role' }, rival.role),
     h('p', { class: 'rc-blurb' }, rival.blurb),
+    record && h('p', { class: 'rc-record' }, record),
     storyBubbles(lines),
     btn('경기 시작', onStart, 'primary'));
 }

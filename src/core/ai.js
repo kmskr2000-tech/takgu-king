@@ -1,7 +1,7 @@
-import { GRADES, COURSE_X, AI_PERFECT_RATIO, AI_BAD_FRACTION } from './constants.js?v=1791532253';
-import { buildTiming, judgeTap } from './timing.js?v=1791532253';
-import { MIN_REACTION_S } from './constants.js?v=1791532253';
-import { createShot, flightOf, powerCap } from './shot.js?v=1791532253';
+import { GRADES, COURSE_X, AI_PERFECT_RATIO, AI_BAD_FRACTION } from './constants.js?v=1791775159';
+import { buildTiming, judgeTap } from './timing.js?v=1791775159';
+import { MIN_REACTION_S } from './constants.js?v=1791775159';
+import { createShot, flightOf, powerCap } from './shot.js?v=1791775159';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -217,7 +217,7 @@ function gauss(rng) {
  * 탭 시각 = 중심 + N(0, σ), 실제 judgeTap 으로 PERFECT/GOOD/MISS 판정.
  * 반환: { judgement: {grade, offset}, shot|null, t(탭 시각, 공 발사 기준 초), timing }
  */
-export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { read = true, streak = null, capPower = streak != null, oppX = null, special = false, pattern = null } = {}) {
+export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { read = true, streak = null, capPower = streak != null, oppX = null, special = false, pattern = null, extraSigma = 1 } = {}) {
   const timing = buildTiming(flight, aiStats(p).focus * 0.5, { bad: true, perfectRatio: AI_PERFECT_RATIO, badFraction: AI_BAD_FRACTION }); // AI 는 판정 폭 보정을 절반만 받는다 (AI 도 같은 4단계 등급)
   const inSpin = flight.spin ?? 0;
   const cutIn = inSpin < -AI_TEMPO.spinThreshold; const topIn = inSpin > AI_TEMPO.spinThreshold;
@@ -229,7 +229,7 @@ export function aiRespond(p, rng, side, flight, foeX = 50, matchup = 'even', { r
   const patRead = pattern && p.counter !== false && rng.next() < Math.min(0.95, (AI_READ[p.league] ?? 0) * (TIER_MULT[p.tier] ?? 1));
   const patMult = patRead ? (pattern === 'hit' ? AI_PATTERN.hit : AI_PATTERN.broken) : 1;
   const patDelay = patRead && pattern === 'broken' ? timing.halfTime * AI_PATTERN.delay : 0;
-  const t = patDelay + timing.center + gauss(rng) * tapSigma(p, Math.abs(flight.vyPost)) * (cutIn ? AI_TEMPO.cutSigmaMult : topIn ? AI_TEMPO.topSigmaMult : 1) * (AI_MATCHUP_SIGMA[matchup] ?? 1) * anticipate * patMult * (p.reactMult ?? 1) * (special ? SPECIAL_SIGMA[p.league] ?? 2 : 1) * (p.counter === false ? 1 : reachMult(flight.land?.x ?? oppX, oppX));
+  const t = patDelay + timing.center + gauss(rng) * tapSigma(p, Math.abs(flight.vyPost)) * (cutIn ? AI_TEMPO.cutSigmaMult : topIn ? AI_TEMPO.topSigmaMult : 1) * (AI_MATCHUP_SIGMA[matchup] ?? 1) * anticipate * patMult * (p.reactMult ?? 1) * extraSigma * (special ? SPECIAL_SIGMA[p.league] ?? 2 : 1) * (p.counter === false ? 1 : reachMult(flight.land?.x ?? oppX, oppX));
   const judgement = judgeTap(t, timing);
   if (judgement.grade === GRADES.MISS) return { judgement, shot: null, t, timing };
   const pos = flight.postPos(t);

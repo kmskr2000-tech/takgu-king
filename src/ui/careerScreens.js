@@ -1,7 +1,8 @@
 // 커리어 화면: 랜덤 이벤트, 월간 컵 대진표, 시즌 결산 레이더. 목업(files/media-generation-takgu-*.webp) 구성을 따른다.
-import { h, svg } from './dom.js?v=1791532253';
-import { radarGeometry } from '../game/review.js?v=1791532253';
-import { safeReward, FAIL_LOSS } from '../game/events.js?v=1791532253';
+import { h, svg } from './dom.js?v=1791775159';
+import { radarGeometry } from '../game/review.js?v=1791775159';
+import { safeReward, FAIL_LOSS } from '../game/events.js?v=1791775159';
+import { TRAIT_STYLES, LEGACY_BONUSES, BUILD_MAX, traitOf, DRAFT_AT, GROWTH_STAGES, GROWTH_PROJECTS, STAT_KEYS, growthStage, draftGauge, ensureRogue } from '../game/roguelike.js?v=1791775159';
 
 const btn = (text, onclick, cls = '') => h('button', { class: `btn ${cls}`.trim(), onclick, type: 'button' }, text);
 const pct = (p) => `${Math.round(p * 100)}%`;
@@ -28,7 +29,7 @@ export function eventResultScreen({ event, result, onNext }) {
   const head = !risky ? '확정 효과!' : result.success ? '대성공!' : '아쉽게 실패…';
   const text = result.delta >= 0 ? `포인트 +${result.delta}` : `포인트 ${result.delta}`;
   return h('section', { class: `screen event-result ${risky ? (result.success ? 'win' : 'lose') : 'safe'}`, 'aria-label': '이벤트 결과' },
-    h('h2', {}, event.title), h('p', { class: 'event-head' }, head), h('p', { class: 'pts' }, `${text} (보유 ${result.points}pt)`), btn('계속', onNext, 'primary'));
+    h('h2', {}, event.title), h('p', { class: 'event-head' }, head), h('p', { class: 'pts' }, `${text} (보유 ${result.points}pt)`), result.draft && h('p', { class: 'win' }, '🃏 시즌 특성 드래프트 획득! 다음 화면에서 한 장 골라요'), btn('계속', onNext, 'primary'));
 }
 
 /** 6각 레이더 SVG. values: [{label,value}], prev: 지난 시즌 값(없으면 null) */
@@ -71,4 +72,78 @@ export function cupScreen({ view, offer, next, onStart, onJoin, onSkip, onClose,
     view && !view.done && next && btn('경기 시작', onStart, 'primary'),
     view && view.done && btn('확인', onClose, 'primary'),
     btn('돌아가기', onBack));
+}
+
+// ---- 로그라이크 (roguelike.js, 설계서 files/탁구왕-로그라이크-설계안-정리본.md) ----
+
+const STAT_LABEL = { power: '파워', spin: '스핀', focus: '집중' };
+
+/** 특성 3택1 카드. source: 'wins'(리그 승리) | 'event' */
+export function draftScreen({ draft, build, onPick }) {
+  const cards = draft.options.map((id) => {
+    const t = traitOf(id);
+    return h('button', { class: `draft-card ${t.style}`, type: 'button', 'data-trait': t.id, onclick: () => onPick(t.id) },
+      h('span', { class: 'dc-icon', 'aria-hidden': 'true' }, t.icon), h('small', {}, TRAIT_STYLES[t.style]), h('b', {}, t.name), h('span', { class: 'dc-desc' }, t.desc));
+  });
+  const full = build.length >= BUILD_MAX;
+  return h('section', { class: 'screen draft', 'aria-label': '특성 드래프트' },
+    h('p', { class: 'event-crumb' }, draft.source === 'event' ? '이벤트 보상' : `리그 ${draft.wins}승 달성`),
+    h('h2', {}, '특성 드래프트'),
+    h('p', {}, '이번 시즌 동안만 쓰는 특성이에요. 한 장 고르면 다음 경기부터 적용!'),
+    h('div', { class: 'draft-cards' }, ...cards),
+    full && h('p', { class: 'draft-note' }, `빌드가 가득 찼어요 — 새로 고르면 가장 오래된 특성「${traitOf(build[0]).name}」이 빠져요.`),
+    build.length > 0 && h('p', { class: 'draft-build' }, `현재 빌드: ${build.map((id) => `${traitOf(id).icon} ${traitOf(id).name}`).join(' · ')}`));
+}
+
+/** 특성 고른 뒤 확인 */
+export function draftPickedScreen({ picked, dropped, onNext }) {
+  const t = traitOf(picked);
+  return h('section', { class: 'screen draft-picked' },
+    h('h2', {}, `${t.icon} ${t.name}`), h('p', {}, t.desc), dropped && h('p', { class: 'draft-note' }, `「${traitOf(dropped).name}」은 빠졌어요.`),
+    h('p', { class: 'quote' }, '“지면 다시.” 이번 시즌은 이 빌드로 간다!'), btn('계속', onNext, 'primary'));
+}
+
+/** 리그 화면 빌드 줄: 현재 특성 아이콘(최대 3칸) + 다음 드래프트까지 게이지 */
+export function buildStrip(state) {
+  const r = ensureRogue(state); const g = draftGauge(state);
+  const slots = Array.from({ length: BUILD_MAX }, (_, i) => {
+    const t = traitOf(r.build[i]);
+    return h('span', { class: `build-slot${t ? ' on' : ''}`, title: t ? `${t.name}: ${t.desc}` : '빈 칸', 'data-trait': t?.id ?? '' }, t ? t.icon : '·');
+  });
+  const gauge = g.next == null ? '이번 시즌 드래프트 완료' : g.need === 1 ? '1승 더 하면 드래프트!' : `${g.need}승 더 하면 드래프트`;
+  return h('div', { class: 'build-strip', 'aria-label': '시즌 빌드' },
+    h('span', { class: 'build-slots' }, ...slots),
+    h('span', { class: 'build-gauge' },
+      h('small', {}, `승리 ${g.wins} · ${gauge}`),
+      h('i', { class: 'gauge-bar', 'aria-hidden': 'true' }, ...DRAFT_AT.map((n) => h('b', { class: g.wins >= n || r.draftedAt.includes(n) ? 'on' : '' }, String(n))))));
+}
+
+/** 시즌 결산: 계승 포인트 + 사라지는 빌드 + 투자 상점 (A/B 연결) */
+export function legacyPanel({ legacy, state, onBuy }) {
+  const r = ensureRogue(state);
+  const items = LEGACY_BONUSES.map((b) => {
+    const n = r.owned[b.id] ?? 0; const can = r.points >= b.cost;
+    return h('button', { class: `legacy-item${can ? ' can' : ''}`, type: 'button', 'data-bonus': b.id, disabled: can ? null : true, onclick: () => onBuy(b.id) },
+      h('b', {}, `${b.name}${n ? ` ×${n}` : ''}`), h('span', {}, b.desc), h('em', {}, `${b.cost}pt`));
+  });
+  return h('div', { class: 'legacy', role: 'group', 'aria-label': '계승 보너스' },
+    legacy && h('p', { class: 'legacy-got' }, `계승 포인트 +${legacy.gained}pt 획득${legacy.gained === 1 ? ' — 탈락해도 성장은 남아요' : ''}`),
+    legacy && legacy.lostBuild.length > 0 && h('p', { class: 'legacy-lost' }, `시즌 빌드 소멸: ${legacy.lostBuild.map((id) => `${traitOf(id).icon} ${traitOf(id).name}`).join(' · ')}`),
+    h('h3', {}, '계승 보너스 (영구)'),
+    h('p', { class: 'legacy-pts' }, `보유 ${r.points}pt`),
+    h('div', { class: 'legacy-list' }, ...items));
+}
+
+/** 성장 줄기: 방향별 3단계 + 프로젝트 해금 */
+export function growthPanel(state, { onDir = null } = {}) {
+  const r = ensureRogue(state);
+  const rows = STAT_KEYS.map((k) => {
+    const st = growthStage(state, k); const p = GROWTH_PROJECTS[k]; const done = st >= GROWTH_STAGES;
+    const pips = Array.from({ length: GROWTH_STAGES }, (_, i) => h('i', { class: i < st ? 'on' : '' }, i < st ? '▰' : '▱'));
+    return h('div', { class: `growth-row${done ? ' done' : ''}${onDir && r.growthDir === k ? ' sel' : ''}`, 'data-dir': k },
+      onDir ? h('button', { class: `btn growth-pick${r.growthDir === k ? ' primary' : ''}`, type: 'button', onclick: () => onDir(k) }, STAT_LABEL[k]) : h('b', {}, STAT_LABEL[k]),
+      h('span', { class: 'pips' }, ...pips, ` ${st}/${GROWTH_STAGES}`),
+      h('small', {}, done ? `「${p.name}」 해금 — ${p.desc}` : `3/3 → 「${p.name}」`));
+  });
+  return h('div', { class: 'growth', role: 'group', 'aria-label': '성장 줄기' }, h('h3', {}, '성장 줄기'), ...rows);
 }

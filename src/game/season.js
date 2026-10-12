@@ -1,16 +1,15 @@
-import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick, RIVAL_CYCLE } from '../core/index.js?v=1791532253';
-import { RIVAL_STORY, ensureStory, rivalStory } from './story.js?v=1791532253';
-import { statCurve } from './statcurve.js?v=1791532253';
-import { ensureTally, emptyTally, buildReview } from './review.js?v=1791532253';
-import { ensureEvents } from './events.js?v=1791532253';
-import { ensurePerks, grantPerks, registerUnlocks, CHAMPION_PERKS } from './perks.js?v=1791532253';
+import { LEAGUES, TIER_LAYOUT, makeAiParams, simulateQuick, RIVAL_CYCLE } from '../core/index.js?v=1791775159';
+import { RIVAL_STORY, ensureStory, rivalStory } from './story.js?v=1791775159';
+import { statCurve } from './statcurve.js?v=1791775159';
+import { ensureTally, emptyTally, buildReview } from './review.js?v=1791775159';
+import { ensureEvents } from './events.js?v=1791775159';
+import { ensurePerks, grantPerks, registerUnlocks, CHAMPION_PERKS } from './perks.js?v=1791775159';
+import { ensureRogue, emptyRogue, statBonus, awardBonusPoints, checkDraft, recordRival, settleSeason, resetSeasonBuild } from './roguelike.js?v=1791775159';
 
 export const SAVE_VERSION = 2;
 export const WIN_PT = 3;
 export const LOSE_PT = 1;
-/** 강등: 정규 시즌 이 순위 이하(9~10위)로 목표 실패가 같은 리그에서 이 횟수만큼 연속이면 한 단계 아래로. 아마추어는 강등 없음 */
-export const RELEGATION_RANK = 9;
-export const RELEGATION_STRIKES = 2;
+// 승급은 영구, 강등 없음 (로그라이크 설계 §4): 5위 이하·토너먼트 미우승이면 같은 리그에서 다시 — 처벌은 시간(재도전)뿐, 진행도는 잃지 않는다
 
 export const LEAGUE_NAMES = Object.freeze({
   amateur: '아마추어 리그', third: '3부 리그', second: '2부 리그', first: '1부 리그', world: '세계대회',
@@ -74,7 +73,8 @@ export function effectiveStats(state) {
   const g = GRIPS[state.grip].mod;
   const r = RACKETS[state.racket].mod;
   const out = {};
-  for (const k of ['power', 'spin', 'focus']) out[k] = Math.max(0, statCurve(state.stats[k]) + g[k] + r[k]);
+  const bonus = statBonus(state); // 계승 보너스·성장 프로젝트 (roguelike.js): 투자한 스탯(raw)에 더해 곡선을 통과 → 수확체감이 적용돼 중첩해도 폭주하지 않는다(장비와 달리)
+  for (const k of ['power', 'spin', 'focus']) out[k] = Math.max(0, statCurve(state.stats[k] + bonus[k]) + g[k] + r[k]);
   return out;
 }
 
@@ -127,6 +127,7 @@ export function startSeason(state, league = state.league) {
   state.summary = null;
   state.seasonTally = emptyTally(); // 이번 시즌 경기 집계 (결산 레이더용)
   state.cup = null; state.cupsDone = []; // 월간 컵은 시즌마다 새로
+  resetSeasonBuild(state); // 시즌 빌드(드래프트 특성)는 시즌 한정
   return state;
 }
 
@@ -148,6 +149,7 @@ export function newGame(league = 'amateur') {
     events: { history: [] }, // 커리어 이벤트 선택 기록 (events.js)
     cupHistory: [], // 월간 컵 성적 (cup.js)
     radarPrev: null, // 지난 시즌 결산 레이더 (성장 비교용)
+    rogue: emptyRogue(), // 계승 보너스·시즌 빌드·라이벌 전적·성장 줄기 (roguelike.js)
   };
   return startSeason(state, league);
 }
@@ -173,6 +175,9 @@ function ensureExtras(state) {
   if (!Array.isArray(state.cupsDone)) state.cupsDone = [];
   if (state.cup === undefined || (state.cup !== null && (typeof state.cup !== 'object' || !state.cup.rounds))) state.cup = null;
   if (state.radarPrev === undefined) state.radarPrev = null;
+  ensureRogue(state);
+  // 강등 삭제(2026-10-12) 이전 저장: 시즌 종료 화면에서 대기 중이던 강등은 취소 — 진행도는 잃지 않는다
+  if (state.summary?.relegated) { state.summary.nextLeague = state.summary.league; state.summary.relegated = false; state.summary.relegationRisk = false; }
   return state;
 }
 /** 재도전 횟수 필드 보강 (예전 저장에는 없다) */
@@ -265,11 +270,14 @@ export function applyRegularResult(state, { won, score }, rng, preset = {}) {
     const r = preset[`${a}-${b}`] ?? quickPlay(state, a, b, rng); // preset: 경기 중 속보(liveRound)로 이미 보여준 다른 경기 결과 — 순위표와 어긋나지 않게 그대로 반영
     record(state, a, b, r.winner, r.sa, r.sb);
   }
-  const gained = won ? WIN_PT : LOSE_PT;
+  const pts = awardBonusPoints(state, won ? WIN_PT : LOSE_PT, { won, rival: !!opp.rival });
+  const gained = pts.total;
   state.statPoints += gained;
+  if (opp.rival) recordRival(state, won);
+  const draft = won ? checkDraft(state, state.teams[0].wins) : false; // 정규 2·4·6승째: 특성 드래프트
   state.week += 1;
   if (state.week > 9) startTournament(state, rng);
-  return { gained, phase: state.phase };
+  return { gained, bonus: pts.bonus, draft, phase: state.phase };
 }
 
 // ---- 토너먼트 ----
@@ -319,10 +327,13 @@ export function applyTournamentResult(state, { won, score }, rng) {
   const opp = m.a === 0 ? m.b : m.a;
   Object.assign(m, { winner: won ? 0 : opp, sa: m.a === 0 ? score.me : score.opp, sb: m.a === 0 ? score.opp : score.me });
   state.log.push({ a: m.a, b: m.b, winner: m.winner, sa: m.sa, sb: m.sb, stage: 'tournament' });
-  const gained = won ? WIN_PT : LOSE_PT;
+  const oppTeam = teamById(state, opp);
+  const pts = awardBonusPoints(state, won ? WIN_PT : LOSE_PT, { won, rival: !!oppTeam.rival });
+  const gained = pts.total;
   state.statPoints += gained;
+  if (oppTeam.rival) recordRival(state, won);
   advanceBracket(state, rng);
-  return { gained, phase: state.phase };
+  return { gained, bonus: pts.bonus, draft: false, phase: state.phase };
 }
 
 // ---- 시즌 종료 ----
@@ -345,12 +356,7 @@ function finishSeason(state) {
   if (iWon) delete retries[prevLeague]; else retries[prevLeague] = (retries[prevLeague] ?? 0) + 1;
   summary.cycleOffer = lastLeague && iWon; // 세계대회 우승: 2회차 시작을 고를 수 있다 (기본 흐름은 그대로 세계대회 계속)
   summary.retryCount = retries[prevLeague] ?? 0; // 같은 리그를 다시 도전하는 횟수 (우승이면 0)
-  // 강등: 아마추어 제외, 정규 9~10위로 목표 실패가 같은 리그에서 연속 RELEGATION_STRIKES 번째면 한 단계 아래 리그로. 첫 번째는 '강등 위기' 경고만
-  const low = rank >= RELEGATION_RANK && prevLeague !== LEAGUES[0] && !iWon;
-  summary.relegated = false; summary.relegationRisk = false;
-  if (low && (retries[prevLeague] ?? 0) >= RELEGATION_STRIKES) {
-    summary.relegated = true; summary.nextLeague = LEAGUES[LEAGUES.indexOf(prevLeague) - 1]; delete retries[prevLeague];
-  } else if (low) summary.relegationRisk = true;
+  summary.relegated = false; summary.relegationRisk = false; // 강등 없음 (구 저장·화면 호환 필드)
   if (iWon) {
     summary.perks = grantPerks(state, prevLeague); // 우승 특전: 트로피·칭호·스킨 (스탯 포인트 보너스는 폐지)
     const un = UNLOCKS[prevLeague];
@@ -360,6 +366,7 @@ function finishSeason(state) {
     if (idx < LEAGUES.length - 1) { summary.promoted = true; summary.nextLeague = LEAGUES[idx + 1]; }
     else if (!state.cleared) { state.cleared = true; summary.ending = true; state.endingPending = true; }
   }
+  summary.legacy = settleSeason(state, { champion: iWon, rank }); // 계승 포인트 지급 + 시즌 빌드 소멸 (A/B 연결)
   const me = state.teams[0];
   summary.review = buildReview(state, { rank, wins: me.wins, losses: me.losses }, effectiveStats(state)); // 결산: 6각 레이더·전적·순위
   state.summary = summary;
