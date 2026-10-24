@@ -1,6 +1,6 @@
 import { h } from './dom.js?v=1791844910';
 import { placeSpotlight } from './spotlight.js?v=1791844910';
-import { ICON_PADDLE, ICON_PALETTE, BALL, BALL_PALETTE, drawSprite } from './sprites.js?v=1791844910';
+import { ICON_PADDLE, ICON_PALETTE, BALL, BALL_PALETTE, drawSprite, SPRITES, PALETTES, palettesFor } from './sprites.js?v=1791844910';
 import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791844910';
 import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791844910';
 import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791844910';
@@ -161,43 +161,81 @@ export function rulesScreen({ onBack, mode = 'simple' }) {
   };
 }
 
+/** 초상화(얼굴+상체): 앞모습 스프라이트 위쪽 10행만 잘라 원형 액자에 넣는다 (장식이라 스크린리더에서 숨김) */
+const PORTRAIT_ROWS = SPRITES.opp[0].slice(0, 10);
+const SHIRTS = [['#e8e8f0', '#aab0c0'], ['#7fc4f0', '#3f8fc4'], ['#9be07a', '#5aa53c'], ['#f7a35c', '#c46a20'], ['#c9a7f0', '#8a63c4'], ['#f08fb0', '#c4507a'], ['#7fe0d0', '#3ca596'], ['#f0e07a', '#c4b03c']];
+const HAIRS = ['#3a2a1a', '#5a5a66', '#1c1c24', '#7a4a20', '#b0b0b8', '#2a1a3a'];
+function namePalette(name = '') {
+  let x = 0; for (const ch of String(name)) x = (x * 31 + ch.charCodeAt(0)) >>> 0;
+  const [c, d] = SHIRTS[x % SHIRTS.length];
+  return { ...PALETTES.opp, c, d, h: HAIRS[(x >>> 3) % HAIRS.length] };
+}
+export function portrait(palette, cls = '') {
+  const cv = h('canvas', { class: `portrait ${cls}`.trim(), width: 12, height: 10, 'aria-hidden': 'true' });
+  cv.width = 12; cv.height = 10;
+  const c = cv.getContext?.('2d');
+  if (c) { c.imageSmoothingEnabled = false; drawSprite(c, PORTRAIT_ROWS, palette, 0, 0); }
+  return h('span', { class: `avatar ${cls}`.trim(), 'aria-hidden': 'true' }, cv);
+}
+const TIER_STARS = { low: 1, mid: 2, high: 3, rival: 4 };
+const stars = (n, max = 4) => h('span', { class: 'tier-stars', 'aria-label': `상대 전력 ${n}/${max}` }, ...Array.from({ length: max }, (_, i) => h('i', { class: i < n ? 'on' : '' })));
+
 export function leagueHomeScreen({ state, onPlay, onStats, onBracket, onTitle, onSeasonEnd, onTrain = null, onCup = null, cupLabel = '월간 컵', onEvent = null, eventLabel = '', onDraft = null, onEquip = null, onRevenge = null, onHelp = null }) {
   const table = standings(state);
   const nm = nextMatch(state);
   const rival = nm?.opp?.rival ? rivalFor(state) : null;
   const header = state.phase === 'tournament' ? '연말 토너먼트' : state.phase === 'seasonEnd' ? '시즌 종료' : `${state.week}주차 / 9`;
   const eff = effectiveStats(state);
+  const meRow = table.find((t) => t.me);
+  const legacyPts = ensureRogue(state).points;
   let nextLine;
   if (state.phase === 'seasonEnd') nextLine = '시즌이 끝났습니다.';
   else if (!nm) nextLine = '토너먼트 탈락 — 결과를 기다리는 중';
   else nextLine = [h('strong', {}, state.phase === 'tournament' ? '토너먼트 상대: ' : '다음 경기: '), nm.opp.name, rival ? ` (${rival.nickname}) — “${rival.line}”` : '', rival ? h('small', { class: 'rival-record' }, ` · ${rivalRecordText(state)}`) : ''];
-  return h('section', { class: 'screen home' },
-    titleName(state) && h('p', { class: 'title-badge' }, `「${titleName(state)}」`),
-    h('header', {}, h('h2', {}, `${LEAGUE_NAMES[state.league]} ${state.season}시즌${(state.cycle ?? 1) >= 2 ? ` · ${state.cycle}회차` : ''}`), h('span', { class: 'week' }, header)),
-    h('table', { class: 'standings', 'data-tour': 'table' },
-      h('thead', {}, h('tr', {}, ['순위', '선수', '승점', '승', '패'].map((t) => h('th', {}, t)))),
-      h('tbody', {}, table.map((t) => h('tr', { class: [t.me ? 'me' : '', t.rank <= 4 ? 'top' : ''].filter(Boolean).join(' ') },
-        h('td', {}, t.rank), h('td', {}, t.name), h('td', {}, t.points), h('td', {}, t.wins), h('td', {}, t.losses))))),
-    h('div', { class: 'next', 'data-tour': 'next' }, nextLine),
+  const tile = (text, fn, ico, tour = null) => { const b = btn(text, fn, 'tile'); if (ico) b.setAttribute('data-ico', ico); return tour ? tourTag(b, tour) : b; };
+  const statMax = Math.max(10, ...Object.keys(STAT_INFO).map((k) => state.stats[k]));
+  return h('section', { class: 'screen home lobby' },
+    h('div', { class: 'lobby-top' },
+      portrait(palettesFor(state.skin), 'me'),
+      h('div', { class: 'lt-id' },
+        h('b', { class: 'lt-name' }, PROTAGONIST.name),
+        titleName(state) ? h('p', { class: 'title-badge' }, `「${titleName(state)}」`) : h('small', { class: 'lt-sub' }, `${meRow ? `${meRow.rank}위 · ${meRow.wins}승 ${meRow.losses}패` : ''}`)),
+      h('div', { class: 'lt-wallet' },
+        h('span', { class: 'coin pt', title: '스탯 포인트' }, h('i', { 'aria-hidden': 'true' }, 'P'), String(state.statPoints)),
+        legacyPts > 0 && h('span', { class: 'coin lg', title: '계승 포인트' }, h('i', { 'aria-hidden': 'true' }, '★'), String(legacyPts)))),
+    h('header', { class: `league-banner lg-${state.league}` }, h('h2', {}, `${LEAGUE_NAMES[state.league]} ${state.season}시즌${(state.cycle ?? 1) >= 2 ? ` · ${state.cycle}회차` : ''}`), h('span', { class: 'week' }, header)),
+    h('div', { class: `next-card${rival ? ' rival' : ''}${nm ? '' : ' idle'}` },
+      nm && h('div', { class: 'nc-vs', 'aria-hidden': 'true' },
+        portrait(palettesFor(state.skin), 'me'),
+        h('em', { class: 'nc-vs-mark' }, 'VS'),
+        portrait(rival ? PALETTES.rival : namePalette(nm.opp.name), 'opp')),
+      nm && h('div', { class: 'nc-meta' }, h('span', { class: 'nc-label' }, rival ? 'RIVAL MATCH' : state.phase === 'tournament' ? 'TOURNAMENT' : 'NEXT MATCH'), stars(TIER_STARS[nm.opp.tier] ?? 2)),
+      h('div', { class: 'next', 'data-tour': 'next' }, nextLine),
+      state.phase === 'seasonEnd' && btn('시즌 결과 보기', onSeasonEnd, 'primary'),
+      nm && tourTag(btn(state.phase === 'tournament' ? '토너먼트 경기 시작' : '경기 시작', onPlay, 'primary play-cta'), 'play')),
+    (onRevenge || onDraft || onEvent) && h('div', { class: 'alerts' },
+      onRevenge && btn('🔥 라이벌 설욕전 (이기면 +4pt·계승 +1pt)', onRevenge, 'primary revenge-alert'),
+      onDraft && btn('🃏 특성 뽑기 (고르기)', onDraft, 'primary draft-alert'),
+      onEvent && btn(eventLabel, onEvent, 'primary event-alert')),
     state.phase === 'regular' && buildStrip(state),
     h('div', { class: 'mystats', 'data-tour': 'stats' },
-      Object.entries(STAT_INFO).map(([k, v]) => h('span', { class: 'chip' },
+      Object.entries(STAT_INFO).map(([k, v]) => h('span', { class: `chip st-${k}`, style: `--pct:${Math.min(100, Math.round((state.stats[k] / statMax) * 100))}%` },
         `${v.label} ${state.stats[k]}${fmt(eff[k]) !== String(state.stats[k]) ? ` (${fmt(eff[k])})` : ''}`)),
       h('span', { class: 'chip pts' }, `포인트 ${state.statPoints}`),
-      ensureRogue(state).points > 0 && h('span', { class: 'chip legacy-chip' }, `계승 ${ensureRogue(state).points}pt`)),
-    onRevenge && btn('🔥 라이벌 설욕전 (이기면 +4pt·계승 +1pt)', onRevenge, 'primary revenge-alert'),
-    onDraft && btn('🃏 특성 뽑기 (고르기)', onDraft, 'primary draft-alert'),
-    onEvent && btn(eventLabel, onEvent, 'primary event-alert'),
-    state.phase === 'seasonEnd' && btn('시즌 결과 보기', onSeasonEnd, 'primary'),
-    nm && tourTag(btn(state.phase === 'tournament' ? '토너먼트 경기 시작' : '경기 시작', onPlay, 'primary'), 'play'),
+      legacyPts > 0 && h('span', { class: 'chip legacy-chip' }, `계승 ${legacyPts}pt`)),
+    h('div', { class: 'standings-wrap' },
+      h('table', { class: 'standings', 'data-tour': 'table' },
+        h('thead', {}, h('tr', {}, ['순위', '선수', '승점', '승', '패'].map((t) => h('th', {}, t)))),
+        h('tbody', {}, table.map((t) => h('tr', { class: [t.me ? 'me' : '', t.rank <= 4 ? 'top' : '', t.rank <= 3 ? `medal m${t.rank}` : ''].filter(Boolean).join(' ') },
+          h('td', {}, t.rank), h('td', {}, t.name), h('td', {}, t.points), h('td', {}, t.wins), h('td', {}, t.losses)))))),
     h('div', { class: 'actions' },
-      tourTag(btn('스탯 투자', onStats), 'invest'),
-      onEquip && tourTag(btn('장비·특전', onEquip), 'equip'),
-      onTrain && tourTag(btn('훈련 모드', onTrain), 'train'),
-      onCup && btn(cupLabel, onCup),
-      tourTag(btn('토너먼트 대진표', onBracket), 'bracket'),
-      onHelp && btn('❓ 가이드 투어', onHelp),
-      btn('타이틀로 이동', onTitle)));
+      tile('스탯 투자', onStats, '💪', 'invest'),
+      onEquip && tile('장비·특전', onEquip, '🏓', 'equip'),
+      onTrain && tile('훈련 모드', onTrain, '🎯', 'train'),
+      onCup && tile(cupLabel, onCup, '🏆'),
+      tile('토너먼트 대진표', onBracket, '📋', 'bracket'),
+      onHelp && tile('❓ 가이드 투어', onHelp, null),
+      tile('타이틀로 이동', onTitle, '🏠')));
 }
 
 /**
@@ -379,11 +417,28 @@ export function summaryPanel(summary, records = null, broken = []) {
       cell('specials', RECORD_LABELS.specials, `${summary.specials}회`, `최고 ${records?.bestSpecials ?? 0}회`)));
 }
 
-export function resultScreen({ result, onNext, reward = null, animate = true }) {
-  return h('section', { class: 'screen result' },
+/** 결과 등급(별 0~3): 이기면 점수 차로 1~3개, 지면 0개 (점수 차가 2점 이하면 '접전' 표시) */
+export function resultStars(result) {
+  if (!result.won) return 0;
+  const gap = result.score.me - result.score.opp;
+  return gap >= 7 ? 3 : gap >= 4 ? 2 : 1;
+}
+function resultHero(result, animate) {
+  const n = resultStars(result);
+  const close = !result.won && !result.forfeit && result.score.opp - result.score.me <= 2;
+  const confetti = result.won && animate ? h('div', { class: 'confetti', 'aria-hidden': 'true' }, ...Array.from({ length: 14 }, (_, i) => h('i', { style: `--i:${i}` }))) : '';
+  return h('div', { class: `res-hero ${result.won ? 'won' : 'lost'}${animate ? ' animate' : ''}` },
+    h('div', { class: 'rays', 'aria-hidden': 'true' }), confetti,
     h('h2', { class: result.won ? 'res-win' : 'res-lose' }, result.won ? '승리!' : result.forfeit ? '기권패' : '패배…'),
-    h('p', { class: 'score' }, `${result.score.me} : ${result.score.opp}`),
-    h('p', { class: 'gain' }, `획득 포인트 +${result.gained}`),
+    h('div', { class: 'res-stars', role: 'img', 'aria-label': `별 ${n}개` }, ...[0, 1, 2].map((i) => h('i', { class: i < n ? 'on' : '', style: `--i:${i}` }))),
+    close && h('small', { class: 'res-close' }, '아깝다! 접전'),
+    h('p', { class: 'score' }, h('b', { class: 'sc-me' }, String(result.score.me)), ' : ', h('b', { class: 'sc-opp' }, String(result.score.opp))),
+    result.gained != null && h('p', { class: 'gain' }, `획득 포인트 +${result.gained}`));
+}
+
+export function resultScreen({ result, onNext, reward = null, animate = true }) {
+  return h('section', { class: `screen result ${result.won ? 'is-win' : 'is-lose'}` },
+    resultHero(result, animate),
     result.training && h('p', { class: 'quote' }, '훈련 경기 — 순위·개인 기록에는 반영되지 않아요'),
     result.revenge && h('p', { class: 'quote' }, '라이벌 설욕전 — 순위에는 영향이 없어요'),
     result.rivalPt > 0 && h('p', { class: 'win' }, `라이벌 격파! 계승 포인트 +${result.rivalPt}pt`),
@@ -701,9 +756,8 @@ export function multiScreen({ onSetNick = () => {}, onHost, onPick = () => {}, o
 /** 멀티플레이 결과. status: ''(대기) | 'wait'(내가 한 번 더 눌렀다) | 'asked'(상대가 한 번 더 하자고 한다) | 'gone'(상대가 나갔다) */
 export function netResultScreen({ won, score, peerName, onAgain, onExit }) {
   const again = btn('한 번 더', onAgain, 'primary'); const note = h('p', { class: 'net-status', 'aria-live': 'polite' }, '');
-  const el = h('section', { class: 'screen result net-result' },
-    h('h2', {}, won ? '승리!' : '패배…'),
-    h('p', { class: 'score' }, `${score.me} : ${score.opp}`),
+  const el = h('section', { class: `screen result net-result ${won ? 'is-win' : 'is-lose'}` },
+    resultHero({ won, score, gained: null }, true),
     h('p', {}, `상대: ${peerName || '상대'}`), note, again, btn('나가기', onExit));
   return {
     el,

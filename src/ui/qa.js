@@ -36,6 +36,7 @@ export function mountQa(root, route, { seed = 12345 } = {}) {
   if (route === 'home') app.showHome();
   else if (route === 'season-intro') app.showSeasonIntro();
   else if (route === 'result') app.showResult({ won: false, score: { me: 7, opp: 11 }, gained: 1 });
+  else if (route === 'result-win') app.showResult({ won: true, score: { me: 11, opp: 3 }, gained: 3 }); // 승리 연출(QA_EXTRA_ROUTES 계약 밖)
   else if (route === 'tutorial') { app.startMatch({ tutorial: true, from: 'title' }); step(3); }
   else if (route === 'match') {
     app.startMatch(); step(2);
