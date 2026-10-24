@@ -50,6 +50,8 @@ import {
 import { createStore } from '../game/store.js?v=1791844910';
 import { createRng, MIN_REACTION_S } from '../core/index.js?v=1791844910';
 import { applyIosTopGap } from './iosTopGap.js?v=1791844910';
+import { loadDaily, saveDaily, dailyStatus, claimDaily, dayKey } from '../game/daily.js?v=1791844910';
+import { dailyModal } from './screens.js?v=1791844910';
 
 
 /** 앱 부트스트랩. root: 마운트 요소, deps: 테스트 주입용 { store, raf, nowFn } */
@@ -112,6 +114,7 @@ export function createApp(root, deps = {}) {
   const onboarding = deps.onboarding === true; // 새 플레이어 안내(튜토리얼 권유·메뉴 설명): main.js 가 켠다. 테스트는 기본 꺼짐
   const guideStore = deps.guideStore ?? createGuideStore(store.storage ?? globalThis.localStorage);
   const learn = deps.learnStore ?? createLearnStore(store.storage ?? globalThis.localStorage); // 상성 학습 진행도: 카운터 누적 15회 전까지 글자 힌트
+  const dailyOn = deps.daily ?? onboarding; // 출석 보상 팝업: 실제 앱(main.js)만. 테스트·QA 는 꺼짐
   const reducedMotion = deps.reducedMotion ?? (() => !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
   let state = migrate(store.load());
   let loop = null; // 경기 루프 중단 플래그
@@ -272,6 +275,25 @@ export function createApp(root, deps = {}) {
         onSeasonEnd: () => api.showSeasonResult(),
       }));
       if (onboarding && !menuGuideStore.seen && state.season === 1 && state.week === 1 && state.phase === 'regular') api.startHomeTour(); // 첫 홈: 가이드 투어를 한 번
+      else if (dailyOn) api.offerDaily();
+    },
+    /** 출석 보상: 오늘 아직 안 받았으면 홈 위에 7일 달력 팝업. 받으면 스탯 포인트 지급 후 홈을 다시 그린다 */
+    offerDaily() {
+      if (!state) return;
+      const today = deps.today ?? dayKey();
+      const sp = store.storage ?? globalThis.localStorage;
+      const status = dailyStatus(loadDaily(sp), today);
+      if (!status.claimable) return;
+      const modal = dailyModal({
+        status,
+        onClaim: () => {
+          const got = claimDaily(loadDaily(sp), today);
+          if (got) { saveDaily(sp, got.rec); state.statPoints += got.amount; persist(); audio.play?.('win'); }
+          return got;
+        },
+        onClose: () => api.showHome(),
+      });
+      root.appendChild(modal);
     },
     /** 커리어 이벤트: 확률형/확정형 선택 → 결과 */
     showEvent(pe) {

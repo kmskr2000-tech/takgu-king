@@ -36,6 +36,7 @@ export function mountQa(root, route, { seed = 12345 } = {}) {
   if (route === 'home') app.showHome();
   else if (route === 'season-intro') app.showSeasonIntro();
   else if (route === 'result') app.showResult({ won: false, score: { me: 7, opp: 11 }, gained: 1 });
+  else if (route === 'daily') { storage.setItem('tabgu-king-daily-v1', JSON.stringify({ last: '2000-01-01', streak: 2 })); app.showHome(); app.offerDaily(); } // 출석 팝업(QA_EXTRA_ROUTES 계약 밖)
   else if (route === 'result-win') app.showResult({ won: true, score: { me: 11, opp: 3 }, gained: 3 }); // 승리 연출(QA_EXTRA_ROUTES 계약 밖)
   else if (route === 'tutorial') { app.startMatch({ tutorial: true, from: 'title' }); step(3); }
   else if (route === 'match') {

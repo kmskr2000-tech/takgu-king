@@ -767,3 +767,32 @@ export function netResultScreen({ won, score, peerName, onAgain, onExit }) {
     },
   };
 }
+
+/**
+ * 출석 보상 팝업: 7일 달력(받은 날 도장 · 오늘 칸 강조 · 7일차 큰 보상) + 받기 버튼.
+ * onClaim() 은 { amount, day } 또는 null 을 돌려준다. 받고 나면 버튼이 '확인'으로 바뀌고 누르면 onClose.
+ */
+export function dailyModal({ status, onClaim, onClose }) {
+  const cells = status.rewards.map((amt, i) => {
+    const d = i + 1;
+    const cls = d < status.day ? 'got' : d === status.day ? 'today' : '';
+    return h('li', { class: `dl-cell ${cls}${d === 7 ? ' big' : ''}`.trim() },
+      h('small', {}, `${d}일차`), h('span', { class: 'dl-coin', 'aria-hidden': 'true' }, d === 7 ? '🎁' : 'P'), h('b', {}, `+${amt}`));
+  });
+  const note = h('p', { class: 'dl-note' }, status.streak > 1 ? `연속 출석 ${status.streak}일째! 내일도 오면 이어져요.` : '매일 들어오면 보상이 커져요. 하루 거르면 1일차부터 다시!');
+  const close = () => { el.remove(); onClose?.(); };
+  const action = btn('보상 받기', () => {
+    const got = onClaim();
+    cells[status.day - 1].classList.add('got', 'stamp');
+    note.textContent = got ? `스탯 포인트 +${got.amount} 획득!` : '오늘은 이미 받았어요.';
+    action.textContent = '확인';
+    action.onclick = null;
+    action.addEventListener('click', close, { once: true });
+  }, 'primary dl-claim');
+  const el = h('div', { class: 'daily-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': '출석 보상' },
+    h('div', { class: 'dl-card' },
+      h('h2', { class: 'dl-title' }, '출석 보상'),
+      h('ol', { class: 'dl-grid' }, ...cells),
+      note, action));
+  return el;
+}

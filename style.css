@@ -914,3 +914,25 @@ body:has(.screen.home), body:has(.screen.stats), body:has(.screen.equip), body:h
 .growth-pick, .screen:not(.match) .btn.growth-pick { padding: 4px 6px; white-space: nowrap; min-width: 56px; }
 .screen.season-result > h2, .screen.ending > h1.logo { margin: 6px 0 0; font-size: 38px !important; font-weight: 900 !important; letter-spacing: -1px; color: #FFC93C !important; -webkit-text-stroke: 3px #3A2400; paint-order: stroke fill; text-shadow: 0 4px 0 #3A2400 !important; animation: skin-stamp .5s cubic-bezier(.2,1.6,.4,1) both; }
 @media (prefers-reduced-motion: reduce) { .screen.season-result > h2, .screen.ending > h1.logo { animation: none; } }
+
+/* ---- 출석 보상 팝업 ---- */
+.daily-modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(14,22,34,.62); animation: screenfade .2s ease-out; }
+.dl-card { width: min(100%, 380px); display: grid; gap: 12px; padding: 34px 16px 16px; position: relative; background: linear-gradient(#FFF9EC, #FFF1D6); border: 3px solid var(--gold-edge); border-radius: 22px; box-shadow: 0 6px 0 var(--gold-edge), inset 0 0 0 2px #FFE7A6; animation: skin-stamp .4s cubic-bezier(.2,1.5,.4,1) both; }
+.dl-title { position: absolute; top: -20px; left: 50%; translate: -50% 0; margin: 0; padding: 6px 28px 8px; white-space: nowrap; color: #fff !important; font-size: 20px !important; font-weight: 900 !important;
+  background: linear-gradient(#FF8A6A, #E0452A); border: 2px solid #6E1E10; border-radius: 12px; box-shadow: 0 4px 0 #6E1E10, inset 0 2px 0 rgba(255,255,255,.4); text-shadow: 0 2px 0 #6E1E10; }
+.dl-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.dl-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; background: #fff; border: 2px solid var(--panel-edge); border-radius: 12px; box-shadow: 0 3px 0 rgba(43,58,77,.45); }
+.dl-cell.big { grid-column: span 2; background: linear-gradient(#FFF4C9, #FFE08A); border-color: var(--gold-edge); }
+.dl-cell small { font-size: 11px; font-weight: 800; color: var(--tx2); }
+.dl-cell b { font-size: 15px; font-weight: 900; color: var(--ink); }
+.dl-coin { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font-size: 13px; font-weight: 900; color: #5A3A00; background: radial-gradient(circle at 35% 30%, #FFF2B0, #FFC93C 60%, #D99A00); box-shadow: inset 0 -2px 0 rgba(138,90,0,.4); }
+.dl-cell.big .dl-coin { background: none; box-shadow: none; font-size: 26px; }
+.dl-cell.today { border-color: #E0452A; box-shadow: 0 3px 0 #6E1E10, 0 0 0 3px rgba(255,138,106,.45); animation: skin-pulse 1.4s ease-in-out infinite; }
+.dl-cell.got { background: #EFE9DD; }
+.dl-cell.got::after { content: '✔'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 30px; font-weight: 900; color: #2F9E55; text-shadow: 0 2px 0 #fff; background: rgba(255,255,255,.45); border-radius: 10px; }
+.dl-cell.stamp::after { animation: skin-stamp .35s cubic-bezier(.2,1.6,.4,1) both; }
+.dl-cell.got.today { animation: none; }
+.dl-note { margin: 0; text-align: center; font-size: 13px; font-weight: 800; color: var(--gold); }
+.daily-modal .btn.dl-claim { position: relative; overflow: hidden; min-height: 54px; font: inherit; font-size: 18px; font-weight: 900; color: #3A2400; border: 2px solid var(--gold-edge); border-radius: var(--r-md);
+  background: linear-gradient(var(--gold-hi) 0, #FFD04A 48%, var(--gold-lo) 52%, #FFC328 100%); box-shadow: 0 5px 0 var(--gold-edge), inset 0 2px 0 rgba(255,255,255,.75); }
+@media (prefers-reduced-motion: reduce) { .daily-modal, .dl-card, .dl-cell.today, .dl-cell.stamp::after { animation: none !important; } }
