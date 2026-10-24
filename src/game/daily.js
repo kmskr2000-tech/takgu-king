@@ -25,8 +25,8 @@ export function saveDaily(storage, rec) {
 }
 
 /** 오늘 상태: claimable(받을 수 있나), day(오늘 받을/받은 칸 1~7), streak(받은 뒤 연속 일수) */
-export function dailyStatus(rec, today = dayKey()) {
-  if (rec.last === today) return { claimable: false, day: ((Math.max(1, rec.streak) - 1) % 7) + 1, streak: rec.streak, rewards: DAILY_REWARDS };
+export function dailyStatus(rec, today = dayKey()) { // 기기 날짜를 과거로 돌린 경우(today < last)도 받은 것으로 친다
+  if (rec.last === today || (rec.last && today < rec.last)) return { claimable: false, day: ((Math.max(1, rec.streak) - 1) % 7) + 1, streak: rec.streak, rewards: DAILY_REWARDS };
   const streak = rec.last && rec.last === prevKey(today) ? rec.streak + 1 : 1;
   return { claimable: true, day: ((streak - 1) % 7) + 1, streak, rewards: DAILY_REWARDS };
 }

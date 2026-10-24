@@ -955,3 +955,6 @@ body:has(.screen.home), body:has(.screen.stats), body:has(.screen.equip), body:h
 @keyframes vs-in-r { from { translate: 120vw 0; } to { translate: 0 0; } }
 @keyframes vs-out { to { opacity: 0; visibility: hidden; } }
 @media (prefers-reduced-motion: reduce) { .vs-splash { display: none; } }
+/* 홈은 첫 가이드 투어가 마운트 직후 위치를 재므로 위치 이동 없이 투명도만 (하이라이트가 10px 어긋나지 않게) */
+.screen.home { animation-name: screenfade; }
+@media (prefers-reduced-motion: reduce) { .screen, .screen:not(.match):not(.title):not(.intro) { animation: none !important; } }

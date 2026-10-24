@@ -1,20 +1,20 @@
-import { h } from './dom.js?v=1792845630';
-import { placeSpotlight } from './spotlight.js?v=1792845630';
-import { ICON_PADDLE, ICON_PALETTE, BALL, BALL_PALETTE, drawSprite, SPRITES, PALETTES, palettesFor } from './sprites.js?v=1792845630';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1792845630';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1792845630';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1792845630';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1792845630';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1792845630';
+import { h } from './dom.js?v=1792845966';
+import { placeSpotlight } from './spotlight.js?v=1792845966';
+import { ICON_PADDLE, ICON_PALETTE, BALL, BALL_PALETTE, drawSprite, SPRITES, PALETTES, palettesFor } from './sprites.js?v=1792845966';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1792845966';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1792845966';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1792845966';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1792845966';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1792845966';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1792845630';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1792845630';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1792845630';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1792845630';
-import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1792845630';
-import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1792845630';
-import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1792845630';
+} from '../game/season.js?v=1792845966';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1792845966';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1792845966';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1792845966';
+import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1792845966';
+import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1792845966';
+import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1792845966';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -781,12 +781,14 @@ export function dailyModal({ status, onClaim, onClose }) {
   });
   const note = h('p', { class: 'dl-note' }, status.streak > 1 ? `연속 출석 ${status.streak}일째! 내일도 오면 이어져요.` : '매일 들어오면 보상이 커져요. 하루 거르면 1일차부터 다시!');
   const close = () => { el.remove(); onClose?.(); };
+  let claimed = false; // h() 는 addEventListener 로 붙이므로 onclick=null 로는 못 뗀다 → 플래그로 한 번만
   const action = btn('보상 받기', () => {
+    if (claimed) return;
+    claimed = true;
     const got = onClaim();
     cells[status.day - 1].classList.add('got', 'stamp');
     note.textContent = got ? `스탯 포인트 +${got.amount} 획득!` : '오늘은 이미 받았어요.';
     action.textContent = '확인';
-    action.onclick = null;
     action.addEventListener('click', close, { once: true });
   }, 'primary dl-claim');
   const el = h('div', { class: 'daily-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': '출석 보상' },
