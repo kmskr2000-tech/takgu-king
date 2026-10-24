@@ -1,20 +1,20 @@
-import { h } from './dom.js?v=1791844910';
-import { placeSpotlight } from './spotlight.js?v=1791844910';
-import { ICON_PADDLE, ICON_PALETTE, BALL, BALL_PALETTE, drawSprite, SPRITES, PALETTES, palettesFor } from './sprites.js?v=1791844910';
-import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1791844910';
-import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1791844910';
-import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1791844910';
-import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1791844910';
-import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1791844910';
+import { h } from './dom.js?v=1792845630';
+import { placeSpotlight } from './spotlight.js?v=1792845630';
+import { ICON_PADDLE, ICON_PALETTE, BALL, BALL_PALETTE, drawSprite, SPRITES, PALETTES, palettesFor } from './sprites.js?v=1792845630';
+import { drawLogo, LOGO_W, LOGO_H, LOGO_TEXT } from './logo.js?v=1792845630';
+import { drawTitleBackground, TB_W, TB_H } from './titlebg.js?v=1792845630';
+import { SHOT_TYPES, SHOT_ORDER } from '../game/controls.js?v=1792845630';
+import { drawRuleDiagram, ruleCards, DIAGRAM_W, DIAGRAM_H } from './rules.js?v=1792845630';
+import { PROTAGONIST, CATCHPHRASE } from '../game/story.js?v=1792845630';
 import {
   LEAGUE_NAMES, rivalFor, standings, nextMatch, GRIPS, RACKETS, effectiveStats, unlockCondition,
-} from '../game/season.js?v=1791844910';
-import { statCurve, statEfficiency } from '../game/statcurve.js?v=1791844910';
-import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1791844910';
-import { TRAIN_WIN_POINTS } from '../game/training.js?v=1791844910';
-import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1791844910';
-import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1791844910';
-import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1791844910';
+} from '../game/season.js?v=1792845630';
+import { statCurve, statEfficiency } from '../game/statcurve.js?v=1792845630';
+import { MIN_TAPS_FOR_RATE, RECORD_LABELS } from '../game/records.js?v=1792845630';
+import { TRAIN_WIN_POINTS } from '../game/training.js?v=1792845630';
+import { reviewPanel, buildStrip, legacyPanel, growthPanel } from './careerScreens.js?v=1792845630';
+import { rivalRecordText, ensureRogue } from '../game/roguelike.js?v=1792845630';
+import { CHAMPION_PERKS, DEFAULT_SKIN, wonLeagues, titleName } from '../game/perks.js?v=1792845630';
 
 const STAT_INFO = {
   power: { label: '파워', desc: '스매시 위력↑, 상대 리턴 난이도↑' },
@@ -165,7 +165,7 @@ export function rulesScreen({ onBack, mode = 'simple' }) {
 const PORTRAIT_ROWS = SPRITES.opp[0].slice(0, 10);
 const SHIRTS = [['#e8e8f0', '#aab0c0'], ['#7fc4f0', '#3f8fc4'], ['#9be07a', '#5aa53c'], ['#f7a35c', '#c46a20'], ['#c9a7f0', '#8a63c4'], ['#f08fb0', '#c4507a'], ['#7fe0d0', '#3ca596'], ['#f0e07a', '#c4b03c']];
 const HAIRS = ['#3a2a1a', '#5a5a66', '#1c1c24', '#7a4a20', '#b0b0b8', '#2a1a3a'];
-function namePalette(name = '') {
+export function namePalette(name = '') {
   let x = 0; for (const ch of String(name)) x = (x * 31 + ch.charCodeAt(0)) >>> 0;
   const [c, d] = SHIRTS[x % SHIRTS.length];
   return { ...PALETTES.opp, c, d, h: HAIRS[(x >>> 3) % HAIRS.length] };
@@ -795,4 +795,16 @@ export function dailyModal({ status, onClaim, onClose }) {
       h('ol', { class: 'dl-grid' }, ...cells),
       note, action));
   return el;
+}
+
+/** 경기 직전 VS 스플래시: 양쪽 초상이 미끄러져 들어오고 가운데 VS 가 찍힌 뒤 사라진다 (탭하면 즉시 닫힘). 장식 — 스크린리더에는 한 줄 요약만 */
+export function versusSplash({ meName, oppName, oppSub = '', label = 'MATCH', rival = false, mePalette, oppPalette, onDone }) {
+  const el = h('div', { class: `vs-splash${rival ? ' rival' : ''}`, role: 'status', 'aria-label': `${meName} 대 ${oppName}` },
+    h('div', { class: 'vs-side me' }, portrait(mePalette, 'me'), h('b', {}, meName)),
+    h('div', { class: 'vs-mid', 'aria-hidden': 'true' }, h('small', {}, label), h('em', {}, 'VS')),
+    h('div', { class: 'vs-side opp' }, portrait(oppPalette, 'opp'), h('b', {}, oppName), oppSub && h('small', {}, oppSub)));
+  let done = false;
+  const finish = () => { if (done) return; done = true; el.remove(); onDone?.(); };
+  el.addEventListener('pointerdown', finish);
+  return { el, finish };
 }

@@ -1,6 +1,6 @@
 import {
   DRAG_MIN_FRAC, DRAG_FULL_FRAC, DRAG_MIN_PX, TAP_POWER, DRAG_VERTICAL_RATIO, COURSE_X,
-} from './constants.js?v=1791844910';
+} from './constants.js?v=1792845630';
 
 /** 코트 폭(px)에 맞춘 드래그 기준 (최소/풀파워) */
 export const dragThresholds = (courtWidth) => ({
